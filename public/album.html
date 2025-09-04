@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Meu Álbum — MIX AWARDS</title>
+
+  <!-- Tema NAVY compartilhado -->
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/layout.css">
+
+  <style>
+    /* ===== NAV-BTN (linhas animadas sem mudar altura do nav) ===== */
+    .nav a.nav-btn,
+    .nav .nav-right a.nav-btn {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 15px;
+      font-size: 14px;
+      font-weight: 600;
+      text-transform: uppercase;
+      text-decoration: none;
+      color: #e8f1f8;
+      background: none !important;
+      border: none !important;
+      cursor: pointer;
+      line-height: 1;
+      transition: letter-spacing .3s ease;
+    }
+
+    .nav a.nav-btn:hover {
+      letter-spacing: 1px;
+      background: none !important;
+    }
+
+    .nav a.nav-btn::before,
+    .nav a.nav-btn::after {
+      content: "";
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 0;
+      border-top: 1px solid transparent;
+      transition: width .28s ease-in-out, border-color .28s ease-in-out;
+      pointer-events: none;
+    }
+
+    .nav a.nav-btn::before {
+      top: 4px;
+    }
+
+    .nav a.nav-btn::after {
+      bottom: 4px;
+    }
+
+    .nav a.nav-btn:hover::before,
+    .nav a.nav-btn:hover::after {
+      width: 70%;
+    }
+
+    .nav a.nav-btn[data-color="#2db2ff"]:hover::before,
+    .nav a.nav-btn[data-color="#2db2ff"]:hover::after {
+      border-color: #2db2ff;
+    }
+
+    .nav a.nav-btn[data-color="#ff1f71"]:hover::before,
+    .nav a.nav-btn[data-color="#ff1f71"]:hover::after {
+      border-color: #ff1f71;
+    }
+
+    .nav a.nav-btn[data-color="#1eff45"]:hover::before,
+    .nav a.nav-btn[data-color="#1eff45"]:hover::after {
+      border-color: #1eff45;
+    }
+
+    .nav a.nav-btn[data-color="#a78bfa"]:hover::before,
+    .nav a.nav-btn[data-color="#a78bfa"]:hover::after {
+      border-color: #a78bfa;
+    }
+
+    .nav a.nav-btn[data-color="#a78bfb"]:hover::before,
+    .nav a.nav-btn[data-color="#a78bfb"]:hover::after {
+      border-color: #fc6107;
+    }
+
+    .nav a.nav-btn[data-color="#56c1ff"]:hover::before,
+    .nav a.nav-btn[data-color="#56c1ff"]:hover::after {
+      border-color: #56c1ff;
+    }
+
+    .nav a.nav-btn[data-color="#ff9e9e"]:hover::before,
+    .nav a.nav-btn[data-color="#ff9e9e"]:hover::after {
+      border-color: #ff9e9e;
+    }
+
+    .nav a.nav-btn[data-color="#6225E6"]:hover::before,
+    .nav a.nav-btn[data-color="#6225E6"]:hover::after {
+      border-color: #FBC638;
+    }
+
+    /* ====== ÁLBUM ====== */
+    .album-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin: 6px 0 14px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: #132b3e;
+      color: #e8f1f8;
+      border: 1px solid #23445e;
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-weight: 800;
+    }
+
+    .badge img {
+      width: 18px;
+      height: 18px;
+      transform: translateY(1px);
+    }
+
+    .btn {
+      appearance: none;
+      border: 0;
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .btn.primary {
+      background: #2d86d6;
+      color: #fff;
+      border: 1px solid #3a93e2;
+    }
+
+    .pager {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      margin-left: auto;
+    }
+
+    .pager .pbtn {
+      min-width: 34px;
+      text-align: center;
+      font-weight: 800;
+      cursor: pointer;
+      background: #0f2435;
+      color: #e8f1f8;
+      border: 1px solid #1f3b54;
+      border-radius: 8px;
+      padding: 6px 10px;
+    }
+
+    .pager .pbtn.active {
+      outline: 2px solid #2d86d6;
+    }
+
+    .grid {
+      display: grid;
+      gap: 24px;
+      grid-template-columns: repeat(5, minmax(170px, 1fr));
+    }
+
+    @media (max-width:1200px) {
+      .grid {
+        grid-template-columns: repeat(4, minmax(160px, 1fr));
+      }
+    }
+
+    @media (max-width:900px) {
+      .grid {
+        grid-template-columns: repeat(3, minmax(150px, 1fr));
+      }
+    }
+
+    @media (max-width:640px) {
+      .grid {
+        grid-template-columns: repeat(2, minmax(140px, 1fr));
+      }
+    }
+
+    .slot {
+      position: relative;
+      aspect-ratio: 2/3;
+      border-radius: 14px;
+      overflow: hidden;
+      background: linear-gradient(180deg, rgba(10, 18, 28, .88), rgba(10, 20, 30, .94));
+      border: 2px dashed rgba(220, 240, 255, .22);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px;
+      color: #e6f1f8;
+      transition: transform .12s ease, box-shadow .12s ease;
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .05);
+      cursor: pointer;
+    }
+
+    .slot:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 10px 22px rgba(0, 0, 0, .30), inset 0 0 0 1px rgba(255, 255, 255, .05);
+    }
+
+    .slot img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      border-radius: 12px;
+      padding: 6px;
+      filter: drop-shadow(0 8px 14px rgba(0, 0, 0, .45));
+    }
+
+    .slot .rarity {
+      position: absolute;
+      top: 6px;
+      left: 8px;
+      background: rgba(15, 35, 53, .90);
+      border: 1px solid rgba(255, 255, 255, .14);
+      color: #e6f1f8;
+      font-weight: 800;
+      font-size: .72rem;
+      padding: 3px 6px;
+      border-radius: 7px;
+      text-transform: capitalize;
+      letter-spacing: .3px;
+      z-index: 2;
+    }
+
+    .slot .num {
+      position: absolute;
+      bottom: 8px;
+      right: 10px;
+      font-weight: 800;
+      opacity: .7;
+      font-size: .86rem;
+      text-shadow: 0 1px 0 rgba(0, 0, 0, .35);
+      z-index: 2;
+    }
+
+    .slot.has {
+      outline: none;
+      outline-offset: 0;
+    }
+
+    /* ===== Fundo base por raridade ===== */
+    .slot.normal {
+      background: linear-gradient(180deg, rgba(10, 18, 28, .88), rgba(10, 20, 30, .94));
+      border: 2px dashed rgba(220, 240, 255, .22);
+    }
+
+    .slot.epica {
+      /* roxo */
+      background: linear-gradient(180deg, rgba(45, 25, 70, .85), rgba(25, 15, 45, .92));
+      border: 2px dashed rgba(192, 132, 252, .45);
+    }
+
+    .slot.lendaria {
+      /* dourado */
+      background: linear-gradient(180deg, rgba(84, 58, 0, .80), rgba(51, 30, 0, .92));
+      border: 2px dashed rgba(255, 189, 89, .55);
+    }
+
+    /* ===== Destaque "nova" sem trocar fundo ===== */
+    .slot.is-new {
+      position: relative;
+    }
+
+    .slot.is-new::after {
+      content: "";
+      position: absolute;
+      inset: -3px;
+      border-radius: 16px;
+      pointer-events: none;
+      box-shadow: 0 0 0 0 var(--pulse-color, rgba(255, 189, 89, .45));
+      animation: pulseVar 1.3s ease-in-out infinite;
+    }
+
+    .slot.normal.is-new {
+      --pulse-color: rgba(86, 193, 255, .45);
+    }
+
+    .slot.epica.is-new {
+      --pulse-color: rgba(192, 132, 252, .50);
+    }
+
+    .slot.lendaria.is-new {
+      --pulse-color: rgba(255, 189, 89, .55);
+    }
+
+    @keyframes pulseVar {
+
+      0%,
+      100% {
+        box-shadow: 0 0 0 0 var(--pulse-color);
+      }
+
+      50% {
+        box-shadow: 0 0 0 8px color-mix(in srgb, var(--pulse-color) 22%, transparent);
+      }
+    }
+
+    /* ===== EFEITO HOLO ===== */
+    .holo-effect {
+      position: absolute;
+      inset: 0;
+      border-radius: 12px;
+      z-index: 2;
+      pointer-events: none;
+      mix-blend-mode: overlay;
+      opacity: .7;
+      transition: opacity .3s ease;
+    }
+
+    .holo-effect::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(125deg, #ff0080, #ff8c00, #ffed00, #00ff80, #00bfff, #8a2be2, #ff0080);
+      background-size: 400% 400%;
+      animation: holoGradient 8s ease infinite;
+      border-radius: 12px;
+      opacity: .3;
+    }
+
+    .holo-effect::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(255, 255, 255, .8) 0%, rgba(255, 255, 255, .4) 30%, transparent 70%);
+      border-radius: 12px;
+      opacity: .6;
+      transition: all .1s ease;
+    }
+
+    /* cor do holo por raridade (grid) */
+    .slot.normal .holo-effect::before {
+      background: linear-gradient(125deg, #00bfff, #1e90ff, #87cefa, #00bfff);
+      background-size: 400% 400%;
+      opacity: .25;
+    }
+
+    .slot.epica .holo-effect::before {
+      background: linear-gradient(125deg, #9370db, #8a2be2, #da70d6, #9370db);
+      background-size: 400% 400%;
+      opacity: .35;
+    }
+
+    .slot.lendaria .holo-effect::before {
+      background: linear-gradient(125deg, #ffd700, #ff8c00, #ff4500, #ffd700);
+      background-size: 400% 400%;
+      opacity: .4;
+    }
+
+    @keyframes holoGradient {
+      0% {
+        background-position: 0% 50%
+      }
+
+      50% {
+        background-position: 100% 50%
+      }
+
+      100% {
+        background-position: 0% 50%
+      }
+    }
+
+    .slot:hover .holo-effect {
+      opacity: .9;
+    }
+
+    .slot:hover .holo-effect::after {
+      opacity: .8;
+    }
+
+    .panel .content {
+      background: rgba(255, 255, 255, .04);
+      border-radius: 14px;
+      padding: 14px;
+    }
+
+    /* ===== MODAL ===== */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 0, 0, .55);
+      z-index: 60;
+    }
+
+    .modal-backdrop.open {
+      display: flex;
+    }
+
+    .modal {
+      width: min(520px, calc(100vw - 24px));
+      background: #0f2435;
+      color: #e8f1f8;
+      border: 1px solid #1f3b54;
+      border-radius: 16px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, .55);
+      padding: 16px;
+    }
+
+    .modal header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+
+    .modal h4 {
+      margin: 0;
+      font-weight: 900;
+    }
+
+    .modal .close {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      border: 1px solid #7a1f1f;
+      background: #c83b3b;
+      color: #fff;
+      font-weight: 900;
+      cursor: pointer;
+    }
+
+    #cardInfo {
+      margin-top: 10px;
+      text-align: center;
+      font-weight: 900;
+      font-size: 16px;
+      letter-spacing: .2px;
+    }
+
+    #cardInfo.normal {
+      color: #aeb8c2;
+    }
+
+    #cardInfo.epica {
+      color: #c084fc;
+    }
+
+    #cardInfo.lendaria {
+      color: #f59e0b;
+    }
+
+    .card-preview {
+      margin: 8px auto;
+      width: min(92%, 420px);
+      aspect-ratio: 2/3;
+      border-radius: 14px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .card-preview img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      border-radius: 12px;
+    }
+
+    .card-preview .holo-effect {
+      opacity: .9;
+    }
+
+    /* Holo por raridade (modal) */
+    .card-preview .holo-effect.normal::before {
+      background: linear-gradient(125deg, #00bfff, #1e90ff, #87cefa, #00bfff);
+      background-size: 400% 400%;
+      opacity: .25;
+    }
+
+    .card-preview .holo-effect.epica::before {
+      background: linear-gradient(125deg, #9370db, #8a2be2, #da70d6, #9370db);
+      background-size: 400% 400%;
+      opacity: .35;
+    }
+
+    .card-preview .holo-effect.lendaria::before {
+      background: linear-gradient(125deg, #ffd700, #ff8c00, #ff4500, #ffd700);
+      background-size: 400% 400%;
+      opacity: .4;
+    }
+  </style>
+</head>
+
+<body class="layout">
+  <!-- NAV -->
+  <div class="nav">
+    <a class="navbar-brand" href="/index">MIX AWARDS</a>
+    <a href="/importar-partida-html" class="nav-btn" data-color="#2db2ff">Importar Partida</a>
+    <a href="/consultar-partidas-html" class="nav-btn" data-color="#ff1f71">Consultar Partida</a>
+    <a href="/ranking-jogadores-html" class="nav-btn" data-color="#1eff45">Ranking Jogadores</a>
+    <a href="/shop-html" class="nav-btn" data-color="#6225E6">Loja</a>
+    <a href="/album-html" class="nav-btn" data-color="#a78bfa">Álbum</a>
+    <a href="/album-stickers-html" class="nav-btn" data-color="#a78bfb">Álbum Stickers</a>
+    <div class="nav-right">
+      <a id="btnOpenRegister" class="nav-btn" data-color="#a78bfa" href="/cadastrar-html">Cadastrar</a>
+      <a id="btnOpenLogin" class="nav-btn" data-color="#56c1ff" href="/login-html">Logar</a>
+    </div>
+  </div>
+  <div class="page-pad"></div>
+
+  <main class="section">
+    <div class="container">
+      <div class="panel">
+        <div class="title">MEU ÁLBUM</div>
+
+        <div class="album-toolbar">
+          <span class="badge" id="chipPacks">
+            <img src="/uploads/figurinhas/pacote.png" alt="">
+            <strong>Pacotes:</strong> <span id="packsQty">0</span>
+          </span>
+
+          <button id="btnOpenPack" class="btn primary" type="button">Abrir pacote</button>
+
+          <div id="pager" class="pager">
+            <button class="pbtn" data-act="prev">«</button>
+            <!-- páginas via JS -->
+            <button class="pbtn" data-act="next">»</button>
+          </div>
+        </div>
+
+        <div class="content">
+          <div id="albumGrid" class="grid" aria-live="polite"></div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- MODAL -->
+  <div id="cardModal" class="modal-backdrop">
+    <div class="modal" role="dialog" aria-modal="true" aria-label="Figurinha">
+      <header>
+        <h4 id="ttlFig">Figurinha</h4>
+        <button id="btnCloseModal" class="close" aria-label="Fechar">×</button>
+      </header>
+      <div class="card-preview">
+        <img id="cardImg" src="" alt="Figurinha">
+        <div class="holo-effect">
+          <div class="holo-reflect"></div>
+        </div>
+      </div>
+      <div id="cardInfo"></div>
+    </div>
+  </div>
+
+  <script src="/js/auth.js" defer></script>
+  <script src="/js/album.js" defer></script>
+</body>
+
+</html>

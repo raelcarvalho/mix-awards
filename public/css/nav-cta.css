@@ -1,0 +1,64 @@
+/* ==============================================
+   Nav CTA (skew + setas animadas)
+   Uso:
+   <a class="nav-cta" style="--cta-bg:#6225E6; --cta-accent:#FBC638">
+     <span class="txt">Loja</span>
+     <span class="ico">[SVG]</span>
+   </a>
+   ============================================== */
+
+:root{
+  --cta-bg:#6225E6;      /* cor base */
+  --cta-accent:#FBC638;  /* cor da animação das setas */
+}
+
+/* Link CTA */
+.nav a.nav-cta,
+.nav .nav-right a.nav-cta{
+  position:relative;
+  display:inline-flex; align-items:center; gap:10px;
+  min-height:36px; padding:8px 14px;
+  border-radius:10px; text-decoration:none;
+  color:#fff; font-weight:800;
+
+  background:var(--cta-bg);
+  box-shadow:4px 4px 0 #0a0f16;
+  transform:skewX(-12deg);
+  transition:box-shadow .35s ease, transform .15s ease;
+
+  /* neutraliza qualquer herança do nav-glass/base */
+  border:0 !important;
+  filter:none !important;
+  -webkit-backdrop-filter:none !important;
+  backdrop-filter:none !important;
+}
+
+/* desinclina conteúdo interno */
+.nav a.nav-cta .txt,
+.nav a.nav-cta .ico{ transform:skewX(12deg); display:inline-flex; align-items:center; }
+
+/* hover/active */
+.nav a.nav-cta:hover{ box-shadow:8px 8px 0 var(--cta-accent); background:var(--cta-bg); }
+.nav a.nav-cta:active{ transform:skewX(-12deg) translateY(1px); }
+
+/* Ícone (SVG) */
+.nav a.nav-cta .ico{ width:22px; height:16px; margin-left:6px; }
+.nav a.nav-cta .ico svg{ width:22px; height:auto; display:block; }
+
+/* Animações das setas */
+.nav a.nav-cta .ico path.one{ transform:translateX(-60%); transition:transform .4s; }
+.nav a.nav-cta .ico path.two{ transform:translateX(-30%); transition:transform .5s; }
+.nav a.nav-cta:hover .ico path.one{ transform:translateX(0); animation:navcta-color 1s infinite .6s; }
+.nav a.nav-cta:hover .ico path.two{ transform:translateX(0); animation:navcta-color 1s infinite .4s; }
+.nav a.nav-cta:hover .ico path.three{ animation:navcta-color 1s infinite .2s; }
+
+@keyframes navcta-color{
+  0%{ fill:#fff; } 50%{ fill:var(--cta-accent); } 100%{ fill:#fff; }
+}
+
+/* Responsivo */
+@media (max-width:700px){
+  .nav a.nav-cta{ padding:6px 10px; }
+  .nav a.nav-cta .ico,
+  .nav a.nav-cta .ico svg{ width:20px; }
+}

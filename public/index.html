@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <link rel="preload" href="/js/auth.js" as="script" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MIX AWARDS - Painel</title>
+  <style>
+    /* ===== ESTILOS GERAIS ===== */
+    :root {
+      --navy-900: #0b1824;
+      --navy-850: #0d1f2e;
+      --navy-800: #0f2436;
+      --navy-700: #112a41;
+      --navy-650: #14324c;
+      --navy-600: #183b59;
+      --ink: #e6f2ff;
+      --muted: #c8daec;
+      --line: #1f3953;
+      --accent: #56c1ff;
+      --accent-2: #87d4ff;
+      --gold: #f4c84a;
+    }
+
+    body {
+      margin: 0;
+      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      color: var(--ink);
+      background: radial-gradient(1200px 700px at 50% 0%, #183a5a 0%, #0f2337 50%, #0b1824 100%),
+        linear-gradient(180deg, #0b1824, #0b1824);
+      min-height: 100dvh;
+    }
+
+    .page-pad {
+      height: 8px;
+    }
+
+    .section {
+      padding: 18px 16px 28px;
+    }
+
+    .container {
+      width: min(1200px, 96vw);
+      margin: 0 auto;
+    }
+
+    .panel {
+      background: var(--navy-850);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 18px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, .35), inset 0 0 0 1px rgba(255, 255, 255, .03);
+    }
+
+    .title {
+      display: inline-block;
+      padding: 10px 14px;
+      background: #112a41;
+      border: 1px solid #244a6a;
+      border-radius: 10px;
+      font-weight: 900;
+      letter-spacing: .4px;
+      text-transform: uppercase;
+      color: #e6f2ff;
+      margin-bottom: 20px;
+    }
+
+    /* ===== NAVBAR ESTILOS ===== */
+    .nav {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 10px 16px;
+      background: #0b1824;
+      color: #e8f1f8;
+      border-bottom: 1px solid #12304a;
+    }
+
+    .navbar-brand {
+      font-weight: 800;
+      letter-spacing: .5px;
+      color: #e8f1f8;
+      text-decoration: none;
+      margin-right: 10px;
+      font-size: 1.2rem;
+    }
+
+    .nav-right {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    /* ===== NOVO ESTILO COM EFEITO DE LINHAS NO HOVER ===== */
+    .nav-btn {
+      color: #e8f1f8;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      margin: 0;
+      padding: 10px 15px;
+      position: relative;
+      text-decoration: none;
+      text-transform: uppercase;
+      transition: all 0.3s ease;
+      background: none !important;
+      border: none !important;
+    }
+
+    .nav-btn:hover,
+    .nav-btn:active {
+      letter-spacing: 1px;
+      background: none !important;
+    }
+
+    .nav-btn:after,
+    .nav-btn:before {
+      backface-visibility: hidden;
+      border: 1px solid rgba(255, 255, 255, 0);
+      bottom: 0px;
+      content: " ";
+      display: block;
+      margin: 0 auto;
+      position: relative;
+      transition: all 0.3s ease-in-out;
+      width: 0;
+    }
+
+    .nav-btn:hover:after,
+    .nav-btn:hover:before {
+      backface-visibility: hidden;
+      transition: width 0.3s ease-in-out;
+      width: 70%;
+    }
+
+    .nav-btn:hover:before {
+      bottom: auto;
+      top: 0;
+      width: 70%;
+    }
+
+    /* Cores específicas para cada botão */
+    .nav-btn[data-color="#2db2ff"]:hover:after,
+    .nav-btn[data-color="#2db2ff"]:hover:before {
+      border-color: #2db2ff;
+    }
+
+    .nav-btn[data-color="#ff1f71"]:hover:after,
+    .nav-btn[data-color="#ff1f71"]:hover:before {
+      border-color: #ff1f71;
+    }
+
+    .nav-btn[data-color="#1eff45"]:hover:after,
+    .nav-btn[data-color="#1eff45"]:hover:before {
+      border-color: #1eff45;
+    }
+
+    .nav-btn[data-color="#a78bfa"]:hover:after,
+    .nav-btn[data-color="#a78bfa"]:hover:before {
+      border-color: #a78bfa;
+    }
+
+    .nav a.nav-btn[data-color="#a78bfb"]:hover::before,
+    .nav a.nav-btn[data-color="#a78bfb"]:hover::after {
+      border-color: #ee6120;
+    }
+
+    .nav-btn[data-color="#56c1ff"]:hover:after,
+    .nav-btn[data-color="#56c1ff"]:hover:before {
+      border-color: #56c1ff;
+    }
+
+    .nav-btn[data-color="#ff9e9e"]:hover:after,
+    .nav-btn[data-color="#ff9e9e"]:hover:before {
+      border-color: #ff9e9e;
+    }
+
+    .nav-btn[data-color="#6225E6"]:hover:after,
+    .nav-btn[data-color="#6225E6"]:hover:before {
+      border-color: #FBC638;
+    }
+
+    /* ===== CARDS DO PAINEL ===== */
+    .cards-grid {
+      display: grid;
+      gap: 16px;
+      grid-template-columns: repeat(3, minmax(220px, 1fr));
+      margin-top: 12px;
+    }
+
+    @media (max-width: 980px) {
+      .cards-grid {
+        grid-template-columns: repeat(2, minmax(220px, 1fr));
+      }
+    }
+
+    @media (max-width: 640px) {
+      .cards-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .nav {
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+
+      .nav-right {
+        margin-left: 0;
+        width: 100%;
+        justify-content: center;
+        margin-top: 10px;
+      }
+    }
+
+    .cards-grid .card {
+      display: block;
+      padding: 16px;
+      border-radius: 14px;
+      background: #0f2337;
+      color: #e6f2ff;
+      text-decoration: none;
+      border: 1px solid #244a6a;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, .25), inset 0 0 0 1px rgba(255, 255, 255, .04);
+      transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease;
+    }
+
+    .cards-grid .card h3 {
+      margin: 0 0 6px;
+    }
+
+    .cards-grid .card p {
+      margin: 0;
+      color: #c8daec;
+    }
+
+    .cards-grid .card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 16px 40px rgba(0, 0, 0, .35), inset 0 0 0 1px rgba(255, 255, 255, .06);
+      border-color: #2a5a86;
+    }
+
+    /* ===== ESTILOS ESPECÍFICOS PARA O GOLD BADGE ===== */
+    .gold-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 4px 12px;
+      background: #132b3e;
+      border: 1px solid #23445e;
+      border-radius: 9999px;
+      line-height: 1;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    /* Ícone do gold - TAMANHO FIXO (18x18) */
+    .gold-badge>img,
+    .gold-badge>svg,
+    .gold-badge>span[aria-hidden] {
+      width: 18px !important;
+      height: 18px !important;
+      max-width: none !important;
+      object-fit: contain;
+      display: block;
+      transform: translateY(1px);
+      flex: 0 0 18px;
+    }
+
+    /* Segurança extra para o ícone com ID específico */
+    #goldIcon {
+      width: 18px !important;
+      height: 18px !important;
+      max-width: none !important;
+      object-fit: contain !important;
+      display: block;
+      transform: translateY(1px);
+    }
+
+    /* Valor numérico do gold */
+    .gold-badge .qty {
+      min-width: 14px;
+      text-align: right;
+    }
+
+    /* Mensagem de boas-vindas */
+    .nav-welcome {
+      white-space: nowrap;
+      color: #e8f1f8;
+      font-size: 14px;
+    }
+
+    /* Garantir que nenhuma imagem no nav fique muito grande */
+    .nav img {
+      max-height: 28px;
+      height: auto;
+    }
+  </style>
+</head>
+
+<body class="layout">
+  <!-- NAVBAR -->
+  <div class="nav">
+    <a class="navbar-brand" href="/index">MIX AWARDS</a>
+
+    <a href="/importar-partida-html" class="nav-btn" data-color="#2db2ff">Importar Partida</a>
+    <a href="/consultar-partidas-html" class="nav-btn" data-color="#ff1f71">Consultar Partida</a>
+    <a href="/ranking-jogadores-html" class="nav-btn" data-color="#1eff45">Ranking Jogadores</a>
+    <a href="/shop-html" class="nav-btn" data-color="#6225E6">Loja</a>
+    <a href="/album-html" class="nav-btn" data-color="#a78bfa">Álbum</a>
+    <a href="/album-stickers-html" class="nav-btn" data-color="#a78bfb">Álbum Stickers</a>
+
+    <div class="nav-right">
+      <!-- Este conteúdo será preenchido pelo auth.js -->
+    </div>
+  </div>
+
+  <div class="page-pad"></div>
+
+  <!-- CONTEÚDO -->
+  <main class="section">
+    <div class="container">
+      <div class="panel">
+        <div class="title">PAINEL MIX AWARDS</div>
+
+        <div class="cards-grid">
+          <a class="card" href="/importar-partida-html">
+            <h3>Importar Partida</h3>
+            <p>Faça a importação da partida pelo JSON da GamersClub.</p>
+          </a>
+
+          <a class="card" href="/consultar-partidas-html">
+            <h3>Consultar Partidas</h3>
+            <p>Veja partidas importadas, resultados e estatísticas detalhadas.</p>
+          </a>
+
+          <a class="card" href="/ranking-jogadores-html">
+            <h3>Ranking dos Jogadores</h3>
+            <p>Leaderboard completo com ADR, KDR, Kills e mais.</p>
+          </a>
+
+          <a class="card" href="/shop-html">
+            <h3>Loja</h3>
+            <p>Compre pacotes de figurinhas e cápsulas de stickers.</p>
+          </a>
+
+          <a class="card" href="/album-html">
+            <h3>Álbum</h3>
+            <p>Veja seu álbum de figurinhas.</p>
+          </a>
+
+          <a class="card" href="/album-stickers-html">
+            <h3>Álbum de Stickers</h3>
+            <p>Veja seu álbum de stickers.</p>
+          </a>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script src="/js/auth.js" defer></script>
+</body>
+
+</html>

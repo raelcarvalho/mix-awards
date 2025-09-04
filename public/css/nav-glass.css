@@ -1,0 +1,85 @@
+/* NAV GLASS - Versão simplificada e mais específica */
+.nav-glass {
+  --glow: #2db2ff;
+  --glass-bg: rgba(255, 255, 255, .06);
+  --glass-bd: rgba(255, 255, 255, .14);
+
+  position: relative;
+  isolation: isolate;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 12px;
+  border-radius: 10px;
+  color: #e8f1f8;
+  text-decoration: none;
+  background:
+    linear-gradient(120deg, rgba(255, 255, 255, .22), transparent 45%) -120% 0/200% 100% no-repeat,
+    var(--glass-bg);
+  border: 1px solid var(--glass-bd);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  font-weight: 800;
+  letter-spacing: .2px;
+  transition: letter-spacing .35s, border-color .25s, background-color .25s,
+              box-shadow .25s, transform .12s, background-position .6s;
+}
+
+.nav-glass:hover {
+  letter-spacing: .6px;
+  border-color: rgba(255, 255, 255, .22);
+  background-position: 120% 0;
+}
+
+/* Barras neon (topo/base) */
+.nav-glass::before,
+.nav-glass::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 28px;
+  height: 10px;
+  border-radius: 12px;
+  background: var(--glow);
+  box-shadow: 0 0 6px var(--glow), 0 0 18px var(--glow), 0 0 36px var(--glow), 0 0 60px var(--glow);
+  opacity: .95;
+  transition: .45s;
+  z-index: 0;
+}
+
+.nav-glass::before {
+  top: -6px;
+}
+
+.nav-glass::after {
+  bottom: -6px;
+}
+
+.nav-glass:hover::before {
+  top: 0;
+  height: 56%;
+  width: 86%;
+}
+
+.nav-glass:hover::after {
+  bottom: 0;
+  height: 56%;
+  width: 86%;
+}
+
+/* Fallback para navegadores sem suporte a backdrop-filter */
+@supports not ((backdrop-filter: blur(6px)) or (-webkit-backdrop-filter: blur(6px))) {
+  .nav-glass {
+    background:
+      linear-gradient(120deg, rgba(255, 255, 255, .16), transparent 45%) -120% 0/200% 100% no-repeat,
+      rgba(255, 255, 255, .08);
+  }
+}
+
+/* Responsivo */
+@media (max-width: 700px) {
+  .nav-glass {
+    padding: 6px 10px;
+  }
+}

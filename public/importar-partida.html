@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Importar Partida GC — MIX AWARDS</title>
+
+  <!-- Navbar padrão e tema navy -->
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/layout.css">
+
+  <!-- Estilos específicos desta página (form no tema navy) -->
+  <style>
+    /* container vertical entre painéis */
+    .vstack {
+      display: grid;
+      gap: 16px;
+    }
+
+    /* título da página (usa a tipografia do tema) */
+    .page-title {
+      margin-bottom: 10px;
+    }
+
+    /* caixas internas (subseções) usando o mesmo visual do tema */
+    .subpanel {
+      background: #0f2337;
+      border: 1px solid var(--line, #1f3953);
+      border-radius: 14px;
+      padding: 16px;
+      box-shadow: 0 12px 28px rgba(0, 0, 0, .28);
+    }
+
+    .subpanel h3 {
+      margin: 0 0 10px;
+      font-size: 1.05rem;
+      font-weight: 900;
+      letter-spacing: .3px;
+    }
+
+    /* campos */
+    .field {
+      margin: 12px 0;
+    }
+
+    .field label {
+      display: block;
+      font-weight: 700;
+      margin-bottom: 6px;
+      color: #cfe4ff;
+    }
+
+    .input,
+    textarea {
+      width: 100%;
+      padding: 12px 14px;
+      border-radius: 10px;
+      border: 1px solid #1e3a53;
+      background: #0f2233;
+      color: #e8f1f8;
+      outline: none;
+    }
+
+    .input:focus,
+    textarea:focus {
+      border-color: #56c1ff;
+      box-shadow: 0 0 0 3px rgba(86, 193, 255, .2);
+    }
+
+    /* botões no padrão do tema */
+    .btn {
+      appearance: none;
+      border: 0;
+      border-radius: 10px;
+      padding: 12px 16px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .btn.primary {
+      background: var(--accent, #56c1ff);
+      color: #072033;
+    }
+
+    .btn.success {
+      background: #36c56a;
+      color: #042a12;
+    }
+
+    .btn:disabled {
+      opacity: .6;
+      cursor: not-allowed;
+    }
+
+    /* iframe/resultados */
+    .iframe-wrap {
+      margin-top: 12px;
+      display: none;
+    }
+
+    .iframe-wrap h4 {
+      margin: 0 0 8px;
+      color: #cfe4ff;
+    }
+
+    iframe {
+      width: 100%;
+      height: 300px;
+      border: 0;
+      border-radius: 10px;
+      box-shadow: 0 6px 0 rgba(0, 0, 0, .25);
+      background: #0b1824;
+    }
+
+    /* alerts */
+    .alert {
+      margin-top: 12px;
+      padding: 12px 14px;
+      border-radius: 10px;
+      font-weight: 700;
+    }
+
+    .alert.ok {
+      background: #0f2a1a;
+      color: #9effb0;
+      border: 1px solid #1f6d3c;
+    }
+
+    .alert.err {
+      background: #2a0f10;
+      color: #ff9e9e;
+      border: 1px solid #6d1f22;
+    }
+
+    /* ====== Modal (mesmo do index) ====== */
+    .mw-modal {
+      position: fixed;
+      inset: 0;
+      display: none;
+      z-index: 1050;
+    }
+
+    .mw-modal.is-open {
+      display: block;
+    }
+
+    .mw-modal__backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, .55);
+      backdrop-filter: blur(1px);
+    }
+
+    .mw-modal__dialog {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      width: min(92vw, 420px);
+      background: #11293d;
+      color: #e8f1f8;
+      border-radius: 16px;
+      padding: 22px 20px 20px;
+      box-shadow: 0 18px 60px rgba(0, 0, 0, .45), inset 0 0 0 1px rgba(255, 255, 255, .05);
+      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    }
+
+    .mw-modal__title {
+      margin: 0 0 10px;
+      font-size: 1.25rem;
+      text-align: center;
+    }
+
+    .mw-modal__close {
+      position: absolute;
+      right: 10px;
+      top: 8px;
+      width: 36px;
+      height: 36px;
+      border: 0;
+      border-radius: 10px;
+      cursor: pointer;
+      background: transparent;
+      color: #cfe8ff;
+      font-size: 22px;
+      line-height: 1;
+    }
+
+    .mw-modal__close:hover {
+      background: rgba(255, 255, 255, .06);
+    }
+
+    .mw-field {
+      display: block;
+      margin: 12px 0;
+    }
+
+    .mw-field>span {
+      display: block;
+      font-size: .9rem;
+      color: #b9d4ea;
+      margin-bottom: 6px;
+    }
+
+    .mw-field>input {
+      width: 100%;
+      padding: 12px 14px;
+      border-radius: 10px;
+      border: 1px solid #1e3a53;
+      background: #0f2233;
+      color: #e8f1f8;
+      outline: none;
+    }
+
+    .mw-field>input:focus {
+      border-color: #56c1ff;
+      box-shadow: 0 0 0 3px rgba(86, 193, 255, .2);
+    }
+
+    .mw-btn {
+      width: 100%;
+      margin-top: 10px;
+      padding: 12px;
+      border: 0;
+      border-radius: 10px;
+      font-weight: 700;
+      background: #56c1ff;
+      color: #072033;
+      cursor: pointer;
+    }
+
+    .mw-btn:disabled {
+      opacity: .6;
+      cursor: not-allowed;
+    }
+
+    .mw-msg {
+      min-height: 18px;
+      margin-top: 10px;
+      font-size: .92rem;
+    }
+
+    .mw-msg.error {
+      color: #ff9e9e;
+    }
+
+    .mw-msg.ok {
+      color: #9effb0;
+    }
+
+    /* ========= NOVO: botões do menu iguais ao index (.nav-btn) ========= */
+    .nav-btn {
+      color: #e8f1f8;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      margin: 0;
+      padding: 10px 15px;
+      position: relative;
+      text-decoration: none;
+      text-transform: uppercase;
+      transition: all .3s ease;
+      background: none !important;
+      border: none !important;
+    }
+
+    .nav-btn:hover,
+    .nav-btn:active {
+      letter-spacing: 1px;
+      background: none !important;
+    }
+
+    .nav-btn:after,
+    .nav-btn:before {
+      backface-visibility: hidden;
+      border: 1px solid rgba(255, 255, 255, 0);
+      bottom: 0;
+      content: " ";
+      display: block;
+      margin: 0 auto;
+      position: relative;
+      transition: all .3s ease-in-out;
+      width: 0;
+    }
+
+    .nav-btn:hover:after,
+    .nav-btn:hover:before {
+      backface-visibility: hidden;
+      transition: width .3s ease-in-out;
+      width: 70%;
+    }
+
+    .nav-btn:hover:before {
+      bottom: auto;
+      top: 0;
+      width: 70%;
+    }
+
+    /* Cores no hover por data-color (mesmas do index) */
+    .nav-btn[data-color="#2db2ff"]:hover:after,
+    .nav-btn[data-color="#2db2ff"]:hover:before {
+      border-color: #2db2ff;
+    }
+
+    .nav-btn[data-color="#ff1f71"]:hover:after,
+    .nav-btn[data-color="#ff1f71"]:hover:before {
+      border-color: #ff1f71;
+    }
+
+    .nav-btn[data-color="#1eff45"]:hover:after,
+    .nav-btn[data-color="#1eff45"]:hover:before {
+      border-color: #1eff45;
+    }
+
+    .nav-btn[data-color="#a78bfa"]:hover:after,
+    .nav-btn[data-color="#a78bfa"]:hover:before {
+      border-color: #a78bfa;
+    }
+
+    .nav a.nav-btn[data-color="#a78bfb"]:hover::before,
+    .nav a.nav-btn[data-color="#a78bfb"]:hover::after {
+      border-color: #f57d1a;
+    }
+
+    .nav-btn[data-color="#56c1ff"]:hover:after,
+    .nav-btn[data-color="#56c1ff"]:hover:before {
+      border-color: #56c1ff;
+    }
+
+    .nav-btn[data-color="#ff9e9e"]:hover:after,
+    .nav-btn[data-color="#ff9e9e"]:hover:before {
+      border-color: #ff9e9e;
+    }
+
+    .nav-btn[data-color="#6225E6"]:hover:after,
+    .nav-btn[data-color="#6225E6"]:hover:before {
+      border-color: #FBC638;
+    }
+  </style>
+</head>
+
+<body class="layout">
+  <!-- NAV -->
+  <div class="nav">
+    <a class="navbar-brand" href="/index">MIX AWARDS</a>
+
+    <!-- Iguais ao index: .nav-btn + data-color -->
+    <a href="/importar-partida-html" class="nav-btn" data-color="#2db2ff">Importar Partida</a>
+    <a href="/consultar-partidas-html" class="nav-btn" data-color="#ff1f71">Consultar Partida</a>
+    <a href="/ranking-jogadores-html" class="nav-btn" data-color="#1eff45">Ranking Jogadores</a>
+    <a href="/shop-html" class="nav-btn" data-color="#6225E6">Loja</a>
+    <a href="/album-html" class="nav-btn" data-color="#a78bfa">Álbum</a>
+    <a href="/album-stickers-html" class="nav-btn" data-color="#a78bfb">Álbum Stickers</a>
+
+    <div class="nav-right">
+      <!-- auth.js substitui isto em runtime; deixei compatível com .nav-btn -->
+      <a id="btnOpenRegister" class="nav-btn" data-color="#a78bfa" href="javascript:void(0)">Cadastrar</a>
+      <a id="btnOpenLogin" class="nav-btn" data-color="#56c1ff" href="javascript:void(0)">Logar</a>
+    </div>
+  </div>
+
+  <div class="page-pad"></div>
+
+  <!-- CONTEÚDO -->
+  <main class="section">
+    <div class="container vstack">
+
+      <div class="panel">
+        <div class="title page-title">Importar Partida da GamersClub</div>
+
+        <!-- 1) Abrir lobby pelo ID -->
+        <section class="subpanel" id="matchIdForm">
+          <h3>1) Abrir página do Lobby pela ID</h3>
+          <div class="field">
+            <label for="matchId">ID da Partida</label>
+            <input class="input" type="text" id="matchId" placeholder="Ex: 24275140" required />
+          </div>
+          <button id="btnOpenLobby" class="btn primary" type="button">Carregar página da partida</button>
+
+          <div id="iframeContainer" class="iframe-wrap">
+            <h4>Copie o JSON (Network ► requisição da partida) e cole abaixo:</h4>
+            <iframe id="matchIframe" src=""></iframe>
+          </div>
+        </section>
+
+        <!-- 2) Colar JSON -->
+        <section class="subpanel" id="jsonForm">
+          <h3>2) Colar o JSON da Partida</h3>
+          <div class="field">
+            <label for="matchJson">JSON da Partida</label>
+            <textarea id="matchJson" rows="12" placeholder="Cole o JSON aqui..." required></textarea>
+          </div>
+
+          <!-- Gate de admin continua igual (auth.js mostra/oculta) -->
+          <div id="importarWrap" style="display:none">
+            <button id="btnImport" class="btn success" type="button">Importar Partida</button>
+            <div id="response"></div>
+          </div>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <!-- ==== MODAL DE LOGIN ==== -->
+  <div id="loginModal" class="mw-modal" aria-hidden="true" role="dialog" aria-labelledby="mwLoginTitle">
+    <div class="mw-modal__backdrop" data-close="true"></div>
+    <div class="mw-modal__dialog" role="document">
+      <button class="mw-modal__close" type="button" aria-label="Fechar" title="Fechar" id="btnCloseLogin">×</button>
+      <h2 id="mwLoginTitle" class="mw-modal__title">Entrar</h2>
+      <form id="loginForm" autocomplete="on" novalidate>
+        <label class="mw-field">
+          <span>E-mail</span>
+          <input id="loginEmail" name="email" type="email" placeholder="voce@exemplo.com" maxlength="100" required />
+        </label>
+        <label class="mw-field">
+          <span>Senha</span>
+          <input id="loginSenha" name="senha" type="password" placeholder="••••••••" maxlength="100" required />
+        </label>
+        <button id="btnDoLogin" class="mw-btn" type="submit">Logar</button>
+        <div id="loginMsg" class="mw-msg" aria-live="polite"></div>
+      </form>
+    </div>
+  </div>
+
+  <!-- JS da página -->
+  <script>
+    const qs = (s) => document.querySelector(s);
+
+    // Abrir lobby pelo ID
+    qs('#btnOpenLobby').addEventListener('click', () => {
+      const id = qs('#matchId').value.trim();
+      if (!id) return;
+      qs('#matchIframe').src = `https://gamersclub.com.br/lobby/match/${id}/1`;
+      qs('#iframeContainer').style.display = 'block';
+    });
+
+    // Importar JSON via fetch
+    qs('#btnImport').addEventListener('click', async () => {
+      const rawJson = qs('#matchJson').value.trim();
+      const resp = qs('#response');
+      resp.innerHTML = '';
+
+      const token = localStorage.getItem("auth_token"); // permanece o gate de login/admin
+
+      if (!token) {
+        resp.innerHTML = `<div class="alert err">Você precisa estar logado para importar uma partida.</div>`;
+        return;
+      }
+
+      let payload;
+      try {
+        payload = JSON.parse(rawJson);
+      } catch (err) {
+        resp.innerHTML = `<div class="alert err">JSON inválido: ${err.message}</div>`;
+        return;
+      }
+
+      qs('#btnImport').disabled = true;
+
+      try {
+        const r = await fetch('http://127.0.0.1:3399/api/partida/importar-json', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify(payload),
+        });
+
+        const data = await r.json().catch(() => ({}));
+
+        if (!r.ok) {
+          resp.innerHTML = `<div class="alert err">Erro: ${data?.mensagem || 'Erro ao importar a partida.'}</div>`;
+        } else {
+          resp.innerHTML = `<div class="alert ok">${data?.mensagem || 'Partida importada com sucesso!'}</div>`;
+          qs('#matchJson').value = '';
+        }
+      } catch (e) {
+        console.error(e);
+        resp.innerHTML = `<div class="alert err">Erro de conexão ao importar.</div>`;
+      } finally {
+        qs('#btnImport').disabled = false;
+      }
+    });
+  </script>
+
+  <!-- Script de autenticação (mantém o gate de admin no importarWrap e nav-right) -->
+  <script src="/js/auth.js" defer></script>
+</body>
+
+</html>

@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Ranking dos Jogadores — MIX AWARDS</title>
+
+  <!-- Evita cache no nível do HTML -->
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+
+  <!-- CSS do nav/tema -->
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/layout.css">
+
+  <!-- Pré-carrega o JS de auth -->
+  <link rel="preload" href="/js/auth.js" as="script" />
+
+  <style>
+    :root {
+      --bg0: #0a1622;
+      --bg1: #091a27;
+      --panel: #0f2435;
+      --card: #132b3e;
+      --ink: #dbe9f6;
+      --muted: #88a4bc;
+      --line: #1f3b54;
+      --line2: #2a4d6a;
+      --chip: #12324a;
+      --chip-text: #e6f2ff;
+      --accent: #2d86d6;
+      --accent-2: #3a93e2;
+      --radius: 16px;
+      --container: max(320px, min(1400px, 96vw));
+      --player-min: 180px;
+      --stat-min: 60px;
+      --rank-min: 40px;
+      --gap: 12px;
+      --gold: linear-gradient(135deg, #ffd700, #daa520);
+      --silver: linear-gradient(135deg, #c0c0c0, #a9a9a9);
+      --bronze: linear-gradient(135deg, #cd7f32, #8c6b46);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0
+    }
+
+    body.layout {
+      color: var(--ink);
+      background:
+        radial-gradient(1200px 800px at 20% -10%, rgba(55, 115, 170, .18), transparent 60%),
+        radial-gradient(1000px 700px at 85% -10%, rgba(38, 89, 140, .18), transparent 60%),
+        linear-gradient(180deg, var(--bg1), var(--bg0));
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    }
+
+    .nav {
+      position: sticky;
+      top: 0;
+      z-index: 50
+    }
+
+    .page-pad {
+      height: 10px
+    }
+
+    .section {
+      padding: 16px 0 28px
+    }
+
+    .container {
+      width: var(--container);
+      margin: 0 auto
+    }
+
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: linear-gradient(180deg, rgba(255, 255, 255, .05), rgba(255, 255, 255, .03)), var(--panel);
+      box-shadow: 0 16px 40px rgba(0, 0, 0, .35), inset 0 0 0 1px rgba(255, 255, 255, .03);
+      padding: 16px;
+    }
+
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px
+    }
+
+    .title {
+      display: inline-block;
+      background: #0f2a40;
+      color: #e8f1f8;
+      border: 1px solid var(--line2);
+      border-radius: 10px;
+      padding: 8px 14px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: .4px;
+    }
+
+    .crumb {
+      color: var(--muted);
+      font-weight: 800;
+      letter-spacing: .25px
+    }
+
+    .podium-section {
+      display: flex;
+      gap: 15px;
+      justify-content: space-between;
+      margin-bottom: 20px;
+      min-height: 190px;
+    }
+
+    .podium-item {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-end;
+      border-radius: 14px;
+      padding: 16px 14px;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 8px 25px rgba(0, 0, 0, .3);
+    }
+
+    .podium-1 {
+      flex: 1.35;
+      transform: translateY(-18px);
+      background: var(--gold);
+      border: 2px solid #ffd700;
+    }
+
+    .podium-2 {
+      background: var(--silver);
+      border: 2px solid #c0c0c0;
+      transform: translateY(-8px);
+    }
+
+    .podium-3 {
+      background: var(--bronze);
+      border: 2px solid #cd7f32;
+    }
+
+    .podium-badge {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+      z-index: 2;
+      background: rgba(0, 0, 0, .15);
+      color: #fff;
+      border: 2px solid rgba(255, 255, 255, .55);
+      text-shadow: 0 1px 2px rgba(0, 0, 0, .35);
+    }
+
+    .podium-content {
+      position: relative;
+      z-index: 2;
+      text-align: center;
+      color: #0b0b0b;
+    }
+
+    .podium-rank {
+      font-size: 22px;
+      font-weight: 900;
+      margin-bottom: 4px;
+    }
+
+    .podium-name {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      font-weight: 900;
+      margin-bottom: 8px;
+      color: #111;
+      text-shadow: 0 1px 0 rgba(255, 255, 255, .35);
+    }
+
+    .podium-avatar {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      object-fit: cover;
+      flex: 0 0 60px;
+      border: 2px solid rgba(0, 0, 0, .18);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, .35);
+      background: #fff;
+      animation: float 3s ease-in-out infinite;
+    }
+
+    .podium-1 .podium-avatar {
+      width: 80px;
+      height: 80px;
+      border-width: 3px;
+      animation: float-1st 3s ease-in-out infinite;
+    }
+
+    .podium-2 .podium-avatar {
+      animation: float-2nd 3.2s ease-in-out infinite;
+    }
+
+    .podium-3 .podium-avatar {
+      animation: float-3rd 3.4s ease-in-out infinite;
+    }
+
+    .podium-score {
+      font-size: 16px;
+      font-weight: 800;
+      opacity: .95
+    }
+
+    @keyframes float-1st {
+
+      0%,
+      100% {
+        transform: translateY(0) scale(1);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, .4)
+      }
+
+      50% {
+        transform: translateY(-12px) scale(1.03);
+        box-shadow: 0 15px 25px rgba(0, 0, 0, .5)
+      }
+    }
+
+    @keyframes float-2nd {
+
+      0%,
+      100% {
+        transform: translateY(0) scale(1);
+        box-shadow: 0 8px 15px rgba(0, 0, 0, .3)
+      }
+
+      50% {
+        transform: translateY(-8px) scale(1.02);
+        box-shadow: 0 12px 20px rgba(0, 0, 0, .4)
+      }
+    }
+
+    @keyframes float-3rd {
+
+      0%,
+      100% {
+        transform: translateY(0) scale(1);
+        box-shadow: 0 6px 12px rgba(0, 0, 0, .25)
+      }
+
+      50% {
+        transform: translateY(-6px) scale(1.01);
+        box-shadow: 0 10px 16px rgba(0, 0, 0, .35)
+      }
+    }
+
+    @keyframes podiumShine {
+      0% {
+        transform: rotate(45deg) translateY(-100%)
+      }
+
+      100% {
+        transform: rotate(45deg) translateY(100%)
+      }
+    }
+
+    .grid {
+      display: grid;
+      align-items: center;
+      width: 100%;
+      gap: var(--gap);
+      grid-template-columns: minmax(var(--rank-min), .8fr) minmax(var(--player-min), 3.6fr) repeat(13, minmax(var(--stat-min), 1fr));
+    }
+
+    .head {
+      margin: 8px 0 10px;
+    }
+
+    .head .cell {
+      background: var(--chip);
+      color: var(--chip-text);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      height: 46px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, .05), 0 2px 0 rgba(0, 0, 0, .25);
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: .25px;
+      user-select: none;
+    }
+
+    .head .cell.primary {
+      justify-content: flex-start;
+      padding: 0 12px;
+    }
+
+    .head .cell.clickable {
+      cursor: pointer;
+    }
+
+    .head .cell.clickable:hover {
+      outline: 2px solid var(--accent);
+    }
+
+    .row {
+      background: linear-gradient(180deg, rgba(255, 255, 255, .06), rgba(255, 255, 255, .04)), var(--card);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 10px;
+      color: #d6e6f4;
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .03);
+    }
+
+    .rank {
+      text-align: center;
+      font-weight: 900
+    }
+
+    .val {
+      text-align: center;
+      font-variant-numeric: tabular-nums
+    }
+
+    .pl {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 180px;
+    }
+
+    .pl .avatar {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      object-fit: cover;
+      flex: 0 0 28px;
+      background: #0b1a26;
+      border: 1px solid rgba(255, 255, 255, .08);
+    }
+
+    .pl .nome {
+      font-weight: 900;
+      letter-spacing: .2px;
+      color: #e8f1f8;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 320px;
+    }
+
+    .empty {
+      margin-top: 10px;
+      padding: 16px;
+      text-align: center;
+      color: var(--muted);
+      border: 1px dashed var(--line);
+      border-radius: 12px;
+      background: rgba(255, 255, 255, .03);
+    }
+
+    .row.top-1 {
+      border-color: #ffd700;
+      background: linear-gradient(135deg, rgba(255, 215, 0, .15), var(--card));
+    }
+
+    .row.top-2 {
+      border-color: #c0c0c0;
+      background: linear-gradient(135deg, rgba(192, 192, 192, .15), var(--card));
+    }
+
+    .row.top-3 {
+      border-color: #cd7f32;
+      background: linear-gradient(135deg, rgba(205, 127, 50, .15), var(--card));
+    }
+
+    .row.top-1 .rank {
+      color: #ffd700;
+      text-shadow: 0 0 8px rgba(255, 215, 0, .5)
+    }
+
+    .row.top-2 .rank {
+      color: #c0c0c0;
+      text-shadow: 0 0 8px rgba(192, 192, 192, .5)
+    }
+
+    .row.top-3 .rank {
+      color: #cd7f32;
+      text-shadow: 0 0 8px rgba(205, 127, 50, .5)
+    }
+
+    @media (max-width:1100px) {
+      :root {
+        --player-min: 150px;
+        --stat-min: 52px
+      }
+
+      .podium-section {
+        flex-direction: column;
+        min-height: auto
+      }
+
+      .podium-item {
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+        padding: 14px 18px;
+        transform: none
+      }
+
+      .podium-1,
+      .podium-2 {
+        transform: none
+      }
+
+      .podium-name {
+        justify-content: flex-start
+      }
+    }
+
+    @media (max-width:900px) {
+      :root {
+        --player-min: 140px;
+        --stat-min: 48px;
+        --gap: 6px
+      }
+
+      .podium-avatar {
+        animation: float-mobile 3s ease-in-out infinite !important;
+      }
+
+      @keyframes float-mobile {
+
+        0%,
+        100% {
+          transform: translateY(0) scale(1);
+          box-shadow: 0 6px 12px rgba(0, 0, 0, .3)
+        }
+
+        50% {
+          transform: translateY(-6px) scale(1.02);
+          box-shadow: 0 10px 16px rgba(0, 0, 0, .4)
+        }
+      }
+    }
+
+    @media (max-width:760px) {
+      :root {
+        --player-min: 120px;
+        --stat-min: 42px;
+        --gap: 5px
+      }
+
+      .podium-name {
+        font-size: 16px
+      }
+    }
+
+    .nav-btn {
+      color: #e8f1f8;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      margin: 0;
+      padding: 10px 15px;
+      position: relative;
+      text-decoration: none;
+      text-transform: uppercase;
+      transition: all .3s ease;
+      background: none !important;
+      border: none !important;
+    }
+
+    .nav-btn:hover,
+    .nav-btn:active {
+      letter-spacing: 1px;
+      background: none !important
+    }
+
+    .nav-btn:after,
+    .nav-btn:before {
+      backface-visibility: hidden;
+      border: 1px solid rgba(255, 255, 255, 0);
+      bottom: 0;
+      content: " ";
+      display: block;
+      margin: 0 auto;
+      position: relative;
+      transition: all .3s ease-in-out;
+      width: 0;
+    }
+
+    .nav-btn:hover:after,
+    .nav-btn:hover:before {
+      width: 70%
+    }
+
+    .nav-btn:hover:before {
+      bottom: auto;
+      top: 0
+    }
+
+    .nav-btn[data-color="#2db2ff"]:hover:after,
+    .nav-btn[data-color="#2db2ff"]:hover:before {
+      border-color: #2db2ff
+    }
+
+    .nav-btn[data-color="#ff1f71"]:hover:after,
+    .nav-btn[data-color="#ff1f71"]:hover:before {
+      border-color: #ff1f71
+    }
+
+    .nav-btn[data-color="#1eff45"]:hover:after,
+    .nav-btn[data-color="#1eff45"]:hover:before {
+      border-color: #1eff45
+    }
+
+    .nav-btn[data-color="#a78bfa"]:hover:after,
+    .nav-btn[data-color="#a78bfa"]:hover:before {
+      border-color: #a78bfa
+    }
+
+    .nav a.nav-btn[data-color="#a78bfb"]:hover::before,
+    .nav a.nav-btn[data-color="#a78bfb"]:hover::after {
+      border-color: #f86815
+    }
+
+    .nav-btn[data-color="#56c1ff"]:hover:after,
+    .nav-btn[data-color="#56c1ff"]:hover:before {
+      border-color: #56c1ff
+    }
+
+    .nav-btn[data-color="#ff9e9e"]:hover:after,
+    .nav-btn[data-color="#ff9e9e"]:hover:before {
+      border-color: #ff9e9e
+    }
+
+    .nav-btn[data-color="#6225E6"]:hover:after,
+    .nav-btn[data-color="#6225E6"]:hover:before {
+      border-color: #FBC638
+    }
+  </style>
+</head>
+
+<body class="layout">
+  <!-- NAV -->
+  <div class="nav">
+    <a class="navbar-brand" href="/index">MIX AWARDS</a>
+
+    <a href="/importar-partida-html" class="nav-btn" data-color="#2db2ff">Importar Partida</a>
+    <a href="/consultar-partidas-html" class="nav-btn" data-color="#ff1f71">Consultar Partida</a>
+    <a href="/ranking-jogadores-html" class="nav-btn" data-color="#1eff45">Ranking Jogadores</a>
+    <a href="/shop-html" class="nav-btn" data-color="#6225E6">Loja</a>
+    <a href="/album-html" class="nav-btn" data-color="#a78bfa">Álbum</a>
+    <a href="/album-stickers-html" class="nav-btn" data-color="#a78bfb">Álbum Stickers</a>
+
+    <div class="nav-right">
+      <a id="btnOpenRegister" class="nav-btn" data-color="#a78bfa" href="javascript:void(0)">Cadastrar</a>
+      <a id="btnOpenLogin" class="nav-btn" data-color="#56c1ff" href="javascript:void(0)">Logar</a>
+    </div>
+  </div>
+
+  <div class="page-pad"></div>
+
+  <main class="section">
+    <div class="container">
+      <div class="panel">
+        <div class="toolbar">
+          <div class="title">Ranking dos Jogadores</div>
+          <div class="crumb">MIX AWARDS</div>
+        </div>
+
+        <!-- PÓDIO -->
+        <div id="podium" class="podium-section"></div>
+
+        <!-- Cabeçalho -->
+        <div id="head" class="grid head">
+          <div class="cell primary">Top</div>
+          <div class="cell primary clickable" data-sort="nome">Jogador</div>
+          <div class="cell clickable" data-sort="adr">ADR</div>
+          <div class="cell clickable" data-sort="kills">Kills</div>
+          <div class="cell clickable" data-sort="assistencias">Assists</div>
+          <div class="cell clickable" data-sort="mortes">Deaths</div>
+          <div class="cell clickable" data-sort="kda_player">KDR</div>
+          <div class="cell clickable" data-sort="multi_kill">M.Kills</div>
+          <div class="cell clickable" data-sort="first_kill">First</div>
+          <div class="cell clickable" data-sort="flash_assist">Flash</div>
+          <div class="cell clickable" data-sort="defuses">Defuses</div>
+          <div class="cell clickable" data-sort="bomb_plants">Plant</div>
+          <div class="cell clickable" data-sort="vitorias">Wins</div>
+          <div class="cell clickable" data-sort="qtd_partidas">Partidas</div>
+          <div class="cell clickable" data-sort="pontos">Pontos</div>
+        </div>
+
+        <!-- Linhas -->
+        <div id="rows"></div>
+        <div id="empty" class="empty" style="display:none">Nenhum jogador encontrado.</div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    /* Helpers */
+    const safeJson = async (res) => { try { return await res.json(); } catch { return null; } };
+    const unwrap = (j) => {
+      if (Array.isArray(j)) return j;
+      if (!j || typeof j !== 'object') return [];
+      return (j.jogadores || j.resultados?.jogadores || j.resultados || j.data?.jogadores || j.items || []);
+    };
+    const num = (v) => {
+      const x = (v === null || v === undefined || v === "") ? NaN : Number(String(v).replace(",", "."));
+      return Number.isFinite(x) ? x : 0;
+    };
+    const fmt = (v, d = 0) =>
+    (v === null || v === undefined || v === "" || isNaN(v) ? "-" :
+      Number(v).toLocaleString("pt-BR", { maximumFractionDigits: d, minimumFractionDigits: d }));
+
+    // fallback transparente para evitar "broken image"
+    const FALLBACK_AVATAR = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
+
+    let DATA = []; let sort = { field: "pontos", dir: "desc" };
+
+    /* Normaliza campos (inclui imagem) */
+    function normalizePlayer(p) {
+      return {
+        nome: p.nome ?? p.name ?? p.player ?? "-",
+        imagem: p.imagem ?? p.jogador_imagem ?? p.avatar ?? "",
+        adr: p.adr ?? p.ADR ?? 0,
+        kills: p.kills ?? p.frags ?? 0,
+        assistencias: p.assistencias ?? p.assists ?? 0,
+        mortes: p.mortes ?? p.deaths ?? 0,
+        kda_player: p.kda_player ?? p.kdr ?? p.kd ?? 0,
+        multi_kill: p.multi_kill ?? p.multiKills ?? 0,
+        first_kill: p.first_kill ?? p.firstKills ?? 0,
+        flash_assist: p.flash_assist ?? p.flashAssists ?? 0,
+        defuses: p.defuses ?? p.defuse ?? 0,
+        bomb_plants: p.bomb_plants ?? p.plants ?? 0,
+        vitorias: p.vitorias ?? p.wins ?? 0,
+        qtd_partidas: p.qtd_partidas ?? p.matches ?? 0,
+        pontos: p.pontos ?? p.points ?? 0,
+      };
+    }
+
+    /* Célula nome + avatar */
+    function playerCell(p) {
+      const img = (p.imagem && String(p.imagem).trim()) ? p.imagem : FALLBACK_AVATAR;
+      const safeAlt = String(p.nome || "").replace(/"/g, '&quot;');
+      return `
+        <div class="pl">
+          <img class="avatar" src="${img}" alt="${safeAlt}" loading="lazy"
+               onerror="this.src='${FALLBACK_AVATAR}'">
+          <div class="nome" title="${safeAlt}">${p.nome}</div>
+        </div>
+      `;
+    }
+
+    /* Pódio (2º | 1º | 3º) */
+    function makePodiumItem(player, position) {
+      const el = document.createElement('div');
+      el.className = `podium-item podium-${position}`;
+      const img = (player.imagem && String(player.imagem).trim()) ? player.imagem : FALLBACK_AVATAR;
+
+      el.innerHTML = `
+        <div class="podium-badge">${position}</div>
+        <div class="podium-content">
+          <div class="podium-rank">${position}º Lugar</div>
+          <div class="podium-name">
+            <img class="podium-avatar" src="${img}" alt="${player.nome}"
+                 onerror="this.src='${FALLBACK_AVATAR}'" loading="lazy">
+            <span>${player.nome}</span>
+          </div>
+          <div class="podium-score">${fmt(player.pontos)} pontos</div>
+        </div>
+      `;
+      return el;
+    }
+    function renderPodium(top) {
+      const podium = document.getElementById('podium');
+      podium.innerHTML = '';
+      if (top.length >= 3) {
+        podium.appendChild(makePodiumItem(top[1], 2));
+        podium.appendChild(makePodiumItem(top[0], 1));
+        podium.appendChild(makePodiumItem(top[2], 3));
+      } else if (top.length === 2) {
+        podium.appendChild(makePodiumItem(top[1], 2));
+        podium.appendChild(makePodiumItem(top[0], 1));
+      } else if (top.length === 1) {
+        podium.appendChild(makePodiumItem(top[0], 1));
+      }
+    }
+
+    /* Linha */
+    function makeRow(j, i) {
+      const el = document.createElement('div');
+      el.className = 'row grid';
+      if (i === 0) el.classList.add('top-1'); else if (i === 1) el.classList.add('top-2'); else if (i === 2) el.classList.add('top-3');
+
+      el.innerHTML = `
+        <div class="rank">${i + 1}</div>
+        <div class="name">${playerCell(j)}</div>
+        <div class="val">${fmt(j.adr, 2)}</div>
+        <div class="val">${fmt(j.kills)}</div>
+        <div class="val">${fmt(j.assistencias)}</div>
+        <div class="val">${fmt(j.mortes)}</div>
+        <div class="val">${fmt(j.kda_player, 2)}</div>
+        <div class="val">${fmt(j.multi_kill)}</div>
+        <div class="val">${fmt(j.first_kill)}</div>
+        <div class="val">${fmt(j.flash_assist)}</div>
+        <div class="val">${fmt(j.defuses)}</div>
+        <div class="val">${fmt(j.bomb_plants)}</div>
+        <div class="val">${fmt(j.vitorias)}</div>
+        <div class="val">${fmt(j.qtd_partidas)}</div>
+        <div class="val">${fmt(j.pontos)}</div>
+      `;
+      return el;
+    }
+
+    function render() {
+      const rows = document.getElementById('rows');
+      const empty = document.getElementById('empty');
+      rows.innerHTML = '';
+
+      if (!Array.isArray(DATA) || DATA.length === 0) { empty.style.display = 'block'; return; }
+      empty.style.display = 'none';
+
+      const { field, dir } = sort;
+      const sorted = [...DATA].sort((a, b) => {
+        if (field === 'nome') { const r = String(a.nome).localeCompare(String(b.nome)); return dir === 'asc' ? r : -r; }
+        const diff = num(a[field]) - num(b[field]); return dir === 'asc' ? diff : -diff;
+      });
+
+      renderPodium(sorted.slice(0, 3));
+      sorted.forEach((j, i) => rows.appendChild(makeRow(j, i)));
+    }
+
+    async function fetchJogadores() {
+      // Ajuste a primeira URL para sua rota oficial de ranking
+      const urls = [
+        `/api/jogadores/ranking?t=${Date.now()}`,
+        `/api/partida/ranking?t=${Date.now()}`,
+        `/api/jogadores?t=${Date.now()}`,
+        `/jogadores?t=${Date.now()}`
+      ];
+      for (const u of urls) {
+        try {
+          const res = await fetch(u, { headers: { 'Accept': 'application/json' }, cache: 'no-store' });
+          if (!res.ok) continue;
+          const j = await safeJson(res);
+          const arr = unwrap(j);
+          if (Array.isArray(arr) && arr.length) return arr;
+          if (Array.isArray(j) && j.length) return j;
+        } catch { }
+      }
+      return [];
+    }
+
+    async function load() {
+      try {
+        const raw = await fetchJogadores();
+        DATA = raw.map(normalizePlayer);
+      } catch { DATA = []; }
+      render();
+    }
+
+    document.getElementById('head').addEventListener('click', (e) => {
+      const btn = e.target.closest('.clickable');
+      if (!btn) return;
+      const field = btn.getAttribute('data-sort');
+      sort.dir = (sort.field === field && sort.dir === 'desc') ? 'asc' : 'desc';
+      sort.field = field;
+      render();
+    });
+
+    // 🔔 Recarrega quando outra aba invalidar o ranking (após exclusão de partida)
+    window.addEventListener('storage', (e) => {
+      if (e.key === 'ranking_invalidate') load();
+    });
+    // 🔁 Recarrega quando esta aba volta ao foco
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') load();
+    });
+
+    // Boot
+    load();
+  </script>
+
+  <!-- Auth -->
+  <script src="/js/auth.js" defer></script>
+</body>
+
+</html>

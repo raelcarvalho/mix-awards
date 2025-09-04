@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>Abrir Cápsula — MIX AWARDS</title>
+
+    <link rel="stylesheet" href="/css/base.css">
+    <link rel="stylesheet" href="/css/layout.css">
+    <link rel="preload" href="/js/auth.js" as="script" />
+
+    <style>
+        :root {
+            --tile: 250px;
+            --gap: 20px;
+            --tileW: var(--tile);
+            --tileH: calc(var(--tile) + 32px);
+            --gold: #ffd45a;
+            --bronze: #cd7f32
+        }
+
+        .panel .content {
+            background: rgba(255, 255, 255, .03)
+        }
+
+        .caps-wrap {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap
+        }
+
+        .caps-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: #132b3e;
+            color: #e8f1f8;
+            border: 1px solid #23445e;
+            padding: 6px 12px;
+            border-radius: 999px;
+            font-weight: 800
+        }
+
+        .caps-badge img {
+            width: 18px;
+            height: 18px;
+            transform: translateY(1px)
+        }
+
+        .btn.primary {
+            background: #2d86d6;
+            color: #fff;
+            border: 1px solid #3a93e2;
+            border-radius: 10px;
+            padding: 10px 14px;
+            font-weight: 800
+        }
+
+        .stage {
+            min-height: 380px;
+            display: grid;
+            place-items: center;
+            background: radial-gradient(60% 60% at 50% 40%, rgba(255, 212, 90, .08), transparent 70%);
+            border-radius: 12px;
+            position: relative;
+            overflow: hidden
+        }
+
+        .capsuleBox {
+            position: relative;
+            display: grid;
+            place-items: center;
+            gap: 18px
+        }
+
+        .capsule {
+            width: 240px;
+            filter: drop-shadow(0 20px 30px rgba(0, 0, 0, .45));
+            animation: wobble 3.6s ease-in-out infinite;
+            will-change: transform;
+            user-select: none;
+            pointer-events: none
+        }
+
+        .cta-open {
+            appearance: none;
+            border: 0;
+            cursor: pointer;
+            padding: 12px 22px;
+            border-radius: 12px;
+            font-weight: 900;
+            background: linear-gradient(180deg, #ffb347, #ff9800);
+            color: #1b1300;
+            text-shadow: 0 1px 0 rgba(255, 255, 255, .35);
+            box-shadow: 0 6px 0 rgba(179, 86, 11, .7), 0 10px 16px rgba(0, 0, 0, .35), inset 0 1px 0 rgba(255, 255, 255, .25)
+        }
+
+        .cta-open:disabled {
+            background: linear-gradient(180deg, #666, #555);
+            color: #ddd;
+            box-shadow: none;
+            cursor: not-allowed
+        }
+
+        .capsuleBox .burst {
+            position: absolute;
+            inset: -20%;
+            background: radial-gradient(closest-side, rgba(255, 212, 90, .55), rgba(255, 212, 90, .22) 50%, transparent 70%);
+            filter: blur(12px);
+            opacity: 0;
+            pointer-events: none;
+            border-radius: 50%
+        }
+
+        @keyframes wobble {
+
+            0%,
+            100% {
+                transform: translateX(0) rotate(0)
+            }
+
+            25% {
+                transform: translateX(-6px) rotate(-2.2deg)
+            }
+
+            50% {
+                transform: translateX(0) rotate(0)
+            }
+
+            75% {
+                transform: translateX(6px) rotate(2.2deg)
+            }
+        }
+
+        .capsuleBox.opening .capsule {
+            animation: openSequence .9s cubic-bezier(.22, 1, .29, 1) forwards
+        }
+
+        .capsuleBox.opening .burst {
+            animation: burst .9s ease-out forwards
+        }
+
+        @keyframes openSequence {
+            0% {
+                transform: translateX(0) rotate(0) scale(1);
+                opacity: 1
+            }
+
+            15% {
+                transform: translateX(-5px) rotate(-2deg) scale(1.02)
+            }
+
+            30% {
+                transform: translateX(6px) rotate(2deg) scale(1.02)
+            }
+
+            45% {
+                transform: translateX(-4px) rotate(-1.5deg)
+            }
+
+            60% {
+                transform: translateX(0) rotate(0)
+            }
+
+            85% {
+                transform: translateX(0) rotate(0) scale(1.12)
+            }
+
+            100% {
+                transform: translateX(0) rotate(0) scale(1.45);
+                opacity: 0
+            }
+        }
+
+        @keyframes burst {
+            0% {
+                opacity: 0;
+                transform: scale(.6)
+            }
+
+            30% {
+                opacity: .85;
+                transform: scale(1.05)
+            }
+
+            60% {
+                opacity: .55;
+                transform: scale(1.35)
+            }
+
+            100% {
+                opacity: 0;
+                transform: scale(1.75)
+            }
+        }
+
+        .subtitle {
+            color: #fff;
+            font-weight: 900;
+            margin: 10px 0 8px
+        }
+
+        .pool {
+            display: flex;
+            gap: 18px;
+            overflow-x: auto;
+            padding-bottom: 8px
+        }
+
+        .card {
+            width: 220px;
+            aspect-ratio: 1/1;
+            border-radius: 14px;
+            position: relative;
+            background: linear-gradient(180deg, rgba(10, 18, 28, .72), rgba(10, 20, 30, .8));
+            border: 1px solid rgba(255, 255, 255, .06);
+            flex: 0 0 auto;
+            display: grid;
+            place-items: center
+        }
+
+        .card::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            background: radial-gradient(60% 60% at 50% 50%, rgba(255, 191, 73, .22), transparent 70%);
+            filter: blur(14px)
+        }
+
+        .card img {
+            width: 86%;
+            height: 86%;
+            object-fit: contain;
+            z-index: 1;
+            filter: drop-shadow(0 10px 16px rgba(0, 0, 0, .5))
+        }
+
+        .card .base {
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            height: 14px;
+            border-radius: 0 0 14px 14px;
+            background: linear-gradient(to top, var(--bronze), transparent);
+            opacity: .9
+        }
+
+        .overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, .85);
+            display: none;
+            z-index: 9999;
+            align-items: center;
+            justify-content: center;
+            padding: 20px
+        }
+
+        .ov {
+            width: min(100%, 1300px)
+        }
+
+        #roulette {
+            width: 1200px;
+            height: calc(var(--tileH) + 30px);
+            background: #0f0f0f;
+            margin: 0 auto;
+            overflow: hidden;
+            border-radius: 10px;
+            mask-image: linear-gradient(to right, transparent 0%, black 10%, black 90%, transparent 100%);
+            -webkit-mask-image: linear-gradient(to right, transparent 0%, black 10%, black 90%, transparent 100%);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, .6), inset 0 0 0 1px rgba(255, 255, 255, .06);
+            position: relative;
+        }
+
+        .marker {
+            position: absolute;
+            width: 4px;
+            top: 0;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--gold);
+            box-shadow: 0 0 10px rgba(255, 212, 90, .95);
+            z-index: 1;
+        }
+
+        .items {
+            position: relative;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            gap: var(--gap);
+            padding: 0 calc(var(--gap)/2);
+            transform: translate3d(0, 0, 0);
+            will-change: transform;
+            z-index: 2;
+        }
+
+        .item {
+            flex: 0 0 var(--tileW);
+            height: var(--tileH);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            position: relative;
+        }
+
+        .thumb {
+            width: var(--tileW);
+            height: var(--tile);
+            border-radius: 12px;
+            display: grid;
+            place-items: center;
+            position: relative;
+            overflow: hidden;
+            background: transparent
+        }
+
+        .thumb::before {
+            content: "";
+            position: absolute;
+            inset: -10%;
+            background: radial-gradient(40% 40% at 50% 50%, rgba(255, 191, 73, .25), transparent 70%);
+            filter: blur(18px)
+        }
+
+        .thumb img {
+            width: 250px;
+            height: 250px;
+            object-fit: contain
+        }
+
+        .caption {
+            margin-top: 10px;
+            font-weight: 800;
+            color: var(--gold)
+        }
+
+        .result {
+            margin: 18px auto 0;
+            max-width: 520px;
+            background: #0f2435;
+            color: #e8f1f8;
+            border: 1px solid #1f3b54;
+            border-radius: 14px;
+            padding: 18px;
+            text-align: center
+        }
+
+        .result h2 {
+            margin: 0 0 4px;
+            color: #fff;
+            text-shadow: 0 0 12px rgba(255, 255, 255, .65)
+        }
+
+        .result p {
+            margin: 0 0 10px
+        }
+
+        .winbox {
+            width: 280px;
+            height: 280px;
+            border-radius: 14px;
+            margin: 0 auto 10px;
+            display: grid;
+            place-items: center;
+            position: relative;
+            background: #0b1723;
+            border: 1px solid rgba(255, 255, 255, .08)
+        }
+
+        .winbox::before {
+            content: "";
+            position: absolute;
+            inset: -10%;
+            background: radial-gradient(45% 45% at 50% 50%, rgba(255, 191, 73, .30), transparent 70%);
+            filter: blur(22px)
+        }
+
+        .winbox img {
+            width: 88%;
+            height: 88%;
+            object-fit: contain;
+            filter: drop-shadow(0 12px 18px rgba(0, 0, 0, .55))
+        }
+
+        .nav-btn {
+            color: #e8f1f8;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            margin: 0;
+            padding: 10px 15px;
+            position: relative;
+            text-decoration: none;
+            text-transform: uppercase;
+            transition: all .3s ease;
+            background: none !important;
+            border: none !important
+        }
+
+        .nav-btn:hover,
+        .nav-btn:active {
+            letter-spacing: 1px;
+            background: none !important
+        }
+
+        .nav-btn:after,
+        .nav-btn:before {
+            backface-visibility: hidden;
+            border: 1px solid rgba(255, 255, 255, 0);
+            bottom: 0;
+            content: " ";
+            display: block;
+            margin: 0 auto;
+            position: relative;
+            transition: all .3s ease-in-out;
+            width: 0
+        }
+
+        .nav-btn:hover:after,
+        .nav-btn:hover:before {
+            width: 70%
+        }
+
+        .nav-btn:hover:before {
+            bottom: auto;
+            top: 0
+        }
+
+        .nav-btn[data-color="#2db2ff"]:hover:after,
+        .nav-btn[data-color="#2db2ff"]:hover:before {
+            border-color: #2db2ff
+        }
+
+        .nav-btn[data-color="#ff1f71"]:hover:after,
+        .nav-btn[data-color="#ff1f71"]:hover:before {
+            border-color: #ff1f71
+        }
+
+        .nav-btn[data-color="#1eff45"]:hover:after,
+        .nav-btn[data-color="#1eff45"]:hover:before {
+            border-color: #1eff45
+        }
+
+        .nav-btn[data-color="#a78bfa"]:hover:after,
+        .nav-btn[data-color="#a78bfa"]:hover:before {
+            border-color: #a78bfa
+        }
+
+        .nav a.nav-btn[data-color="#a78bfb"]:hover::before,
+        .nav a.nav-btn[data-color="#a78bfb"]:hover::after {
+            border-color: #f16a1c
+        }
+
+        .nav-btn[data-color="#56c1ff"]:hover:after,
+        .nav-btn[data-color="#56c1ff"]:hover:before {
+            border-color: #56c1ff
+        }
+
+        .nav-btn[data-color="#ff9e9e"]:hover:after,
+        .nav-btn[data-color="#ff9e9e"]:hover:before {
+            border-color: #ff9e9e
+        }
+
+        .nav-btn[data-color="#6225E6"]:hover:after,
+        .nav-btn[data-color="#6225E6"]:hover:before {
+            border-color: #FBC638
+        }
+
+        .nav .gold-badge>img,
+        .nav .gold-badge>svg,
+        .nav .gold-badge>span[aria-hidden] {
+            inline-size: 18px !important;
+            block-size: 18px !important;
+            max-inline-size: none !important;
+            object-fit: contain;
+            display: block;
+            transform: translateY(1px);
+            flex: 0 0 18px
+        }
+
+        .nav img#goldIcon {
+            inline-size: 18px !important;
+            block-size: 18px !important;
+            max-inline-size: none !important;
+            object-fit: contain !important;
+            display: block;
+            transform: translateY(1px)
+        }
+
+        .nav-right {
+            display: flex;
+            align-items: center;
+            margin-left: auto;
+            gap: 10px
+        }
+
+        .gold-btn {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: linear-gradient(180deg, #ffd700, #ff8c00);
+            color: #000 !important;
+            font-weight: 800;
+            padding: 8px 12px;
+            border-radius: 8px;
+            text-decoration: none;
+            border: none;
+            cursor: pointer
+        }
+
+        .gold-btn:hover {
+            background: linear-gradient(180deg, #ff8c00, #ffd700);
+            letter-spacing: 0
+        }
+
+        .gold-btn:before,
+        .gold-btn:after {
+            display: none !important
+        }
+
+        .nav-right .nav-btn {
+            color: #e8f1f8;
+            padding: 8px 12px
+        }
+
+        .nav-right .nav-btn[data-color="#ff9e9e"] {
+            color: #ff9e9e
+        }
+
+        .nav-right .nav-btn[data-color="#56c1ff"] {
+            color: #56c1ff
+        }
+    </style>
+</head>
+
+<body class="layout">
+    <div class="nav">
+        <a class="navbar-brand" href="/index">MIX AWARDS</a>
+        <a href="/importar-partida-html" class="nav-btn admin-only" data-color="#2db2ff">Importar Partida</a>
+        <a href="/consultar-partidas-html" class="nav-btn" data-color="#ff1f71">Consultar Partida</a>
+        <a href="/ranking-jogadores-html" class="nav-btn" data-color="#1eff45">Ranking Jogadores</a>
+        <a href="/shop-html" class="nav-btn" data-color="#6225E6">Loja</a>
+        <a href="/album-html" class="nav-btn" data-color="#a78bfa">Álbum</a>
+        <a href="/album-stickers-html" class="nav-btn" data-color="#a78bfb">Álbum Stickers</a>
+        <div class="nav-right">
+            <a id="btnOpenRegister" class="nav-btn" data-color="#a78bfa" href="javascript:void(0)">Cadastrar</a>
+            <a id="btnOpenLogin" class="nav-btn" data-color="#56c1ff" href="javascript:void(0)">Logar</a>
+        </div>
+    </div>
+
+    <div class="page-pad"></div>
+
+    <main class="section">
+        <div class="container">
+            <div class="panel">
+                <div class="title">ABRIR CÁPSULA</div>
+
+                <div class="caps-wrap">
+                    <span class="caps-badge">
+                        <img src="/uploads/stickers/sticker_capsula.png" alt="">
+                        Cápsulas:&nbsp;<strong id="capsCount">—</strong>
+                    </span>
+                    <a href="/album-stickers-html" class="btn primary"
+                        style="background:#1f3b54;border-color:#2a4a69">Voltar ao Álbum</a>
+                </div>
+
+                <div class="content">
+                    <div class="stage">
+                        <div class="capsuleBox" id="capsuleBox">
+                            <div class="burst"></div>
+                            <img id="capsuleImg" class="capsule" src="/uploads/stickers/sticker_capsula.png"
+                                alt="Cápsula">
+                            <button id="btnOpen" class="cta-open">Abrir cápsula</button>
+                        </div>
+                    </div>
+
+                    <div class="subtitle">Itens que podem vir nesta cápsula</div>
+                    <div id="pool" class="pool" aria-live="polite"></div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- OVERLAY -->
+    <section id="overlay" class="overlay" aria-hidden="true">
+        <div class="ov">
+            <div style="position:relative">
+                <div id="roulette">
+                    <div class="marker"></div>
+                    <div id="items" class="items"></div>
+                </div>
+            </div>
+            <div id="result" class="result" style="display:none"></div>
+        </div>
+    </section>
+
+    <!-- ÁUDIOS -->
+    <audio id="sfxCompra" preload="auto">
+        <!-- Caminho correto que corresponde à nova rota -->
+        <source src="/audios/ComprandoCaixa.mp3" type="audio/mpeg">
+    </audio>
+    <audio id="sfxRoleta" preload="auto">
+        <!-- Caminho correto que corresponde à nova rota -->
+        <source src="/audios/Roleta.mp3" type="audio/mpeg">
+    </audio>
+
+    <script>
+        (function () {
+            const $ = (s, c = document) => c.querySelector(s);
+
+            // DURAÇÃO SINCRONIZADA COM O ÁUDIO (7s)
+            const SPIN_MS = 7000;
+            const SPIN_EASING = 'cubic-bezier(.12,.82,.14,1)';
+
+            const TOTAL_STICKERS = 24;
+            const REPEATS = 10;
+
+            // DOM
+            const capsCountEl = $("#capsCount");
+            const btnOpen = $("#btnOpen");
+            const itemsDiv = $("#items");
+            const resultDiv = $("#result");
+            const overlay = $("#overlay");
+            const rouletteEl = $("#roulette");
+            const poolRail = $("#pool");
+            const capsuleBox = $("#capsuleBox");
+
+            // Áudio
+            const sfxRoleta = document.getElementById("sfxRoleta");
+
+            // Auth
+            const token = localStorage.getItem("auth_token");
+            const auth = token ? { Authorization: `Bearer ${token}` } : {};
+
+            // Helpers
+            const unwrap = (d) => d?.resultados ?? d ?? {};
+            const numFrom = (s) => {
+                if (typeof s === "number") return s;
+                const n = Number(s?.slot ?? s?.ordem ?? s?.id);
+                if (Number.isFinite(n)) return n;
+                const t = String(s?.nome || s?.imagem || "");
+                const m = t.match(/sticker\s*#?\s*(\d{1,3})/i) || t.match(/(\d{1,3})/);
+                return m ? Number(m[1]) : null;
+            };
+            const imgPath = (x) => {
+                const n = typeof x === "number" ? x : numFrom(x);
+                return `/uploads/stickers/sticker${n}.png`;
+            };
+
+            // Estado
+            let pool = [];
+            let spinning = false;
+            let spinTimer = null;
+
+            // UI
+            function openOverlay() {
+                overlay.style.display = "flex";
+                overlay.setAttribute("aria-hidden", "false");
+            }
+            function closeOverlay() {
+                overlay.style.display = "none";
+                overlay.setAttribute("aria-hidden", "true");
+            }
+            overlay.addEventListener("click", (e) => {
+                if (e.target === overlay) closeOverlay();
+            });
+            window.addEventListener("keydown", (e) => {
+                if (e.key === "Escape") closeOverlay();
+            });
+
+            // Contador de cápsulas
+            async function refreshCapsCount() {
+                try {
+                    const r = await fetch("/shop/listar-capsulas-fechadas", {
+                        headers: auth,
+                    });
+                    const j = unwrap(await r.json());
+                    const qtd = Number(
+                        j?.quantidade ??
+                        (Array.isArray(j?.capsulas) ? j.capsulas.length : 0) ??
+                        0
+                    );
+                    capsCountEl.textContent = String(qtd);
+                    btnOpen.disabled = !token || qtd <= 0;
+                } catch {
+                    capsCountEl.textContent = "0";
+                    btnOpen.disabled = !token;
+                }
+            }
+
+            // Carrega a lista de stickers
+            async function loadPool() {
+                const base = Array.from({ length: TOTAL_STICKERS }, (_, i) => {
+                    const n = i + 1;
+                    return { id: n, slot: n, nome: `Sticker #${n}`, imagem: imgPath(n) };
+                });
+                try {
+                    const r = await fetch("/album/stickers", { headers: auth });
+                    const j = unwrap(await r.json());
+                    const arr = Array.isArray(j?.stickers) ? j.stickers : j?.itens || [];
+                    for (const s of arr) {
+                        const n = numFrom(s);
+                        if (!Number.isFinite(n) || n < 1 || n > TOTAL_STICKERS) continue;
+                        const idx = n - 1;
+                        base[idx] = {
+                            id: n,
+                            slot: n,
+                            nome: s?.nome || base[idx].nome,
+                            imagem: imgPath(n),
+                        };
+                    }
+                } catch { }
+                pool = base;
+                renderPool();
+            }
+
+            function renderPool() {
+                poolRail.innerHTML = "";
+                for (const s of pool) {
+                    const el = document.createElement("div");
+                    el.className = "card";
+                    el.innerHTML = `<img src="${s.imagem}" alt="${s.nome}"><div class="base"></div>`;
+                    poolRail.appendChild(el);
+                }
+            }
+
+            // Roleta
+            let strip = [];
+            function buildStrip() {
+                itemsDiv.innerHTML = "";
+                strip = [];
+                const base = pool.slice();
+                function shuffle(a) {
+                    for (let i = a.length - 1; i > 0; i--) {
+                        const j = Math.floor(Math.random() * (i + 1));
+                        [a[i], a[j]] = [a[j], a[i]];
+                    }
+                    return a;
+                }
+                for (let r = 0; r < REPEATS; r++) {
+                    strip.push(...shuffle(base.slice()));
+                }
+                for (const s of strip) {
+                    const it = document.createElement("div");
+                    it.className = "item";
+                    it.innerHTML = `
+                    <div class="thumb"><img src="${s.imagem}" alt="${s.nome}"></div>
+                    <div class="caption">${s.nome}</div>`;
+                    itemsDiv.appendChild(it);
+                }
+                itemsDiv.style.transition = "none";
+                itemsDiv.style.transform = "translate3d(0,0,0)";
+                void itemsDiv.offsetWidth;
+            }
+
+            // Abrir cápsula
+            btnOpen.addEventListener("click", async () => {
+                if (spinning || btnOpen.disabled) return;
+                spinning = true;
+
+                // Animação de abertura da cápsula
+                capsuleBox.classList.add("opening");
+                await new Promise(resolve => setTimeout(resolve, 900));
+                capsuleBox.classList.remove("opening");
+
+                // Prepara overlay e roleta
+                openOverlay();
+                resultDiv.style.display = "none";
+                buildStrip();
+
+                // Faz requisição para abrir cápsula
+                const req = fetch("/album/stickers/capsulas", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", ...auth },
+                    body: JSON.stringify({}),
+                })
+                    .then((r) => r.json())
+                    .then(unwrap)
+                    .catch(() => null);
+
+                // Índice inicial provisório
+                const minIndex = Math.max(strip.length - pool.length * 2, pool.length * 2);
+                let chosenIndex = minIndex + Math.floor(
+                    Math.random() * Math.min(pool.length * 2, strip.length - minIndex - 3)
+                );
+                let target = strip[chosenIndex];
+
+                // Quando a resposta chegar, ajusta para o sticker correto
+                req.then((j) => {
+                    let win = (j?.novas && j.novas[0]) || (j?.duplicadas && j.duplicadas[0]) || null;
+                    if (!win) return;
+                    const winNum = numFrom(win);
+                    for (let i = strip.length - 1; i >= strip.length - 100; i--) {
+                        if (strip[i]?.slot === winNum) {
+                            target = strip[i];
+                            chosenIndex = i;
+                            break;
+                        }
+                    }
+                }).finally(() => {
+                    // Calcula posição final
+                    const chosenEl = itemsDiv.children[chosenIndex];
+                    const itemCenter = chosenEl.offsetLeft + chosenEl.offsetWidth / 2;
+                    const containerCenter = rouletteEl.clientWidth / 2;
+                    const targetX = Math.round(containerCenter - itemCenter);
+
+                    // INICIA ÁUDIO + ANIMAÇÃO SINCRONIZADA (7s)
+                    try {
+                        sfxRoleta.currentTime = 0;
+                        sfxRoleta.play().catch(e => console.error("Erro ao tocar áudio:", e));
+                    } catch (e) {
+                        console.error("Erro ao configurar áudio:", e);
+                    }
+
+                    itemsDiv.style.transition = `transform ${SPIN_MS}ms ${SPIN_EASING}`;
+                    itemsDiv.style.transform = `translate3d(${targetX}px,0,0)`;
+
+                    // Função para finalizar a roleta
+                    const finishRoll = () => {
+                        try {
+                            sfxRoleta.pause();
+                            sfxRoleta.currentTime = 0;
+                        } catch { }
+
+                        req.then((j) => {
+                            const isDup = !!(j?.duplicadas || []).find(
+                                (x) => numFrom(x) === target.slot || x?.id === target.id
+                            );
+
+                            const msgTop = isDup ? "Azar!" : "Parabéns!";
+                            const msgSub = isDup
+                                ? "Você já possui esse sticker — ele será vendido automaticamente por 5 gold!"
+                                : "Você ganhou um novo sticker!";
+
+                            resultDiv.innerHTML = `
+                            <h2>${msgTop}</h2>
+                            <p>${msgSub}</p>
+                            <div class="winbox"><img src="${target.imagem}" alt="${target.nome}"></div>
+                            <button class="btn primary" id="btnFechar">Fechar</button>
+                        `;
+                            resultDiv.style.display = "block";
+
+                            try {
+                                if (typeof window.__onStickerDrop === "function") {
+                                    window.__onStickerDrop(target.slot);
+                                }
+                            } catch { }
+                            refreshCapsCount();
+
+                            $("#btnFechar", resultDiv).onclick = () => {
+                                closeOverlay();
+                                spinning = false;
+                            };
+                        });
+                    };
+
+                    // Event listener para término da transição
+                    itemsDiv.addEventListener("transitionend", finishRoll, { once: true });
+
+                    // Fallback timeout (caso o evento não dispare)
+                    clearTimeout(spinTimer);
+                    spinTimer = setTimeout(finishRoll, SPIN_MS + 100);
+                });
+            });
+
+            // Init
+            (async function init() {
+                await loadPool();
+                await refreshCapsCount();
+            })();
+        })();
+    </script>
+
+    <script src="/js/auth.js" defer></script>
+    <script src="/js/abrir-capsula.js" defer></script>
+</body>
+
+</html>

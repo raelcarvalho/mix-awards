@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Shop — MIX AWARDS</title>
+
+  <!-- Estilos globais -->
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/layout.css">
+  <link rel="preload" href="/js/auth.js" as="script" />
+
+  <style>
+    /* ================= NAV-BTN (linhas animadas, sem aumentar a altura) ================ */
+    /* Neutraliza o hover genérico dos links do nav para .nav-btn */
+    .nav a.nav-btn,
+    .nav .nav-right a.nav-btn {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 15px;
+      font-size: 14px;
+      /* mantém o tamanho certo */
+      font-weight: 600;
+      text-transform: uppercase;
+      text-decoration: none;
+      color: #e8f1f8;
+      background: none !important;
+      border: none !important;
+      cursor: pointer;
+      line-height: 1;
+      /* não inflar altura */
+      transition: letter-spacing .3s ease;
+    }
+
+    .nav a.nav-btn:hover {
+      letter-spacing: 1px;
+      background: none !important;
+    }
+
+    /* Linhas absolutas (não participam do fluxo, não aumentam a barra) */
+    .nav a.nav-btn::before,
+    .nav a.nav-btn::after {
+      content: "";
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 0;
+      border-top: 1px solid transparent;
+      transition: width .28s ease-in-out, border-color .28s ease-in-out;
+      pointer-events: none;
+    }
+
+    /* distância pequena do texto (topo e base do botão) */
+    .nav a.nav-btn::before {
+      top: 4px;
+    }
+
+    .nav a.nav-btn::after {
+      bottom: 4px;
+    }
+
+    .nav a.nav-btn:hover::before,
+    .nav a.nav-btn:hover::after {
+      width: 70%;
+    }
+
+    /* Cores por data-color */
+    .nav a.nav-btn[data-color="#2db2ff"]:hover::before,
+    .nav a.nav-btn[data-color="#2db2ff"]:hover::after {
+      border-color: #2db2ff;
+    }
+
+    .nav a.nav-btn[data-color="#ff1f71"]:hover::before,
+    .nav a.nav-btn[data-color="#ff1f71"]:hover::after {
+      border-color: #ff1f71;
+    }
+
+    .nav a.nav-btn[data-color="#1eff45"]:hover::before,
+    .nav a.nav-btn[data-color="#1eff45"]:hover::after {
+      border-color: #1eff45;
+    }
+
+    .nav a.nav-btn[data-color="#a78bfa"]:hover::before,
+    .nav a.nav-btn[data-color="#a78bfa"]:hover::after {
+      border-color: #a78bfa;
+    }
+
+    .nav a.nav-btn[data-color="#a78bfb"]:hover::before,
+    .nav a.nav-btn[data-color="#a78bfb"]:hover::after {
+      border-color: #f86c1c;
+    }
+
+    .nav a.nav-btn[data-color="#56c1ff"]:hover::before,
+    .nav a.nav-btn[data-color="#56c1ff"]:hover::after {
+      border-color: #56c1ff;
+    }
+
+    .nav a.nav-btn[data-color="#ff9e9e"]:hover::before,
+    .nav a.nav-btn[data-color="#ff9e9e"]:hover::after {
+      border-color: #ff9e9e;
+    }
+
+    .nav a.nav-btn[data-color="#6225E6"]:hover::before,
+    .nav a.nav-btn[data-color="#6225E6"]:hover::after {
+      border-color: #FBC638;
+    }
+
+    /* ===================== AJUSTES DA PÁGINA SHOP ===================== */
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+
+    .toolbar .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: #132b3e;
+      color: #e6f1f8;
+      border: 1px solid #23445e;
+      font-weight: 800;
+      line-height: 1;
+    }
+
+    .toolbar .chip .icon {
+      width: 18px;
+      height: 18px;
+      object-fit: contain;
+      transform: translateY(1px);
+    }
+
+    .product-card {
+      display: grid;
+      grid-template-columns: 300px 1fr;
+      column-gap: 36px;
+      align-items: start;
+      margin-bottom: 28px;
+    }
+
+    .product__thumb {
+      position: relative;
+      width: 260px;
+      min-width: 260px;
+      height: 308px;
+      background: #0b1824;
+      border: 1px solid #1f3953;
+      border-radius: 14px;
+      padding: 16px;
+      display: grid;
+      place-items: center;
+      box-shadow: 0 12px 28px rgba(0, 0, 0, .28);
+      perspective: 1000px;
+      cursor: pointer;
+      user-select: none;
+      overflow: hidden;
+    }
+
+    .product__body h3 {
+      margin: 0 0 6px;
+    }
+
+    .product__body p {
+      margin: 0 0 8px;
+    }
+
+    .muted {
+      opacity: .9;
+    }
+
+    .price {
+      font-weight: 800;
+    }
+
+    .row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .btn {
+      appearance: none;
+      border: 1px solid #2a5475;
+      border-radius: 10px;
+      padding: 10px 14px;
+      cursor: pointer;
+      color: #e8f1f8;
+      background: #132b3e;
+    }
+
+    .btn:hover {
+      filter: brightness(1.05);
+    }
+
+    .btn.primary {
+      background: #2a7de4;
+      border-color: #2c89ff;
+      color: #072033;
+      font-weight: 900;
+    }
+
+    .btn.light {
+      background: #163750;
+    }
+
+    .btn.ghost {
+      background: transparent;
+      color: #e8f1f8;
+    }
+
+    .btn[disabled] {
+      opacity: .55;
+      cursor: not-allowed;
+    }
+
+    .pack3d {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      transform-style: preserve-3d;
+      transition: transform .6s cubic-bezier(.2, .7, .2, 1);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .packface {
+      position: absolute;
+      inset: 0;
+      transform-style: preserve-3d;
+      backface-visibility: hidden;
+      border-radius: 12px;
+    }
+
+    .packface>img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+      backface-visibility: hidden;
+    }
+
+    .packface.front {
+      transform: rotateY(0deg) translateZ(0.2px);
+    }
+
+    .packface.back {
+      transform: rotateY(180deg) translateZ(0.1px);
+    }
+
+    .tilt3d {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      border-radius: 12px;
+      overflow: hidden;
+      transform-style: preserve-3d;
+      transition: transform .35s ease, filter .2s ease;
+      display: grid;
+      place-items: center;
+    }
+
+    .tilt3d img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      display: block;
+      pointer-events: none;
+    }
+
+    .holo::after {
+      content: "";
+      position: absolute;
+      inset: -40%;
+      background: conic-gradient(from 180deg, rgba(255, 255, 255, .35), rgba(0, 255, 255, .15), rgba(255, 0, 255, .15), rgba(255, 255, 255, .25));
+      mix-blend-mode: overlay;
+      opacity: .35;
+      transform: translate(calc((var(--mx, .5)-.5) * 10%), calc((var(--my, .5)-.5) * 10%)) rotate(5deg);
+      filter: blur(12px) saturate(1.1);
+      transition: opacity .25s ease;
+    }
+
+    .product__thumb:hover .holo::after {
+      opacity: .55;
+    }
+
+    .product__thumb:hover .tilt3d {
+      filter: brightness(1.05);
+    }
+
+    .mw-back {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 0, 0, .55);
+      z-index: 60;
+    }
+
+    .mw-back.open {
+      display: flex;
+    }
+
+    .mw {
+      width: min(520px, 92vw);
+      background: #0f2435;
+      color: #e6f1f8;
+      border: 1px solid #1f3b54;
+      border-radius: 16px;
+      padding: 16px;
+      box-shadow: 0 18px 60px rgba(0, 0, 0, .45);
+      position: relative;
+    }
+
+    .mw header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+
+    .mw h4 {
+      margin: 0;
+    }
+
+    .mw .btn-close {
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
+      background: #e35151;
+      color: #fff;
+      border: 0;
+      font-weight: 900;
+      cursor: pointer;
+    }
+
+    .qty {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 6px;
+    }
+
+    .qty input {
+      width: 80px;
+      text-align: center;
+      padding: 10px;
+      border-radius: 10px;
+      background: #0b1824;
+      color: #e6f1f8;
+      border: 1px solid #264761;
+    }
+
+    .mw footer {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+      margin-top: 16px;
+    }
+
+    .toast {
+      position: fixed;
+      right: 16px;
+      bottom: 16px;
+      z-index: 80;
+      min-width: 260px;
+      max-width: 92vw;
+      background: #0f2435;
+      color: #e6f1f8;
+      border: 1px solid #264761;
+      border-radius: 10px;
+      padding: 12px 14px;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, .35);
+      transform: translateY(20px);
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .toast.show {
+      animation: toastIn .18s ease forwards;
+    }
+
+    .toast.hide {
+      animation: toastOut .22s ease forwards;
+    }
+
+    .toast.ok {
+      border-color: #2ea043;
+    }
+
+    .toast.err {
+      border-color: #b32525;
+    }
+
+    .toast.warn {
+      border-color: #d0a000;
+    }
+
+    @keyframes toastIn {
+      to {
+        transform: translateY(0);
+        opacity: 1
+      }
+    }
+
+    @keyframes toastOut {
+      to {
+        transform: translateY(20px);
+        opacity: 0
+      }
+    }
+
+    @media (max-width:980px) {
+      .product-card {
+        grid-template-columns: 280px 1fr;
+        column-gap: 28px;
+      }
+    }
+
+    @media (max-width:800px) {
+      .product-card {
+        grid-template-columns: 1fr;
+      }
+
+      .product__thumb {
+        width: 100%;
+        min-width: 0;
+      }
+    }
+
+    /* Fix de centralização da cápsula */
+    #capsHolder {
+      display: grid;
+      place-items: center;
+    }
+
+    #caps3d {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 100%;
+      transform-origin: center center;
+    }
+
+    #caps3d img {
+      display: block;
+      width: auto;
+      height: auto;
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      object-position: center;
+      margin: auto;
+    }
+
+    /* ============ NOVOS ESTILOS PARA OS EFEITOS ============ */
+
+    /* Efeito de cartinhas voando (pacote) */
+    .sticker {
+      position: absolute;
+      width: 30px;
+      height: 40px;
+      background: linear-gradient(135deg, #ffeb3b, #ff9800);
+      border-radius: 4px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      color: #e53935;
+      font-weight: bold;
+      pointer-events: none;
+    }
+
+    /* Efeito de cápsulas caindo */
+    .mini-capsule {
+      position: absolute;
+      width: 20px;
+      height: 25px;
+      background: url('/uploads/stickers/sticker_capsula.png') center/contain no-repeat;
+      z-index: 10;
+      pointer-events: none;
+    }
+
+    /* Efeito de brilho ao comprar */
+    @keyframes purchase-glow {
+      0% {
+        box-shadow: 0 0 0 0 rgba(42, 125, 228, 0.7);
+      }
+
+      70% {
+        box-shadow: 0 0 0 20px rgba(42, 125, 228, 0);
+      }
+
+      100% {
+        box-shadow: 0 0 0 0 rgba(42, 125, 228, 0);
+      }
+    }
+
+    .purchase-effect {
+      animation: purchase-glow 1s ease-out;
+    }
+
+    /* Efeito de pulo para o pacote */
+    @keyframes package-jump {
+      0% {
+        transform: translateY(0) scale(1);
+      }
+
+      50% {
+        transform: translateY(-20px) scale(1.1);
+      }
+
+      100% {
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    .package-jump {
+      animation: package-jump 0.5s ease;
+    }
+
+    /* Efeito de abertura para a cápsula */
+    @keyframes capsule-open {
+      0% {
+        transform: scale(1);
+      }
+
+      25% {
+        transform: scale(1.2);
+      }
+
+      50% {
+        transform: scale(0.9);
+      }
+
+      75% {
+        transform: scale(1.1);
+      }
+
+      100% {
+        transform: scale(1);
+      }
+    }
+
+    .capsule-open {
+      animation: capsule-open 0.6s ease;
+    }
+  </style>
+</head>
+
+<body class="layout">
+  <!-- NAV -->
+  <div class="nav">
+    <a class="navbar-brand" href="/index">MIX AWARDS</a>
+
+    <a href="/importar-partida-html" class="nav-btn" data-color="#2db2ff">Importar Partida</a>
+    <a href="/consultar-partidas-html" class="nav-btn" data-color="#ff1f71">Consultar Partida</a>
+    <a href="/ranking-jogadores-html" class="nav-btn" data-color="#1eff45">Ranking Jogadores</a>
+    <a href="/shop-html" class="nav-btn" data-color="#6225E6">Loja</a>
+    <a href="/album-html" class="nav-btn" data-color="#a78bfa">Álbum</a>
+    <a href="/album-stickers-html" class="nav-btn" data-color="#a78bfb">Álbum Stickers</a>
+
+    <div class="nav-right">
+      <!-- auth.js substitui pelo layout logado; mantém proporções corretas do gold -->
+      <a id="btnOpenRegister" class="nav-btn" data-color="#a78bfa" href="/cadastrar-html">Cadastrar</a>
+      <a id="btnOpenLogin" class="nav-btn" data-color="#56c1ff" href="/login-html">Logar</a>
+    </div>
+  </div>
+  <div class="page-pad"></div>
+
+  <main class="section">
+    <div class="container">
+      <div class="panel">
+        <div class="title">SHOP</div>
+
+        <div class="toolbar">
+          <span id="badgePacotes" class="chip" title="Pacotes fechados">
+            <img class="icon" src="/uploads/figurinhas/pacote.png" alt="">
+            Pacotes: <strong id="qtdPacotes">—</strong>
+          </span>
+          <span id="badgeCapsulas" class="chip" title="Cápsulas fechadas">
+            <img class="icon" src="/uploads/stickers/sticker_capsula.png" alt="">
+            Cápsulas: <strong id="qtdCapsulas">—</strong>
+          </span>
+          <button id="btnIrAlbum" class="btn ghost" type="button">Ir para o Álbum</button>
+          <button id="btnIrAlbumStickers" class="btn ghost" type="button">Ir para o Álbum Sticker</button>
+        </div>
+
+        <!-- ===== CARD: PACOTE ===== -->
+        <article class="product-card">
+          <div id="packHolder" class="product__thumb" title="Clique para ver frente/verso">
+            <div id="pack3d" class="pack3d holo">
+              <div class="packface front">
+                <img id="packFront" src="/uploads/figurinhas/pacote.png" alt="Pacote (frente)">
+              </div>
+              <div class="packface back">
+                <img id="packBack" src="/uploads/figurinhas/pacote_verso.png" alt="Pacote (verso)">
+              </div>
+            </div>
+          </div>
+
+          <div class="product__body">
+            <h3>Pacote de Figurinhas</h3>
+            <p class="muted">Cada pacote vem com <strong id="itensPorPacote">4 figurinhas</strong>.</p>
+            <p class="price">Preço: <strong id="precoPacote">20</strong> gold</p>
+
+            <div class="row">
+              <button class="btn primary" id="btnAbrirComprar">Comprar</button>
+              <button class="btn light" id="btnComprar1">Comprar 1</button>
+              <button class="btn light" id="btnComprar5">Comprar 5</button>
+              <button class="btn light" id="btnComprar10">Comprar 10</button>
+            </div>
+          </div>
+        </article>
+
+        <!-- ===== CARD: CÁPSULA ===== -->
+        <article class="product-card">
+          <div id="capsHolder" class="product__thumb" title="Efeito 3D holográfico">
+            <div id="caps3d" class="tilt3d holo">
+              <img id="capsImg" src="/uploads/stickers/sticker_capsula.png" alt="Cápsula (frente)" />
+            </div>
+          </div>
+
+          <div class="product__body">
+            <h3>Cápsula de Figurinha</h3>
+            <p class="muted">Cada cápsula vem com <strong id="itensPorCapsula">1 figurinha</strong>.</p>
+            <p class="price">Preço: <strong id="precoCapsula">10</strong> gold</p>
+
+            <div class="row">
+              <button class="btn primary" id="btnAbrirComprarCaps">Comprar</button>
+              <button class="btn light" id="btnComprarCap1">Comprar 1</button>
+              <button class="btn light" id="btnComprarCap5">Comprar 5</button>
+              <button class="btn light" id="btnComprarCap10">Comprar 10</button>
+            </div>
+          </div>
+        </article>
+
+      </div>
+    </div>
+  </main>
+
+  <!-- MODAL COMPRAR -->
+  <div id="comprarModal" class="mw-back" aria-hidden="true">
+    <div class="mw" role="dialog" aria-modal="true" aria-labelledby="ttlComprar">
+      <header>
+        <h4 id="ttlComprar">Comprar pacotes</h4>
+        <button id="btnFecharModal" class="btn-close" type="button" aria-label="Fechar">✕</button>
+      </header>
+      <div>
+        <div class="qty">
+          <button id="menos" class="btn" type="button">–</button>
+          <input id="qtd" type="number" min="1" max="50" step="1" value="1" />
+          <button id="mais" class="btn" type="button">+</button>
+        </div>
+        <p class="muted" style="margin:10px 0 0">Máximo por compra: <strong>50</strong></p>
+      </div>
+      <footer>
+        <button id="btnConfirmar" class="btn primary" type="button">Comprar agora</button>
+        <button id="btnCancelar" class="btn" type="button">Cancelar</button>
+      </footer>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <!-- Canvas FX -->
+  <canvas id="fxCanvas" class="fx-canvas"
+    style="position:fixed; inset:0; width:100vw; height:100vh; pointer-events:none; z-index:85;"></canvas>
+
+  <!-- Scripts -->
+  <script src="/js/auth.js" defer></script>
+  <script src="/js/shop.js" defer></script>
+
+  <!-- Tilt/Holo da cápsula (backup leve) -->
+  <script>
+    (function () {
+      if (window.__CAPS_TILT_INIT__) return;
+      window.__CAPS_TILT_INIT__ = true;
+      const holder = document.getElementById('capsHolder');
+      const target = document.getElementById('caps3d');
+      if (!holder || !target) return;
+      let tRX = 0, tRY = 0, cRX = 0, cRY = 0, raf = 0;
+      const MAXY = 12, MAXX = 6, lerp = (a, b, t) => a + (b - a) * t;
+      function set() { target.style.transform = `rotateX(${cRX}deg) rotateY(${cRY}deg)`; }
+      function upd() {
+        cRX = lerp(cRX, tRX, .18); cRY = lerp(cRY, tRY, .18); set();
+        if (Math.abs(cRX - tRX) > .1 || Math.abs(cRY - tRY) > .1) raf = requestAnimationFrame(upd); else cancelAnimationFrame(raf), raf = 0;
+      }
+      function calc(e) {
+        const r = holder.getBoundingClientRect();
+        const nx = ((e.clientX - (r.left + r.width / 2)) / (r.width / 2));
+        const ny = ((e.clientY - (r.top + r.height / 2)) / (r.height / 2));
+        tRY = -Math.max(-1, Math.min(1, nx)) * MAXY;
+        tRX = Math.max(-1, Math.min(1, ny)) * MAXX;
+        target.style.setProperty('--mx', ((nx / 2) + .5).toFixed(3));
+        target.style.setProperty('--my', ((-ny / 2) + .5).toFixed(3));
+        if (!raf) raf = requestAnimationFrame(upd);
+      }
+      holder.addEventListener('pointermove', calc);
+      holder.addEventListener('pointerleave', () => { tRX = 0; tRY = 0; if (!raf) raf = requestAnimationFrame(upd); });
+      set();
+    })();
+  </script>
+
+  <!-- Script para os efeitos de compra -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      // Elementos dos produtos
+      const packHolder = document.getElementById('packHolder');
+      const capsHolder = document.getElementById('capsHolder');
+      const pack3d = document.getElementById('pack3d');
+      const caps3d = document.getElementById('caps3d');
+
+      // Botões de compra do pacote
+      const btnComprar1 = document.getElementById('btnComprar1');
+      const btnComprar5 = document.getElementById('btnComprar5');
+      const btnComprar10 = document.getElementById('btnComprar10');
+
+      // Botões de compra da cápsula
+      const btnComprarCap1 = document.getElementById('btnComprarCap1');
+      const btnComprarCap5 = document.getElementById('btnComprarCap5');
+      const btnComprarCap10 = document.getElementById('btnComprarCap10');
+
+      // Função para criar efeito de figurinhas voando (para pacote)
+      function createFlyingStickers(container, quantity) {
+        for (let i = 0; i < quantity; i++) {
+          const sticker = document.createElement('div');
+          sticker.className = 'sticker';
+          sticker.innerHTML = '⭐';
+
+          // Posição inicial aleatória
+          const startX = Math.random() * 100;
+          const startY = Math.random() * 100;
+
+          sticker.style.left = startX + '%';
+          sticker.style.top = startY + '%';
+
+          container.appendChild(sticker);
+
+          // Animação
+          const angle = Math.random() * Math.PI * 2;
+          const distance = 50 + Math.random() * 100;
+          const duration = 1000 + Math.random() * 1000;
+
+          const endX = startX + Math.cos(angle) * distance;
+          const endY = startY + Math.sin(angle) * distance;
+
+          sticker.animate(
+            [
+              {
+                transform: 'translate(0, 0) rotate(0deg) scale(1)',
+                opacity: 1
+              },
+              {
+                transform: `translate(${endX}px, ${endY}px) rotate(${360 + Math.random() * 360}deg) scale(0.5)`,
+                opacity: 0
+              }
+            ],
+            {
+              duration: duration,
+              easing: 'cubic-bezier(0.1, 0.8, 0.2, 1)',
+              fill: 'forwards'
+            }
+          ).onfinish = () => sticker.remove();
+        }
+      }
+
+      // Função para criar efeito de cápsulas caindo (para cápsula)
+      function createFallingCapsules(container, quantity) {
+        for (let i = 0; i < quantity; i++) {
+          const capsule = document.createElement('div');
+          capsule.className = 'mini-capsule';
+
+          // Posição inicial no topo
+          const startX = Math.random() * 100;
+
+          capsule.style.left = startX + '%';
+          capsule.style.top = '0%';
+
+          container.appendChild(capsule);
+
+          // Animação de queda
+          const duration = 800 + Math.random() * 400;
+          const endY = 80 + Math.random() * 20;
+          const rotation = (Math.random() - 0.5) * 360;
+
+          capsule.animate(
+            [
+              {
+                transform: 'translate(0, 0) rotate(0deg)',
+                opacity: 1
+              },
+              {
+                transform: `translate(0, ${endY}%) rotate(${rotation}deg)`,
+                opacity: 0.8
+              }
+            ],
+            {
+              duration: duration,
+              easing: 'cubic-bezier(0.4, 0, 0.6, 1)',
+              fill: 'forwards'
+            }
+          ).onfinish = () => {
+            // Pequeno salto no final
+            capsule.animate(
+              [
+                { transform: `translate(0, ${endY}%) rotate(${rotation}deg) scale(1)` },
+                { transform: `translate(0, ${endY - 10}%) rotate(${rotation}deg) scale(1.2)` },
+                { transform: `translate(0, ${endY}%) rotate(${rotation}deg) scale(1)` }
+              ],
+              {
+                duration: 300,
+                easing: 'ease-out'
+              }
+            ).onfinish = () => capsule.remove();
+          };
+        }
+      }
+
+      // Adicionar eventos aos botões de compra do pacote
+      [btnComprar1, btnComprar5, btnComprar10].forEach(btn => {
+        btn.addEventListener('click', function () {
+          // Efeito visual no pacote
+          packHolder.classList.add('purchase-effect');
+          pack3d.classList.add('package-jump');
+
+          // Quantidade de figurinhas baseada no botão clicado
+          let stickerCount = 4; // padrão para 1 pacote
+          if (btn.id === 'btnComprar5') stickerCount = 12;
+          if (btn.id === 'btnComprar10') stickerCount = 24;
+
+          // Criar efeito de figurinhas
+          createFlyingStickers(packHolder, stickerCount);
+
+          // Remover classes após animação
+          setTimeout(() => {
+            packHolder.classList.remove('purchase-effect');
+            pack3d.classList.remove('package-jump');
+          }, 1000);
+        });
+      });
+
+      // Adicionar eventos aos botões de compra da cápsula
+      [btnComprarCap1, btnComprarCap5, btnComprarCap10].forEach(btn => {
+        btn.addEventListener('click', function () {
+          // Efeito visual na cápsula
+          capsHolder.classList.add('purchase-effect');
+          caps3d.classList.add('capsule-open');
+
+          // Quantidade de mini-cápsulas baseada no botão clicado
+          let capsuleCount = 3; // padrão para 1 cápsula
+          if (btn.id === 'btnComprarCap5') capsuleCount = 8;
+          if (btn.id === 'btnComprarCap10') capsuleCount = 15;
+
+          // Criar efeito de cápsulas caindo
+          createFallingCapsules(capsHolder, capsuleCount);
+
+          // Remover classes após animação
+          setTimeout(() => {
+            capsHolder.classList.remove('purchase-effect');
+            caps3d.classList.remove('capsule-open');
+          }, 1000);
+        });
+      });
+    });
+  </script>
+
+  <script src="/js/auth.js" defer></script>
+</body>
+
+</html>

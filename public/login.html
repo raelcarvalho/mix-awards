@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Entrar — MIX AWARDS</title>
+
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/layout.css">
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    .mw-modal {
+      position: fixed;
+      inset: 0;
+      display: none;
+      z-index: 1050;
+    }
+
+    .mw-modal.is-open {
+      display: block;
+    }
+
+    .mw-modal__backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, .55);
+      backdrop-filter: blur(1px);
+    }
+
+    .mw-modal__dialog {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      width: min(92vw, 420px);
+      background: #11293d;
+      color: #e8f1f8;
+      border-radius: 16px;
+      padding: 22px 20px 20px;
+      box-shadow: 0 18px 60px rgba(0, 0, 0, .45), inset 0 0 0 1px rgba(255, 255, 255, .05);
+      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      overflow: hidden;
+    }
+
+    .mw-modal__title {
+      margin: 0 0 10px;
+      font-size: 1.25rem;
+      text-align: center;
+    }
+
+    .mw-modal__close {
+      position: absolute;
+      right: 10px;
+      top: 8px;
+      width: 36px;
+      height: 36px;
+      border: 0;
+      border-radius: 10px;
+      cursor: pointer;
+      background: transparent;
+      color: #cfe8ff;
+      font-size: 22px;
+      line-height: 1;
+    }
+
+    .mw-modal__close:hover {
+      background: rgba(255, 255, 255, .06);
+    }
+
+    .mw-field {
+      display: block;
+      margin: 12px 0;
+      width: 100%;
+      border: 0 !important;
+      box-shadow: none !important;
+      background: transparent !important;
+    }
+
+    .mw-field>span {
+      display: block;
+      font-size: .9rem;
+      color: #b9d4ea;
+      margin-bottom: 6px;
+    }
+
+    .mw-field>input {
+      width: 100%;
+      min-width: 0;
+      padding: 12px 14px;
+      border-radius: 10px;
+      border: 1px solid #1e3a53;
+      background: #0f2233;
+      color: #e8f1f8;
+      outline: none;
+      box-shadow: none;
+    }
+
+    .mw-field>input:focus {
+      border-color: #56c1ff;
+      outline: 3px solid rgba(86, 193, 255, .25);
+      outline-offset: 0;
+    }
+
+    .mw-btn {
+      width: 100%;
+      margin-top: 10px;
+      padding: 12px;
+      border: 0;
+      border-radius: 10px;
+      font-weight: 700;
+      background: #56c1ff;
+      color: #072033;
+      cursor: pointer;
+    }
+
+    .mw-btn:disabled {
+      opacity: .6;
+      cursor: not-allowed;
+    }
+
+    .mw-msg {
+      min-height: 18px;
+      margin-top: 10px;
+      font-size: .92rem;
+    }
+
+    .mw-msg.error {
+      color: #ff9e9e;
+    }
+
+    .mw-msg.ok {
+      color: #9effb0;
+    }
+
+    .mw-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 12px;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .mw-link {
+      display: inline-block;
+      padding: 10px 0;
+      color: #cfe8ff;
+      text-decoration: underline;
+      cursor: pointer;
+    }
+  </style>
+</head>
+
+<body class="layout">
+  <div class="nav"></div>
+  <div class="page-pad"></div>
+
+  <!-- Modal Login -->
+  <div id="loginModal" class="mw-modal" aria-hidden="true" role="dialog" aria-labelledby="mwLoginTitle">
+    <div class="mw-modal__backdrop" data-close="true"></div>
+    <div class="mw-modal__dialog" role="document">
+      <button class="mw-modal__close" type="button" aria-label="Fechar" data-close-target="loginModal">×</button>
+      <h2 id="mwLoginTitle" class="mw-modal__title">Entrar</h2>
+
+      <form id="loginForm" novalidate>
+        <label class="mw-field">
+          <span>E-mail</span>
+          <input id="loginEmail" name="email" type="email" placeholder="voce@exemplo.com" maxlength="100" required />
+        </label>
+
+        <label class="mw-field">
+          <span>Senha</span>
+          <input id="loginSenha" name="senha" type="password" placeholder="••••••••" maxlength="100" required />
+        </label>
+
+        <button id="btnDoLogin" class="mw-btn" type="submit">Logar</button>
+        <div id="loginMsg" class="mw-msg" aria-live="polite"></div>
+
+        <div class="mw-actions">
+          <a class="mw-link" href="/cadastrar-html">Criar conta</a>
+          <!-- CORREÇÃO: Link para abrir o modal de recuperação -->
+          <a id="btnOpenRecover" class="mw-link" href="javascript:void(0)">Esqueci minha senha</a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- CORREÇÃO: Novo Modal para Recuperar Senha -->
+  <div id="recoverModal" class="mw-modal" aria-hidden="true" role="dialog" aria-labelledby="mwRecoverTitle">
+    <div class="mw-modal__backdrop" data-close="true"></div>
+    <div class="mw-modal__dialog" role="document">
+      <button class="mw-modal__close" type="button" aria-label="Fechar" data-close-target="recoverModal">×</button>
+      <h2 id="mwRecoverTitle" class="mw-modal__title">Recuperar Senha</h2>
+
+      <form id="recoverForm" novalidate>
+        <label class="mw-field">
+          <span>Seu e-mail de cadastro</span>
+          <input id="recoverEmail" name="email" type="email" placeholder="voce@exemplo.com" maxlength="100" required />
+        </label>
+
+        <button id="btnDoRecover" class="mw-btn" type="submit">Enviar e-mail de recuperação</button>
+        <div id="recoverMsg" class="mw-msg" aria-live="polite"></div>
+
+        <div class="mw-actions">
+          <a id="btnBackToLogin" class="mw-link" href="javascript:void(0)">Voltar para o Login</a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // --- Elementos dos Modais ---
+      const loginModal = document.getElementById('loginModal');
+      const recoverModal = document.getElementById('recoverModal');
+
+      // --- Elementos do Login ---
+      const loginForm = document.getElementById('loginForm');
+      const loginEmail = document.getElementById('loginEmail');
+      const loginSenha = document.getElementById('loginSenha');
+      const loginMsg = document.getElementById('loginMsg');
+      const btnDoLogin = document.getElementById('btnDoLogin');
+      const btnOpenRecover = document.getElementById('btnOpenRecover');
+
+      // --- Elementos da Recuperação ---
+      const recoverForm = document.getElementById('recoverForm');
+      const recoverEmail = document.getElementById('recoverEmail');
+      const recoverMsg = document.getElementById('recoverMsg');
+      const btnDoRecover = document.getElementById('btnDoRecover');
+      const btnBackToLogin = document.getElementById('btnBackToLogin');
+
+      // --- Funções de Controle dos Modais ---
+      const openModal = (modal) => {
+        if (!modal) return;
+        modal.classList.add('is-open');
+        const form = modal.querySelector('form');
+        const msg = modal.querySelector('.mw-msg');
+        const input = modal.querySelector('input');
+        if (form) form.reset();
+        if (msg) {
+          msg.textContent = '';
+          msg.className = 'mw-msg';
+        }
+        setTimeout(() => input?.focus(), 50);
+      };
+
+      const closeModal = (modal) => {
+        if (modal) modal.classList.remove('is-open');
+      };
+
+      // --- Eventos Globais ---
+      document.addEventListener('click', (e) => {
+        if (e.target.dataset.close === 'true') {
+          closeModal(loginModal);
+          closeModal(recoverModal);
+        }
+        const closeButton = e.target.closest('.mw-modal__close');
+        if (closeButton) {
+          const targetModalId = closeButton.getAttribute('data-close-target');
+          if (targetModalId) {
+            closeModal(document.getElementById(targetModalId));
+          }
+        }
+      });
+
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          closeModal(loginModal);
+          closeModal(recoverModal);
+        }
+      });
+
+      // --- Lógica de Troca entre Modais ---
+      btnOpenRecover.addEventListener('click', () => {
+        closeModal(loginModal);
+        openModal(recoverModal);
+      });
+
+      btnBackToLogin.addEventListener('click', () => {
+        closeModal(recoverModal);
+        openModal(loginModal);
+      });
+
+      // --- Submissão do Formulário de Login ---
+      loginForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        loginMsg.textContent = '';
+        loginMsg.className = 'mw-msg';
+        btnDoLogin.disabled = true;
+        try {
+          const res = await fetch('/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: loginEmail.value.trim(), senha: loginSenha.value })
+          });
+          const data = await res.json();
+          if (!res.ok) {
+            loginMsg.textContent = data?.mensagem || 'Falha no login';
+            loginMsg.className = 'mw-msg error';
+            btnDoLogin.disabled = false;
+            return;
+          }
+          const token = data?.resultados?.token?.token || data?.resultados?.token || data?.token?.token || data?.token;
+          const usuario = data?.resultados?.usuario || data?.usuario;
+          if (token) localStorage.setItem('auth_token', token);
+          if (usuario) localStorage.setItem('auth_user', JSON.stringify(usuario));
+          loginMsg.textContent = 'Login realizado!';
+          loginMsg.className = 'mw-msg ok';
+          setTimeout(() => window.location.href = '/index', 300);
+        } catch (err) {
+          loginMsg.textContent = 'Erro inesperado';
+          loginMsg.className = 'mw-msg error';
+          btnDoLogin.disabled = false;
+        }
+      });
+
+      // --- Submissão do Formulário de Recuperação de Senha ---
+      recoverForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        recoverMsg.textContent = 'Enviando...';
+        recoverMsg.className = 'mw-msg';
+        btnDoRecover.disabled = true;
+        try {
+          const res = await fetch('/recuperar-senha', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: recoverEmail.value.trim() })
+          });
+          const data = await res.json();
+          if (!res.ok) {
+            recoverMsg.textContent = data?.mensagem || 'E-mail não encontrado.';
+            recoverMsg.className = 'mw-msg error';
+            btnDoRecover.disabled = false;
+            return;
+          }
+          recoverMsg.textContent = 'E-mail de recuperação enviado com sucesso! Verifique sua caixa de entrada.';
+          recoverMsg.className = 'mw-msg ok';
+        } catch (err) {
+          recoverMsg.textContent = 'Erro inesperado ao tentar recuperar a senha.';
+          recoverMsg.className = 'mw-msg error';
+          btnDoRecover.disabled = false;
+        }
+      });
+
+      // Abre o modal de login ao carregar a página
+      openModal(loginModal);
+    });
+  </script>
+
+  <script src="/js/auth.js" defer></script>
+</body>
+
+</html>

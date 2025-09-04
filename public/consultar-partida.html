@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MIX AWARDS — Consultar Partidas</title>
+
+  <!-- Evita cache no nível do HTML -->
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+
+  <!-- CSS do nav/tema -->
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/layout.css">
+
+  <!-- Pré-carrega o JS de auth -->
+  <link rel="preload" href="/js/auth.js" as="script" />
+
+  <style>
+    :root {
+      --bg0: #0a1622;
+      --bg1: #091a27;
+      --bg2: #0f2435;
+      --ink: #dbe9f6;
+      --muted: #88a4bc;
+      --line: #1f3b54;
+      --line2: #2a4d6a;
+      --accent: #2d86d6;
+      --accent-2: #3a93e2;
+      --danger: #e24f4f;
+      --chip: #132b3e;
+      --radius: 16px;
+      --container: max(320px, min(1200px, 96vw));
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+    }
+
+    body.layout {
+      color: var(--ink);
+      background:
+        radial-gradient(1200px 800px at 20% -10%, rgba(55, 115, 170, .18), transparent 60%),
+        radial-gradient(1000px 700px at 85% -10%, rgba(38, 89, 140, .18), transparent 60%),
+        linear-gradient(180deg, var(--bg1), var(--bg0));
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    }
+
+    .nav {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+
+    .page-pad {
+      height: 10px;
+    }
+
+    .section {
+      padding: 16px 0 28px;
+    }
+
+    .container {
+      width: var(--container);
+      margin: 0 auto;
+    }
+
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: linear-gradient(180deg, rgba(255, 255, 255, .03), rgba(255, 255, 255, .02));
+      box-shadow: 0 16px 40px rgba(0, 0, 0, .35), inset 0 0 0 1px rgba(255, 255, 255, .03);
+      padding: 16px;
+    }
+
+    .title {
+      display: inline-block;
+      background: #0f2a40;
+      color: #e8f1f8;
+      border: 1px solid var(--line2);
+      border-radius: 10px;
+      padding: 8px 14px;
+      font-weight: 900;
+      letter-spacing: .4px;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .crumb {
+      color: var(--muted);
+      font-weight: 800;
+      letter-spacing: .25px;
+    }
+
+    .content {
+      background: rgba(255, 255, 255, .04);
+      border-radius: 14px;
+      padding: 14px;
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .03);
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0 10px;
+    }
+
+    thead th {
+      background: #12324a;
+      color: #e6f2ff;
+      border: 1px solid var(--line);
+      padding: 12px;
+      text-align: left;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: .3px;
+      border-radius: 10px;
+      box-shadow: 0 4px 0 rgba(0, 0, 0, .15) inset, 0 1px 0 rgba(255, 255, 255, .04);
+    }
+
+    tbody tr {
+      background: var(--bg2);
+      border: 1px solid var(--line);
+    }
+
+    tbody td {
+      padding: 12px;
+      color: #d6e6f4;
+      border-top: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+    }
+
+    tbody tr td:first-child {
+      border-left: 1px solid var(--line);
+      border-top-left-radius: 12px;
+      border-bottom-left-radius: 12px;
+    }
+
+    tbody tr td:last-child {
+      border-right: 1px solid var(--line);
+      border-top-right-radius: 12px;
+      border-bottom-right-radius: 12px;
+    }
+
+    .muted {
+      color: var(--muted);
+      font-size: .92rem;
+    }
+
+    .row-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .btn {
+      appearance: none;
+      border: 1px solid var(--line2);
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-weight: 900;
+      cursor: pointer;
+      text-decoration: none;
+      background: #14344c;
+      color: #e8f1f8;
+      box-shadow: 0 2px 0 rgba(0, 0, 0, .25);
+    }
+
+    .btn.primary {
+      background: var(--accent);
+      border-color: var(--accent-2);
+    }
+
+    .btn.danger {
+      background: var(--danger);
+      border-color: #b73d3d;
+      color: #fff;
+    }
+
+    .btn[disabled] {
+      opacity: .6;
+      cursor: not-allowed;
+    }
+
+    .btn:hover {
+      transform: translateY(-1px);
+    }
+
+    .empty,
+    .loading {
+      text-align: center;
+      padding: 18px;
+      color: var(--muted);
+      font-weight: 800;
+    }
+
+    @media (max-width:900px) {
+
+      thead th:nth-child(3),
+      thead th:nth-child(4),
+      tbody td:nth-child(3),
+      tbody td:nth-child(4) {
+        white-space: nowrap;
+      }
+    }
+
+    .nav-btn {
+      color: #e8f1f8;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      margin: 0;
+      padding: 10px 15px;
+      position: relative;
+      text-decoration: none;
+      text-transform: uppercase;
+      transition: all .3s ease;
+      background: none !important;
+      border: none !important;
+    }
+
+    .nav-btn:hover,
+    .nav-btn:active {
+      letter-spacing: 1px;
+      background: none !important
+    }
+
+    .nav-btn:after,
+    .nav-btn:before {
+      backface-visibility: hidden;
+      border: 1px solid rgba(255, 255, 255, 0);
+      bottom: 0;
+      content: " ";
+      display: block;
+      margin: 0 auto;
+      position: relative;
+      transition: all .3s ease-in-out;
+      width: 0;
+    }
+
+    .nav-btn:hover:after,
+    .nav-btn:hover:before {
+      width: 70%
+    }
+
+    .nav-btn:hover:before {
+      bottom: auto;
+      top: 0
+    }
+
+    .nav-btn[data-color="#2db2ff"]:hover:after,
+    .nav-btn[data-color="#2db2ff"]:hover:before {
+      border-color: #2db2ff
+    }
+
+    .nav-btn[data-color="#ff1f71"]:hover:after,
+    .nav-btn[data-color="#ff1f71"]:hover:before {
+      border-color: #ff1f71
+    }
+
+    .nav-btn[data-color="#1eff45"]:hover:after,
+    .nav-btn[data-color="#1eff45"]:hover:before {
+      border-color: #1eff45
+    }
+
+    .nav-btn[data-color="#a78bfa"]:hover:after,
+    .nav-btn[data-color="#a78bfa"]:hover:before {
+      border-color: #a78bfa
+    }
+
+    .nav a.nav-btn[data-color="#a78bfb"]:hover::before,
+    .nav a.nav-btn[data-color="#a78bfb"]:hover::after {
+      border-color: #f16a1c
+    }
+
+    .nav-btn[data-color="#56c1ff"]:hover:after,
+    .nav-btn[data-color="#56c1ff"]:hover:before {
+      border-color: #56c1ff
+    }
+
+    .nav-btn[data-color="#ff9e9e"]:hover:after,
+    .nav-btn[data-color="#ff9e9e"]:hover:before {
+      border-color: #ff9e9e
+    }
+
+    .nav-btn[data-color="#6225E6"]:hover:after,
+    .nav-btn[data-color="#6225E6"]:hover:before {
+      border-color: #FBC638
+    }
+
+    .admin-only {
+      display: none;
+    }
+  </style>
+</head>
+
+<body class="layout">
+  <!-- NAV -->
+  <div class="nav">
+    <a class="navbar-brand" href="/index">MIX AWARDS</a>
+
+    <a href="/importar-partida-html" class="nav-btn admin-only" data-color="#2db2ff">Importar Partida</a>
+    <a href="/consultar-partidas-html" class="nav-btn" data-color="#ff1f71">Consultar Partida</a>
+    <a href="/ranking-jogadores-html" class="nav-btn" data-color="#1eff45">Ranking Jogadores</a>
+    <a href="/shop-html" class="nav-btn" data-color="#6225E6">Loja</a>
+    <a href="/album-html" class="nav-btn" data-color="#a78bfa">Álbum</a>
+    <a href="/album-stickers-html" class="nav-btn" data-color="#a78bfb">Álbum Stickers</a>
+
+    <div class="nav-right">
+      <a id="btnOpenRegister" class="nav-btn" data-color="#a78bfa" href="javascript:void(0)">Cadastrar</a>
+      <a id="btnOpenLogin" class="nav-btn" data-color="#56c1ff" href="javascript:void(0)">Logar</a>
+    </div>
+  </div>
+
+  <div class="page-pad"></div>
+
+  <main class="section">
+    <div class="container">
+      <div class="panel">
+        <div class="toolbar">
+          <div class="title">Consultar Partidas</div>
+          <div class="crumb">MIX AWARDS</div>
+        </div>
+
+        <div class="content">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th style="min-width:120px">Código</th>
+                  <th style="min-width:120px">Mapa</th>
+                  <th style="min-width:160px">Time A</th>
+                  <th style="min-width:160px">Time B</th>
+                  <th style="min-width:120px">Resultado</th>
+                  <th style="min-width:220px">Data / Ações</th>
+                </tr>
+              </thead>
+              <tbody id="tabela-partidas">
+                <tr id="row-loading">
+                  <td colspan="6" class="loading">Carregando partidas...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <!-- /panel -->
+    </div>
+  </main>
+
+  <script>
+    // ===== Funções auxiliares =====
+    function getToken() {
+      const rawToken = localStorage.getItem('auth_token') || '';
+      if (rawToken.startsWith('{') || rawToken.startsWith('[')) {
+        try {
+          const obj = JSON.parse(rawToken);
+          return obj?.token?.token || obj?.token || rawToken;
+        } catch { return rawToken; }
+      }
+      return rawToken;
+    }
+    function getUser() {
+      try { return JSON.parse(localStorage.getItem('auth_user') || 'null'); }
+      catch { return null; }
+    }
+    function isAdmin() {
+      const user = getUser();
+      return !!user?.usuario_admin;
+    }
+    function formatDate(iso) {
+      try {
+        const d = new Date(iso);
+        return d.toLocaleString('pt-BR', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+      } catch { return iso; }
+    }
+
+    // ===== Carregar partidas =====
+    async function carregarPartidas() {
+      const tbody = document.getElementById('tabela-partidas');
+      try {
+        const resposta = await fetch(`/api/partida/listar?t=${Date.now()}`, {
+          cache: 'no-store',
+          headers: { 'Accept': 'application/json' }
+        });
+        const partidas = await resposta.json();
+
+        tbody.innerHTML = '';
+
+        if (!partidas?.length) {
+          tbody.innerHTML = `<tr><td colspan="6" class="empty">Nenhuma partida cadastrada ainda.</td></tr>`;
+          return;
+        }
+
+        const admin = isAdmin();
+
+        for (const p of partidas) {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td><strong>${p.codigo}</strong></td>
+            <td>${p.mapa}</td>
+            <td>${p.nome_time1}</td>
+            <td>${p.nome_time2}</td>
+            <td><strong>${p.resultado_time1} x ${p.resultado_time2}</strong></td>
+            <td>
+              <div class="muted">${formatDate(p.data)}</div>
+              <div class="row-actions">
+                <a class="btn primary" href="/detalhes-partida-html?codigo=${encodeURIComponent(p.codigo)}">Ver detalhes</a>
+                ${admin ? `<button class="btn danger" data-del="${p.id}" onclick="excluirPartida(${p.id}, '${p.codigo}')">Excluir</button>` : ''}
+              </div>
+            </td>
+          `;
+          tbody.appendChild(tr);
+        }
+      } catch (err) {
+        console.error(err);
+        tbody.innerHTML = `<tr><td colspan="6" class="empty">Falha ao carregar partidas.</td></tr>`;
+      }
+    }
+
+    // ===== Excluir partida =====
+    async function excluirPartida(id, codigo) {
+      if (!isAdmin()) { alert('Apenas administradores podem excluir partidas.'); return; }
+      if (!confirm(`Tem certeza que deseja excluir a partida #${codigo}?`)) return;
+
+      const token = getToken();
+      if (!token) {
+        alert('Sessão expirada. Faça login novamente.');
+        window.location.href = '/login-html';
+        return;
+      }
+
+      const btn = document.querySelector(`button[data-del="${id}"]`);
+      if (btn) btn.disabled = true;
+
+      try {
+        const response = await fetch(`/api/partida/deletar/${id}?t=${Date.now()}`, {
+          method: 'DELETE',
+          cache: 'no-store',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          }
+        });
+
+        let data = {};
+        try { data = await response.json(); } catch { data = { message: 'Erro ao processar resposta do servidor' }; }
+
+        if (response.status === 401) {
+          alert('Sessão expirada. Faça login novamente.');
+          localStorage.removeItem('auth_token');
+          localStorage.removeItem('auth_user');
+          window.location.href = '/login-html';
+          return;
+        }
+        if (response.status === 403) { alert(data.message || 'Apenas administradores podem excluir partidas!'); return; }
+        if (!response.ok) { alert(data.message || 'Erro ao excluir partida.'); return; }
+
+        // Recarrega a lista (garante estado coerente)
+        await carregarPartidas();
+
+        // 🔔 Invalida o ranking para todas as abas abertas
+        localStorage.setItem('ranking_invalidate', String(Date.now()));
+
+        alert(data.message || 'Partida deletada com sucesso!');
+      } catch (error) {
+        console.error('Erro ao excluir partida:', error);
+        alert('Erro de conexão ao tentar excluir partida.');
+      } finally {
+        if (btn) btn.disabled = false;
+      }
+    }
+
+    // ===== Mostrar/ocultar links de admin =====
+    function toggleAdminLinks() {
+      const adminLinks = document.querySelectorAll('.admin-only');
+      const isAdminUser = isAdmin();
+      adminLinks.forEach(link => { link.style.display = isAdminUser ? '' : 'none'; });
+    }
+
+    // ===== Inicialização =====
+    window.excluirPartida = excluirPartida;
+
+    document.addEventListener('DOMContentLoaded', () => {
+      carregarPartidas();
+      toggleAdminLinks();
+    });
+  </script>
+
+  <!-- Auth (renderiza gold 18x18 e esconde Importar se não for admin) -->
+  <script src="/js/auth.js" defer></script>
+</body>
+
+</html>

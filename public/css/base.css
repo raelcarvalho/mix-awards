@@ -1,0 +1,91 @@
+/* ===== NAV BAR ===== */
+.nav{
+  display:flex;
+  align-items:center;
+  gap:14px;
+  padding:10px 16px;
+  background:#0b1824;
+  color:#e8f1f8;
+  border-bottom:1px solid #12304a;
+}
+
+/* Links simples do nav (não conflitar com nav-cta/nav-glass) */
+.nav a:not(.nav-cta):not(.nav-glass){
+  color:#e8f1f8;
+  text-decoration:none;
+  padding:6px 8px;
+  border-radius:8px;
+}
+.nav a:not(.nav-cta):not(.nav-glass):hover{
+  background:rgba(255,255,255,.06);
+}
+
+.navbar-brand{ font-weight:800; letter-spacing:.5px; }
+
+.nav-right{
+  margin-left:auto;
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+
+/* Botão Sair (skin) */
+.btn-logout{
+  border:1px solid #2e4a64;
+  padding:6px 10px;
+  border-radius:8px;
+}
+.btn-logout:hover{ background:#1a3246; }
+
+/* ===========================
+   GOLD BADGE (NAV) - ROBUSTO
+   =========================== */
+
+/* Cápsula */
+.nav .gold-badge{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:4px 12px;
+  background:#132b3e;
+  border:1px solid #23445e;
+  border-radius:9999px;
+  line-height:1;
+  font-weight:700;
+  white-space:nowrap;
+}
+
+/* Ícone do gold + fallbacks (SEMPRE 18x18) */
+.nav .gold-badge > img,
+.nav .gold-badge > svg,
+.nav .gold-badge > span[aria-hidden]{
+  inline-size:18px !important;   /* width */
+  block-size:18px !important;    /* height */
+  max-inline-size:none !important;
+  object-fit:contain;
+  display:block;
+  transform:translateY(1px);
+  flex:0 0 18px;
+}
+
+/* Segurança extra: se vier com id=goldIcon */
+.nav img#goldIcon{
+  inline-size:18px !important;
+  block-size:18px !important;
+  max-inline-size:none !important;
+  object-fit:contain !important;
+  display:block;
+  transform:translateY(1px);
+}
+
+/* Valor */
+.nav .gold-badge .qty{
+  min-width:14px;
+  text-align:right;
+}
+
+/* Boas-vindas compacta */
+.nav .nav-welcome{ white-space:nowrap; }
+
+/* Guard-rail global: nenhuma img do nav passa de 28px de altura */
+.nav img{ max-height:28px; height:auto; }
