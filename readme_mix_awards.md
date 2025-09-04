@@ -1,3 +1,7 @@
+![Node.js](https://img.shields.io/badge/Node.js-18%2B-339933?logo=node.js&logoColor=white)
+![AdonisJS](https://img.shields.io/badge/AdonisJS-5.x-5A45FF?logo=adonisjs&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-13%2B-336791?logo=postgresql&logoColor=white)
+
 # MIX AWARDS — Álbum, Figurinhas, Stickers e Ranking a partir das partidas
 
 > Plataforma gamificada que importa/contabiliza partidas, calcula estatísticas e recompensa os jogadores com **Gold**. O Gold é usado para comprar **pacotes** (cápsulas) de **figurinhas** e **stickers de assinaturas** para completar o álbum e disputar o **ranking**.
