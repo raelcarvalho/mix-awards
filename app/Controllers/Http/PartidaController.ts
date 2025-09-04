@@ -24,66 +24,49 @@ export default class PartidaController {
 
     const data = request.all();
 
-    // -------- helper para resolver a URL do avatar ----------
     const resolveAvatarUrl = (j: any): string => {
+      // ... (sua função helper de avatar, sem alterações)
       try {
-        // 1) Tenta extrair do avatarHtml (já vem com _medium.*)
         const html: string = j?.player?.avatarHtml || "";
         const mHtml = html.match(
           /src="([^"]+_medium\.(?:jpg|jpeg|png|webp))"/i
         );
         if (mHtml?.[1]) return mHtml[1];
-
-        // 2) Monta com player.avatar (+ extensão) -> domínio GC + _medium
-        const avatar = j?.player?.avatar; // ex: "players/avatar/822181/822181"
+        const avatar = j?.player?.avatar;
         const ext = j?.player?.avatarExtension || "jpg";
         if (avatar && typeof avatar === "string") {
-          // se já vier completo (http), só garante _medium
           if (/^https?:\/\//i.test(avatar)) {
             if (/_medium\.(jpg|jpeg|png|webp)(\?.*)?$/i.test(avatar))
               return avatar;
-
             const hasExt = /\.(jpg|jpeg|png|webp)(\?.*)?$/i.test(avatar);
-            if (hasExt) {
+            if (hasExt)
               return avatar.replace(
                 /\.(jpg|jpeg|png|webp)(\?.*)?$/i,
                 `_medium.$1`
               );
-            }
             return `${avatar}_medium.jpg`;
           }
-
-          // caminho relativo da GC → prefixa domínio estático + _medium
           return `https://static.gamersclub.com.br/${avatar}_medium.${ext}`;
         }
-
-        // 3) plAvatar (pode ser full URL da Steam ou caminho GC)
         const plAvatar = j?.plAvatar;
         if (plAvatar && typeof plAvatar === "string") {
           if (/^https?:\/\//i.test(plAvatar)) {
-            // full URL (Steam/GC). Tenta garantir _medium
             if (/_medium\.(jpg|jpeg|png|webp)(\?.*)?$/i.test(plAvatar))
               return plAvatar;
-
             const hasExt = /\.(jpg|jpeg|png|webp)(\?.*)?$/i.test(plAvatar);
-            if (hasExt) {
+            if (hasExt)
               return plAvatar.replace(
                 /\.(jpg|jpeg|png|webp)(\?.*)?$/i,
                 `_medium.$1`
               );
-            }
             return `${plAvatar}_medium.jpg`;
           } else {
-            // caminho relativo GC
             return `https://static.gamersclub.com.br/${plAvatar}_medium.jpg`;
           }
         }
-      } catch {
-        // ignora e cai no fallback
-      }
+      } catch {}
       return "";
     };
-    // --------------------------------------------------------
 
     const partida = await Partidas.create({
       ...data.partida,
@@ -103,7 +86,6 @@ export default class PartidaController {
     if (scoreA > scoreB) timeVencedor = "A";
     else if (scoreB > scoreA) timeVencedor = "B";
 
-    // monta input dos jogadores, já com a imagem resolvida
     const jogadoresInput = [
       ...data.jogos.players.team_a.map((j: any) => ({
         nome: j.player.nick,
@@ -143,7 +125,6 @@ export default class PartidaController {
 
       let jogadorModel = await Jogadores.findBy("nome", nome);
 
-      // Vincular jogador ao usuário se nome_normalizado for igual
       if (jogadorModel && !jogadorModel.usuario_adm_id) {
         const nomeNorm = nome
           .normalize("NFD")
@@ -168,7 +149,6 @@ export default class PartidaController {
       pontosPartida += vitoria ? 20 : 10;
 
       if (jogadorModel) {
-        // Atualiza imagem só se ainda não houver (ou estiver vazia)
         if (
           (!jogadorModel.imagem || jogadorModel.imagem.trim() === "") &&
           imagem
@@ -177,6 +157,16 @@ export default class PartidaController {
         }
 
         novaQtdPartidas = Number(jogadorModel.qtd_partidas || 0) + 1;
+
+        // =====================================================================
+        // CORREÇÃO: Adiciona a lógica para incrementar as vitórias
+        // =====================================================================
+        if (vitoria) {
+          jogadorModel.vitorias = (
+            Number(jogadorModel.vitorias || 0) + 1
+          ).toString();
+        }
+        // =====================================================================
 
         jogadorModel.kills = (
           Number(jogadorModel.kills || 0) + estatisticas.kills
@@ -220,7 +210,6 @@ export default class PartidaController {
 
         await jogadorModel.save();
       } else {
-        // Cria já com a imagem
         jogadorModel = await Jogadores.create({
           nome,
           imagem: imagem || "",
@@ -238,7 +227,8 @@ export default class PartidaController {
           ...estatisticas,
           nome,
           time: _time,
-          vitorias: vitoria ? "1" : "0",
+          // CORREÇÃO: Passa o valor total de vitórias para o pivot, não apenas 0 ou 1
+          vitorias: jogadorModel.vitorias,
           pontos: pontosPartida,
           qtd_partidas: novaQtdPartidas,
         },
@@ -247,20 +237,13 @@ export default class PartidaController {
 
     const pivotData = jogadoresCriados.reduce((acc, jogador) => {
       const { id, origem } = jogador;
-
       let bonus = 0;
       const qtdPartidas = Number(origem.qtd_partidas);
-
       if (qtdPartidas === 15) bonus = 20;
       else if (qtdPartidas === 20) bonus = 40;
       else if (qtdPartidas === 25) bonus = 60;
       else if (qtdPartidas === 30) bonus = 80;
-
-      acc[id] = {
-        ...origem,
-        pontos: origem.pontos + bonus,
-      };
-
+      acc[id] = { ...origem, pontos: origem.pontos + bonus };
       return acc;
     }, {} as Record<number, any>);
 
