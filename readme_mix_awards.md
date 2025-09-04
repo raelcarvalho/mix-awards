@@ -340,5 +340,5 @@ Defina a licença do projeto conforme sua estratégia (ex.: **MIT**, **AGPL**, *
 ---
 
 ### Nota
-Este README descreve a implementação atual do MIX AWARDS conforme as regras e fluxos presentes no projeto: dois álbuns (figurinhas e stickers), ranking com as regras de pontuação especificadas, shop/cápsulas com itens por pacote e probabilidades configuráveis, e importação de partidas via JSON oficial da plataforma de jogo.
+Este README descreve a implementação atual do MIX AWARDS conforme as regras e fluxos presentes no projeto: dois álbuns (figurinhas e stickers), ranking com as regras de pontuação especificadas, shop/cápsulas com itens por pacote e probabilidades configuráveis, e importação de partidas via JSON oficial da plataforma de jogo...
 
