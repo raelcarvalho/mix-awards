@@ -1,0 +1,102 @@
+/* Gooey Button — versão corrigida (bolhas visíveis fora do botão) */
+:root{
+  --gooey-prime:#00FF80;  /* cor do botão/bolhas */
+  --gooey-text:#0c1016;   /* cor do texto */
+}
+
+/* botão */
+:is(a,button).gooey-btn{
+  position: relative;
+  isolation: isolate;                   /* stacking context próprio */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 10px 16px;
+  border: 0;
+  border-radius: 10px;
+  text-decoration: none;
+  font-weight: 800;
+  letter-spacing: .3px;
+  line-height: 1;
+  cursor: pointer;
+
+  background: var(--prime, var(--gooey-prime));
+  color: var(--gtext, var(--gooey-text));
+
+  /* IMPORTANTE: filtro e visibilidade para o efeito aparecer */
+  filter: url(#gooey) !important;
+  -webkit-filter: url(#gooey) !important;
+  overflow: visible !important;         /* <-- estava hidden; quebrava o efeito */
+
+  transition: transform .15s ease, background-color .15s ease;
+}
+.gooey-btn:hover{ background: var(--prime, var(--gooey-prime)); }
+.gooey-btn:active{ transform: translateY(1px) scale(.99); }
+.gooey-btn:disabled{ opacity: .55; cursor: not-allowed; }
+
+/* se alguém combinar com .btn do tema, neutralize conflitos */
+.btn.gooey-btn{
+  background: var(--prime, var(--gooey-prime)) !important;
+  color: var(--gtext, var(--gooey-text)) !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  padding: 10px 16px !important;
+}
+
+.gooey-btn .txt{ position: relative; z-index: 2; }
+
+/* camada das bolhas: expande um pouco acima do botão */
+.gooey-btn .bubbles{
+  position: absolute;
+  left: 0; right: 0;
+  bottom: -6px;     /* deixa algumas bolhas nascerem um pouco abaixo */
+  top: -26px;       /* e principalmente acima (onde o efeito é visível) */
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* bolhas */
+.gooey-btn .bubble{
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--prime, var(--gooey-prime));
+  opacity: .95;
+  box-shadow: 0 0 20px var(--prime, var(--gooey-prime));
+  will-change: transform;
+}
+
+/* 10 bolhas subindo em tempos/alturas diferentes */
+.gooey-btn .bubble:nth-child(1){  left:10%; animation:gb1 3.1s infinite .2s linear; }
+.gooey-btn .bubble:nth-child(2){  left:22%; animation:gb2 3.3s infinite .4s linear; }
+.gooey-btn .bubble:nth-child(3){  left:34%; animation:gb3 3.5s infinite .6s linear; }
+.gooey-btn .bubble:nth-child(4){  left:46%; animation:gb4 3.7s infinite .8s linear; }
+.gooey-btn .bubble:nth-child(5){  left:58%; animation:gb5 3.9s infinite 1.0s linear; }
+.gooey-btn .bubble:nth-child(6){  left:70%; animation:gb6 4.1s infinite 1.2s linear; }
+.gooey-btn .bubble:nth-child(7){  left:82%; animation:gb7 4.3s infinite 1.4s linear; }
+.gooey-btn .bubble:nth-child(8){  left:16%; animation:gb8 3.8s infinite .3s linear; }
+.gooey-btn .bubble:nth-child(9){  left:40%; animation:gb9 4.0s infinite .9s linear; }
+.gooey-btn .bubble:nth-child(10){ left:74%; animation:gb10 4.2s infinite 1.3s linear; }
+
+@keyframes gb1  {0%{transform:translateY(0)}99%{transform:translateY(-110px)}100%{transform:translateY(0);opacity:0}}
+@keyframes gb2  {0%{transform:translateY(0)}99%{transform:translateY(-130px)}100%{transform:translateY(0);opacity:0}}
+@keyframes gb3  {0%{transform:translateY(0)}99%{transform:translateY(-105px)}100%{transform:translateY(0);opacity:0}}
+@keyframes gb4  {0%{transform:translateY(0)}99%{transform:translateY(-140px)}100%{transform:translateY(0);opacity:0}}
+@keyframes gb5  {0%{transform:translateY(0)}99%{transform:translateY(-120px)}100%{transform:translateY(0);opacity:0}}
+@keyframes gb6  {0%{transform:translateY(0)}99%{transform:translateY(-150px)}100%{transform:translateY(0);opacity:0}}
+@keyframes gb7  {0%{transform:translateY(0)}99%{transform:translateY(-115px)}100%{transform:translateY(0);opacity:0}}
+@keyframes gb8  {0%{transform:translateY(0)}99%{transform:translateY(-145px)}100%{transform:translateY(0);opacity:0}}
+@keyframes gb9  {0%{transform:translateY(0)}99%{transform:translateY(-108px)}100%{transform:translateY(0);opacity:0}}
+@keyframes gb10 {0%{transform:translateY(0)}99%{transform:translateY(-135px)}100%{transform:translateY(0);opacity:0}}
+
+/* tamanho menor opcional */
+.gooey-sm{ min-height: 36px; padding: 8px 12px; font-size: .95rem; }
+
+/* acessibilidade: respeita usuários que preferem menos movimento */
+@media (prefers-reduced-motion: reduce){
+  .gooey-btn .bubble{ animation: none !important; }
+}

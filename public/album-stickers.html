@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Meu Álbum (Stickers) — MIX AWARDS</title>
+
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/layout.css">
+  <link rel="stylesheet" href="/css/gooey.css">
+  <link rel="preload" href="/js/auth.js" as="script" />
+
+  <style>
+    /* ====== ÁLBUM STICKERS ====== */
+    .album-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin: 6px 0 14px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: #132b3e;
+      color: #e8f1f8;
+      border: 1px solid #23445e;
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-weight: 800;
+    }
+
+    .badge img {
+      width: 18px;
+      height: 18px;
+      transform: translateY(1px);
+    }
+
+    .btn {
+      appearance: none;
+      border: 0;
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .btn.primary {
+      background: #2d86d6;
+      color: #fff;
+      border: 1px solid #3a93e2;
+    }
+
+    .pager {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      margin-left: auto;
+    }
+
+    .pager .pbtn {
+      min-width: 34px;
+      text-align: center;
+      font-weight: 800;
+      cursor: pointer;
+      background: #0f2435;
+      color: #e8f1f8;
+      border: 1px solid #1f3b54;
+      border-radius: 8px;
+      padding: 6px 10px;
+    }
+
+    .pager .pbtn.active {
+      outline: 2px solid #2d86d6;
+    }
+
+    .panel .content {
+      position: relative;
+      border-radius: 14px;
+      padding: 14px;
+      overflow: hidden;
+      background: rgba(255, 255, 255, .02);
+    }
+
+    .panel .content::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: url('/uploads/figurinhas/mix-awards.png') center/cover no-repeat;
+      filter: saturate(1.05) brightness(.65);
+      opacity: .35;
+      z-index: 0;
+    }
+
+    .panel .content>* {
+      position: relative;
+      z-index: 1;
+    }
+
+    /* NOVO GRID COM EFEITO CARTA */
+    .stickers-grid {
+      display: grid;
+      gap: 24px;
+      grid-template-columns: repeat(5, minmax(160px, 1fr));
+      perspective: 1000px;
+    }
+
+    @media(max-width:1200px) {
+      .stickers-grid {
+        grid-template-columns: repeat(4, minmax(150px, 1fr));
+      }
+    }
+
+    @media(max-width:900px) {
+      .stickers-grid {
+        grid-template-columns: repeat(3, minmax(150px, 1fr));
+      }
+    }
+
+    @media(max-width:640px) {
+      .stickers-grid {
+        grid-template-columns: repeat(2, minmax(140px, 1fr));
+      }
+    }
+
+    /* SLOT COM EFEITO 3D MELHORADO */
+    .slot {
+      position: relative;
+      aspect-ratio: 1/1;
+      border-radius: 14px;
+      overflow: visible;
+      background: linear-gradient(180deg, rgba(10, 18, 28, .62), rgba(10, 20, 30, .76));
+      border: 1px solid rgba(255, 255, 255, .06);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 8px;
+      transition: all 0.5s ease;
+      color: #e6f2f8;
+      cursor: pointer;
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .05);
+      transform-style: preserve-3d;
+    }
+
+    /* Efeito de elevação do slot ao passar o mouse */
+    .slot:hover {
+      transform: translateY(-5%) rotateX(10deg);
+      box-shadow: 0 15px 35px rgba(0, 0, 0, 0.6);
+    }
+
+    /* Efeito holográfico com contorno neon dourado */
+    .slot::before {
+      content: "";
+      position: absolute;
+      inset: -3px;
+      background: linear-gradient(45deg, #ffd700, #ffb700, #ffd700, #ffb700);
+      border-radius: 16px;
+      z-index: -1;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      filter: blur(8px);
+    }
+
+    .slot:hover::before {
+      opacity: 0.7;
+      animation: hologram 2s infinite linear;
+    }
+
+    /* Animação holográfica */
+    @keyframes hologram {
+      0% {
+        background-position: 0% 0%;
+      }
+
+      100% {
+        background-position: 200% 200%;
+      }
+    }
+
+    /* Container para a imagem com efeito 3D separado */
+    .sticker-img-container {
+      position: relative;
+      width: 92%;
+      height: 92%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.5s ease;
+      transform-style: preserve-3d;
+    }
+
+    .slot img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      z-index: 1;
+      filter: drop-shadow(0 10px 16px rgba(0, 0, 0, .45));
+      transition: all 0.5s ease;
+      transform: translateZ(0);
+    }
+
+    /* Efeito de movimento 3D da imagem ao passar o mouse - A IMAGEM SAI DO QUADRO */
+    .slot:hover .sticker-img-container {
+      transform: translate3d(0, -15%, 30px) scale(1.1);
+    }
+
+    .slot .label {
+      position: absolute;
+      top: 6px;
+      left: 8px;
+      background: rgba(15, 35, 53, .9);
+      border: 1px solid rgba(255, 255, 255, .14);
+      color: #e6f1f8;
+      font-weight: 800;
+      font-size: .72rem;
+      padding: 3px 6px;
+      border-radius: 7px;
+      z-index: 2;
+      transition: all 0.5s ease;
+    }
+
+    .slot:hover .label {
+      transform: translate3d(0%, -10px, 30px);
+    }
+
+    .slot .num {
+      position: absolute;
+      bottom: 8px;
+      right: 10px;
+      font-weight: 800;
+      opacity: .7;
+      font-size: .86rem;
+      text-shadow: 0 1px 0 rgba(0, 0, 0, .35);
+      z-index: 2;
+      transition: all 0.5s ease;
+    }
+
+    .slot:hover .num {
+      transform: translate3d(0%, 10px, 30px);
+    }
+
+    .slot.is-new {
+      border: 2px dashed transparent;
+      background: linear-gradient(rgba(0, 0, 0, .14), rgba(0, 0, 0, .14)) padding-box,
+        linear-gradient(135deg, #ffd45a, #ff7b3d) border-box;
+    }
+
+    /* MODAL COM EFEITO HOLOGRÁFICO MELHORADO */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 0, 0, .85);
+      z-index: 60;
+    }
+
+    .modal-backdrop.open {
+      display: flex;
+    }
+
+    .modal {
+      width: min(520px, calc(100vw - 24px));
+      background: #0f2435;
+      color: #e8f1f8;
+      border: 1px solid #1f3b54;
+      border-radius: 16px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, .75);
+      padding: 16px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Efeito de brilho holográfico no modal */
+    .modal::before {
+      content: "";
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: linear-gradient(45deg, transparent, rgba(255, 215, 0, 0.1), transparent, rgba(255, 215, 0, 0.1), transparent);
+      transform: rotate(45deg);
+      animation: modalHologram 4s linear infinite;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    @keyframes modalHologram {
+      0% {
+        transform: rotate(45deg) translateX(-50%);
+      }
+
+      100% {
+        transform: rotate(45deg) translateX(50%);
+      }
+    }
+
+    .modal>* {
+      position: relative;
+      z-index: 1;
+    }
+
+    .modal header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+
+    .modal h4 {
+      margin: 0;
+      font-weight: 900;
+    }
+
+    .modal .close {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      border: 1px solid #7a1f1f;
+      background: #c83b3b;
+      color: #fff;
+      font-weight: 900;
+      cursor: pointer;
+      z-index: 2;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      line-height: 1;
+    }
+
+    .modal .close:hover {
+      background: #d9534f;
+    }
+
+    /* CARD 3D MELHORADO COM EFEITO HOLOGRÁFICO */
+    .card3d {
+      perspective: 1000px;
+      margin: 8px auto;
+      width: min(92%, 420px);
+    }
+
+    .card3d .inner {
+      transform-style: preserve-3d;
+      transition: transform .12s ease;
+      border-radius: 14px;
+      overflow: visible;
+      aspect-ratio: 1/1;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, .5);
+      position: relative;
+      display: grid;
+      place-items: center;
+      /* Efeito holográfico no card */
+      background: linear-gradient(135deg, rgba(255, 215, 0, 0.05), rgba(255, 215, 0, 0.1), rgba(255, 215, 0, 0.05));
+    }
+
+    /* Brilho holográfico no card */
+    .card3d .inner::after {
+      content: "";
+      position: absolute;
+      inset: -20%;
+      background: linear-gradient(45deg, transparent 30%, rgba(255, 215, 0, 0.2) 50%, transparent 70%);
+      animation: cardHologram 3s linear infinite;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    @keyframes cardHologram {
+      0% {
+        transform: translateX(-100%) translateY(-100%) rotate(45deg);
+      }
+
+      100% {
+        transform: translateX(100%) translateY(100%) rotate(45deg);
+      }
+    }
+
+    .card3d img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+      position: relative;
+      z-index: 2;
+      filter: drop-shadow(0 0 15px rgba(255, 215, 0, 0.3));
+      transition: transform 0.5s ease;
+    }
+
+    .card3d .inner:hover img {
+      transform: translateZ(40px) scale(1.1);
+    }
+
+    .card3d .inner::before {
+      content: "";
+      position: absolute;
+      inset: -10%;
+      border-radius: inherit;
+      background: radial-gradient(45% 45% at 50% 50%, rgba(255, 191, 73, .32), transparent 70%);
+      filter: blur(18px);
+    }
+
+    #cardInfo {
+      margin-top: 10px;
+      text-align: center;
+      font-weight: 900;
+      font-size: 16px;
+      letter-spacing: .2px;
+      color: #ffd700;
+      text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+    }
+
+    /* ======= Botões do menu ======= */
+    .nav-btn {
+      color: #e8f1f8;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      margin: 0;
+      padding: 10px 15px;
+      position: relative;
+      text-decoration: none;
+      text-transform: uppercase;
+      transition: all .3s ease;
+      background: none !important;
+      border: none !important;
+    }
+
+    .nav-btn:hover,
+    .nav-btn:active {
+      letter-spacing: 1px;
+      background: none !important;
+    }
+
+    .nav-btn:after,
+    .nav-btn:before {
+      backface-visibility: hidden;
+      border: 1px solid rgba(255, 255, 255, 0);
+      bottom: 0;
+      content: " ";
+      display: block;
+      margin: 0 auto;
+      position: relative;
+      transition: all .3s ease-in-out;
+      width: 0;
+    }
+
+    .nav-btn:hover:after,
+    .nav-btn:hover:before {
+      width: 70%;
+    }
+
+    .nav-btn:hover:before {
+      bottom: auto;
+      top: 0;
+    }
+
+    /* cores no hover via data-color */
+    .nav-btn[data-color="#2db2ff"]:hover:after,
+    .nav-btn[data-color="#2db2ff"]:hover:before {
+      border-color: #2db2ff;
+    }
+
+    .nav-btn[data-color="#ff1f71"]:hover:after,
+    .nav-btn[data-color="#ff1f71"]:hover:before {
+      border-color: #ff1f71;
+    }
+
+    .nav-btn[data-color="#1eff45"]:hover:after,
+    .nav-btn[data-color="#1eff45"]:hover:before {
+      border-color: #1eff45;
+    }
+
+    .nav-btn[data-color="#a78bfa"]:hover:after,
+    .nav-btn[data-color="#a78bfa"]:hover:before {
+      border-color: #a78bfa;
+    }
+
+    .nav a.nav-btn[data-color="#a78bfb"]:hover::before,
+    .nav a.nav-btn[data-color="#a78bfb"]:hover::after {
+      border-color: #f16a1c;
+    }
+
+    .nav-btn[data-color="#56c1ff"]:hover:after,
+    .nav-btn[data-color="#56c1ff"]:hover:before {
+      border-color: #56c1ff;
+    }
+
+    .nav-btn[data-color="#ff9e9e"]:hover:after,
+    .nav-btn[data-color="#ff9e9e"]:hover:before {
+      border-color: #ff9e9e;
+    }
+
+    .nav-btn[data-color="#6225E6"]:hover:after,
+    .nav-btn[data-color="#6225E6"]:hover:before {
+      border-color: #FBC638;
+    }
+  </style>
+</head>
+
+<body class="layout">
+
+  <!-- NAV com os MESMOS botões/efeitos das outras páginas -->
+  <div class="nav">
+    <a class="navbar-brand" href="/index">MIX AWARDS</a>
+
+    <a class="nav-btn" data-color="#2db2ff" href="/importar-partida-html">Importar Partida</a>
+    <a class="nav-btn" data-color="#ff1f71" href="/consultar-partidas-html">Consultar Partida</a>
+    <a class="nav-btn" data-color="#1eff45" href="/ranking-jogadores-html">Ranking Jogadores</a>
+    <a class="nav-btn" data-color="#6225E6" href="/shop-html">Loja</a>
+    <a class="nav-btn" data-color="#a78bfa" href="/album-html">Álbum</a>
+    <a class="nav-btn" data-color="#a78bfb" href="/album-stickers-html">Álbum (Stickers)</a>
+
+    <div class="nav-right"><!-- auth.js preenche: boas-vindas + gold badge + ações --></div>
+  </div>
+  <div class="page-pad"></div>
+
+  <main class="section">
+    <div class="container">
+      <div class="panel">
+        <div class="album-title">MEU ÁLBUM (STICKERS)</div>
+
+        <div class="album-toolbar">
+          <span class="badge" id="chipCaps">
+            <img src="/uploads/stickers/sticker_capsula.png" alt="">
+            Cápsulas: <strong id="qtdCapsulas">—</strong>
+          </span>
+
+          <!-- Botão no mesmo modelo do Álbum -->
+          <button id="btnOpenCaps" class="btn primary" type="button">Abrir cápsula</button>
+
+          <div id="pager" class="pager"></div>
+        </div>
+
+        <div class="content">
+          <div id="stickersGrid" class="stickers-grid" aria-live="polite"></div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- MODAL -->
+  <div id="stickerModal" class="modal-backdrop" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-label="Sticker">
+      <header>
+        <h4 id="ttlSticker">Sticker</h4>
+        <button id="btnCloseStickerModal" class="close" aria-label="Fechar">×</button>
+      </header>
+      <div class="card3d" id="sticker3d">
+        <div class="inner" id="sticker3dInner"><img id="stickerImg" src="" alt="Sticker"></div>
+      </div>
+      <div id="cardInfo">Normal</div>
+    </div>
+  </div>
+
+  <!-- JS CORRIGIDO para paginação e gestão de stickers -->
+  <script>
+    (function () {
+      const $ = (s, c = document) => c.querySelector(s);
+      const grid = $("#stickersGrid");
+      const pager = $("#pager");
+      const capsEl = $("#qtdCapsulas");
+      const btnOpenCaps = $("#btnOpenCaps");
+
+      const token = localStorage.getItem("auth_token");
+      const auth = token ? { Authorization: `Bearer ${token}` } : {};
+
+      const TOTAL_STICKERS = 28;
+      const PER_PAGE = 10;
+      const PAGES = Math.ceil(TOTAL_STICKERS / PER_PAGE);
+      let page = 1;
+      let owned = new Set();
+
+      // Modal
+      const stickerModal = $("#stickerModal");
+      const inner3d = $("#sticker3dInner");
+      const stickerImg = $("#stickerImg");
+      const titleEl = $("#ttlSticker");
+      const closeModalBtn = $("#btnCloseStickerModal");
+      const cardInfo = $("#cardInfo");
+
+      function openStickerModal(src, name, rarity) {
+        stickerImg.src = src;
+        titleEl.textContent = name || "Sticker";
+        cardInfo.textContent = rarity || "Normal";
+        stickerModal.classList.add("open");
+      }
+
+      function closeStickerModal() {
+        stickerModal.classList.remove("open");
+      }
+
+      // CORREÇÃO: Botão de fechar funcionando corretamente
+      if (closeModalBtn) {
+        closeModalBtn.addEventListener("click", closeStickerModal);
+      }
+
+      if (stickerModal) {
+        stickerModal.addEventListener("click", e => {
+          if (e.target === stickerModal) closeStickerModal();
+        });
+      }
+
+      window.addEventListener("keydown", e => {
+        if (e.key === "Escape") closeStickerModal();
+      });
+
+      // Tilt para o modal
+      (function () {
+        const inner = inner3d;
+        if (!inner) return;
+        let rx = 0, ry = 0, tx = 0, ty = 0;
+
+        function loop() {
+          rx += (tx - rx) * 0.12;
+          ry += (ty - ry) * 0.12;
+          inner.style.transform = `rotateX(${rx}deg) rotateY(${ry}deg) scale3d(1.05, 1.05, 1.05)`;
+          requestAnimationFrame(loop);
+        }
+
+        if (inner) {
+          inner.addEventListener("mousemove", e => {
+            const r = inner.getBoundingClientRect();
+            const nx = (e.clientX - (r.left + r.width / 2)) / (r.width / 2);
+            const ny = (e.clientY - (r.top + r.height / 2)) / (r.height / 2);
+            ty = -ny * 15;
+            tx = nx * 18;
+          });
+
+          inner.addEventListener("mouseleave", () => {
+            tx = 0;
+            ty = 0;
+          });
+
+          requestAnimationFrame(loop);
+        }
+      })();
+
+      if (grid) {
+        grid.addEventListener("click", e => {
+          const slot = e.target.closest(".slot");
+          if (!slot) return;
+
+          const img = slot.querySelector("img");
+          if (!img) return;
+
+          const rarity = slot.querySelector(".label")?.textContent || "Normal";
+          openStickerModal(img.src, "", rarity);
+        });
+      }
+
+      async function fetchOwned() {
+        owned = new Set();
+        if (!token) return;
+        try {
+          const r = await fetch('/album/stickers', { headers: auth });
+          const j = (await r.json())?.resultados || {};
+          const arr = j.stickers || [];
+          for (const it of arr) if (it.possui) owned.add(it.id);
+        } catch { }
+      }
+
+      function renderPager() {
+        if (!pager) return;
+
+        pager.innerHTML = "";
+        const mk = (label, target, extra = "") => {
+          const b = document.createElement("button");
+          b.className = `pbtn ${extra}`;
+          b.textContent = label;
+          b.onclick = () => {
+            page = target;
+            renderGrid();
+            renderPager();
+          };
+          return b;
+        };
+
+        // Botão anterior
+        if (page > 1) {
+          pager.appendChild(mk("«", page - 1));
+        }
+
+        // Páginas
+        for (let i = 1; i <= PAGES; i++) {
+          pager.appendChild(mk(String(i), i, i === page ? "active" : ""));
+        }
+
+        // Próxima página
+        if (page < PAGES) {
+          pager.appendChild(mk("»", page + 1));
+        }
+      }
+
+      function renderGrid() {
+        if (!grid) return;
+
+        grid.innerHTML = "";
+        const start = (page - 1) * PER_PAGE + 1;
+        const end = Math.min(page * PER_PAGE, TOTAL_STICKERS);
+
+        for (let n = start; n <= end; n++) {
+          const slot = document.createElement("div");
+          slot.className = "slot";
+
+          const label = `<span class="label">Normal</span>`;
+          const num = `<span class="num">${n}</span>`;
+
+          // Verifica se o usuário possui este sticker
+          if (owned.has(n)) {
+            // REMOVIDO: texto "Sticker #X" do alt
+            const img = `<div class="sticker-img-container"><img src="/uploads/stickers/sticker${n}.png" alt=""></div>`;
+            slot.innerHTML = `${label}${img}${num}`;
+          } else {
+            // Slot vazio - sem imagem
+            slot.innerHTML = `${label}${num}`;
+          }
+
+          grid.appendChild(slot);
+        }
+      }
+
+      if (btnOpenCaps) {
+        btnOpenCaps.addEventListener("click", () => {
+          window.location.href = '/abrir-capsula-html';
+        });
+      }
+
+      async function refreshCaps() {
+        try {
+          const r = await fetch('/shop/listar-capsulas-fechadas', { headers: auth });
+          const j = (await r.json())?.resultados || {};
+          const qtd = Number(j.quantidade ?? (Array.isArray(j.capsulas) ? j.capsulas.length : 0) ?? 0);
+          if (capsEl) capsEl.textContent = String(qtd);
+          if (btnOpenCaps) btnOpenCaps.disabled = !token || qtd <= 0;
+        } catch {
+          if (capsEl) capsEl.textContent = "0";
+          if (btnOpenCaps) btnOpenCaps.disabled = !token;
+        }
+      }
+
+      window.__onStickerDrop = async function () {
+        await fetchOwned();
+        renderGrid();
+        await refreshCaps();
+      };
+
+      // Inicialização
+      (async function init() {
+        await fetchOwned();
+        renderGrid();
+        renderPager();
+        await refreshCaps();
+      })();
+    })();
+  </script>
+
+  <!-- Auth (aplica gold badge 18×18 e esconde Importar se não for admin) -->
+  <script src="/js/auth.js" defer></script>
+</body>
+
+</html>

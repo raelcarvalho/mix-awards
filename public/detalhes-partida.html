@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Detalhes da Partida — MIX AWARDS</title>
+
+  <!-- CSS do nav/tema (corrige ícone gold e layout do topo) -->
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/layout.css">
+
+  <!-- Pré-carrega o JS de auth -->
+  <link rel="preload" href="/js/auth.js" as="script" />
+
+  <style>
+    :root {
+      --bg0: #0a1622;
+      --bg1: #091a27;
+      --panel: #0f2435;
+      --card: #132b3e;
+      --ink: #dbe9f6;
+      --muted: #88a4bc;
+      --line: #1f3b54;
+      --line2: #2a4d6a;
+      --accent: #2d86d6;
+      --accent-2: #3a93e2;
+      --radius: 16px;
+      --container: max(320px, min(1200px, 96vw));
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+    }
+
+    body.layout {
+      color: var(--ink);
+      background:
+        radial-gradient(1200px 800px at 20% -10%, rgba(55, 115, 170, .18), transparent 60%),
+        radial-gradient(1000px 700px at 85% -10%, rgba(38, 89, 140, .18), transparent 60%),
+        linear-gradient(180deg, var(--bg1), var(--bg0));
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    }
+
+    /* topo colado; demais estilos do nav vêm do base.css */
+    .nav {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+
+    .page-pad {
+      height: 10px;
+    }
+
+    /* layout central */
+    .section {
+      padding: 16px 0 28px;
+    }
+
+    .container {
+      width: var(--container);
+      margin: 0 auto;
+    }
+
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: linear-gradient(180deg, rgba(255, 255, 255, .05), rgba(255, 255, 255, .03)), var(--panel);
+      box-shadow: 0 16px 40px rgba(0, 0, 0, .35), inset 0 0 0 1px rgba(255, 255, 255, .03);
+      padding: 16px;
+    }
+
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .title {
+      display: inline-block;
+      background: #0f2a40;
+      color: #e8f1f8;
+      border: 1px solid var(--line2);
+      border-radius: 10px;
+      padding: 8px 14px;
+      font-weight: 900;
+      letter-spacing: .4px;
+      text-transform: uppercase;
+    }
+
+    .crumb {
+      color: var(--muted);
+      font-weight: 800;
+      letter-spacing: .25px;
+    }
+
+    .card {
+      background: linear-gradient(180deg, rgba(255, 255, 255, .06), rgba(255, 255, 255, .04)), var(--card);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .03);
+      padding: 14px;
+    }
+
+    .spacer {
+      height: 12px;
+    }
+
+    .card h3 {
+      margin: 0 0 8px;
+      font-weight: 900;
+      letter-spacing: .3px;
+      text-transform: uppercase;
+      color: #e6f2ff;
+    }
+
+    .muted {
+      color: var(--muted);
+    }
+
+    .btn {
+      appearance: none;
+      border: 1px solid var(--line2);
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-weight: 900;
+      cursor: pointer;
+      text-decoration: none;
+      background: #14344c;
+      color: #e8f1f8;
+      box-shadow: 0 2px 0 rgba(0, 0, 0, .25);
+    }
+
+    .btn.primary {
+      background: var(--accent);
+      border-color: var(--accent-2);
+    }
+
+    .btn:hover {
+      transform: translateY(-1px);
+    }
+
+    /* tabelas */
+    .table-wrap {
+      margin-top: 10px;
+    }
+
+    .table-box {
+      background: linear-gradient(180deg, rgba(255, 255, 255, .06), rgba(255, 255, 255, .04)), var(--card);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 10px;
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .03);
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0 10px;
+    }
+
+    thead th {
+      background: #12324a;
+      color: #e6f2ff;
+      border: 1px solid var(--line);
+      padding: 12px;
+      text-align: left;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: .3px;
+      border-radius: 10px;
+      box-shadow: 0 4px 0 rgba(0, 0, 0, .15) inset, 0 1px 0 rgba(255, 255, 255, .04);
+      white-space: nowrap;
+    }
+
+    tbody tr {
+      background: var(--panel);
+      border: 1px solid var(--line);
+    }
+
+    tbody td {
+      padding: 12px;
+      color: #d6e6f4;
+      border-top: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+      vertical-align: middle;
+    }
+
+    tbody tr td:first-child {
+      border-left: 1px solid var(--line);
+      border-top-left-radius: 12px;
+      border-bottom-left-radius: 12px;
+    }
+
+    tbody tr td:last-child {
+      border-right: 1px solid var(--line);
+      border-top-right-radius: 12px;
+      border-bottom-right-radius: 12px;
+    }
+
+    .center {
+      text-align: center;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .row-actions {
+      margin-top: 14px;
+    }
+
+    /* ====== Botões do menu iguais ao index (.nav-btn) ====== */
+    .nav-btn {
+      color: #e8f1f8;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      margin: 0;
+      padding: 10px 15px;
+      position: relative;
+      text-decoration: none;
+      text-transform: uppercase;
+      transition: all .3s ease;
+      background: none !important;
+      border: none !important;
+    }
+
+    .nav-btn:hover,
+    .nav-btn:active {
+      letter-spacing: 1px;
+      background: none !important;
+    }
+
+    .nav-btn:after,
+    .nav-btn:before {
+      backface-visibility: hidden;
+      border: 1px solid rgba(255, 255, 255, 0);
+      bottom: 0;
+      content: " ";
+      display: block;
+      margin: 0 auto;
+      position: relative;
+      transition: all .3s ease-in-out;
+      width: 0;
+    }
+
+    .nav-btn:hover:after,
+    .nav-btn:hover:before {
+      width: 70%;
+    }
+
+    .nav-btn:hover:before {
+      bottom: auto;
+      top: 0;
+    }
+
+    /* cores no hover via data-color */
+    .nav-btn[data-color="#2db2ff"]:hover:after,
+    .nav-btn[data-color="#2db2ff"]:hover:before {
+      border-color: #2db2ff;
+    }
+
+    .nav-btn[data-color="#ff1f71"]:hover:after,
+    .nav-btn[data-color="#ff1f71"]:hover:before {
+      border-color: #ff1f71;
+    }
+
+    .nav-btn[data-color="#1eff45"]:hover:after,
+    .nav-btn[data-color="#1eff45"]:hover:before {
+      border-color: #1eff45;
+    }
+
+    .nav-btn[data-color="#a78bfa"]:hover:after,
+    .nav-btn[data-color="#a78bfa"]:hover:before {
+      border-color: #a78bfa;
+    }
+
+    .nav a.nav-btn[data-color="#a78bfb"]:hover::before,
+    .nav a.nav-btn[data-color="#a78bfb"]:hover::after {
+      border-color: #ee6120;
+    }
+
+    .nav-btn[data-color="#56c1ff"]:hover:after,
+    .nav-btn[data-color="#56c1ff"]:hover:before {
+      border-color: #56c1ff;
+    }
+
+    .nav-btn[data-color="#ff9e9e"]:hover:after,
+    .nav-btn[data-color="#ff9e9e"]:hover:before {
+      border-color: #ff9e9e;
+    }
+
+    .nav-btn[data-color="#6225E6"]:hover:after,
+    .nav-btn[data-color="#6225E6"]:hover:before {
+      border-color: #FBC638;
+    }
+
+    /* ===== Avatar + nome na tabela ===== */
+    .pl {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 220px;
+    }
+
+    .pl .avatar {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      object-fit: cover;
+      flex: 0 0 28px;
+      background: #0b1a26;
+      border: 1px solid rgba(255, 255, 255, .08);
+    }
+
+    .pl .nome {
+      font-weight: 800;
+      letter-spacing: .2px;
+      color: #e8f1f8;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 320px;
+    }
+  </style>
+</head>
+
+<body class="layout">
+  <!-- NAV -->
+  <div class="nav">
+    <a class="navbar-brand" href="/index">MIX AWARDS</a>
+
+    <a href="/importar-partida-html" class="nav-btn" data-color="#2db2ff">Importar Partida</a>
+    <a href="/consultar-partidas-html" class="nav-btn" data-color="#ff1f71">Consultar Partida</a>
+    <a href="/ranking-jogadores-html" class="nav-btn" data-color="#1eff45">Ranking Jogadores</a>
+    <a href="/shop-html" class="nav-btn" data-color="#6225E6">Loja</a>
+    <a href="/album-html" class="nav-btn" data-color="#a78bfa">Álbum</a>
+    <a href="/album-stickers-html" class="nav-btn" data-color="#a78bfb">Álbum Stickers</a>
+
+    <div class="nav-right">
+      <!-- auth.js troca por gold + alterar senha + sair quando logado -->
+      <a id="btnOpenRegister" class="nav-btn" data-color="#a78bfa" href="javascript:void(0)">Cadastrar</a>
+      <a id="btnOpenLogin" class="nav-btn" data-color="#56c1ff" href="javascript:void(0)">Logar</a>
+    </div>
+  </div>
+
+  <div class="page-pad"></div>
+
+  <main class="section">
+    <div class="container">
+      <div class="panel">
+        <div class="toolbar">
+          <div class="title" id="ttl">Detalhes da Partida</div>
+          <div class="crumb">MIX AWARDS</div>
+        </div>
+
+        <!-- Cartão: informações gerais -->
+        <section class="card" id="info-partida"></section>
+
+        <div class="spacer"></div>
+
+        <!-- Tabelas Time A -->
+        <section class="card">
+          <h3 id="tA">Time A</h3>
+          <div class="table-wrap">
+            <div class="table-box" id="estatisticas-time-a"></div>
+          </div>
+        </section>
+
+        <div class="spacer"></div>
+
+        <!-- Tabelas Time B -->
+        <section class="card">
+          <h3 id="tB">Time B</h3>
+          <div class="table-wrap">
+            <div class="table-box" id="estatisticas-time-b"></div>
+          </div>
+        </section>
+
+        <div class="row-actions">
+          <a class="btn" href="/consultar-partidas-html">Voltar para a lista</a>
+          <a class="btn primary" href="/ranking-jogadores-html">Ranking</a>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const codigo = urlParams.get('codigo');
+
+    const tdCenter = (v) => `<td class="center">${v}</td>`;
+
+    // fallback de imagem (transparente) — evita "broken image"
+    const FALLBACK_AVATAR =
+      'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
+
+    // célula com avatar + nome
+    const jogadorCell = (j) => {
+      // Nome vem do pivot (j.nome). Você também sobrescreve jogadores_id com o nome,
+      // então, para maior robustez, caímos no jogadores_id se faltar.
+      const nome = j.nome || j.jogadores_id || 'Sem nome';
+      const img = (j.jogador_imagem && String(j.jogador_imagem).trim()) ? j.jogador_imagem : FALLBACK_AVATAR;
+      const safeAlt = nome.replace(/"/g, '&quot;');
+
+      return `
+        <td>
+          <div class="pl">
+            <img class="avatar" src="${img}" alt="${safeAlt}" loading="lazy" onerror="this.src='${FALLBACK_AVATAR}'">
+            <div class="nome" title="${safeAlt}">${nome}</div>
+          </div>
+        </td>
+      `;
+    };
+
+    async function carregarDetalhes() {
+      try {
+        const response = await fetch(`/api/partida/detalhes/${codigo}`);
+        const dados = await response.json();
+
+        const partida = dados.partida || {};
+        const jogadores = dados.jogadores || [];
+
+        // Título
+        document.getElementById("ttl").textContent = `Detalhes da Partida #${codigo || ''}`;
+
+        // Info principal
+        document.getElementById("info-partida").innerHTML = `
+          <h3>Informações da Partida</h3>
+          <div><strong>Mapa:</strong> ${partida.mapa ?? '-'}</div>
+          <div class="muted" style="margin-top:4px;">
+            <strong>Placar:</strong> ${partida.nome_time1 ?? 'Time A'} ${partida.resultado_time1 ?? 0}
+            x ${partida.resultado_time2 ?? 0} ${partida.nome_time2 ?? 'Time B'}
+          </div>
+        `;
+
+        const timeA = jogadores.filter(j => j.time === "A");
+        const timeB = jogadores.filter(j => j.time === "B");
+
+        document.getElementById('tA').textContent = `${partida.nome_time1 ?? 'Time A'} (Time A)`;
+        document.getElementById('tB').textContent = `${partida.nome_time2 ?? 'Time B'} (Time B)`;
+
+        const tabela = (lista) => `
+          <table>
+            <thead>
+              <tr>
+                <th style="min-width:260px">Jogador</th>
+                <th>Kills</th>
+                <th>Assists</th>
+                <th>Mortes</th>
+                <th>ADR</th>
+                <th>KAST</th>
+                <th>Flash Assist</th>
+                <th>First Kill</th>
+                <th>Multi Kill</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${lista.map(j => `
+                <tr>
+                  ${jogadorCell(j)}
+                  ${tdCenter(j.kills)}
+                  ${tdCenter(j.assistencias)}
+                  ${tdCenter(j.mortes)}
+                  ${tdCenter(j.adr)}
+                  ${tdCenter((j.kast ?? 0) + '%')}
+                  ${tdCenter(j.flash_assist)}
+                  ${tdCenter(j.first_kill)}
+                  ${tdCenter(j.multi_kill)}
+                </tr>`).join('')}
+            </tbody>
+          </table>
+        `;
+
+        document.getElementById("estatisticas-time-a").innerHTML = tabela(timeA);
+        document.getElementById("estatisticas-time-b").innerHTML = tabela(timeB);
+      } catch (e) {
+        document.getElementById("info-partida").innerHTML =
+          `<h3>Informações da Partida</h3><div class="muted">Não foi possível carregar os dados.</div>`;
+      }
+    }
+
+    carregarDetalhes();
+  </script>
+
+  <!-- Auth (renderiza gold 18x18 e controla nav-right) -->
+  <script src="/js/auth.js" defer></script>
+</body>
+
+</html>
