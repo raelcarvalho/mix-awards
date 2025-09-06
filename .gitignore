@@ -4,6 +4,7 @@ coverage
 .vscode
 .DS_STORE
 .env
+.env PRODUCAO
 tmp
 npm-debug.log*
 yarn-debug.log*
