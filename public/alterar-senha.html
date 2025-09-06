@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Alterar senha — MIX AWARDS</title>
+    <link rel="stylesheet" href="/css/base.css">
+    <link rel="stylesheet" href="/css/layout.css">
+    <style>
+        * {
+            box-sizing: border-box
+        }
+
+        .panel {
+            max-width: 520px;
+            margin: 32px auto;
+            padding: 22px;
+            border-radius: 16px;
+            background: #0f2435;
+            color: #e8f1f8;
+            box-shadow: 0 18px 60px rgba(0, 0, 0, .35), inset 0 0 0 1px rgba(255, 255, 255, .05)
+        }
+
+        .title {
+            font-size: 1.25rem;
+            margin: 0 0 12px
+        }
+
+        .field {
+            margin: 12px 0
+        }
+
+        .field span {
+            display: block;
+            color: #b9d4ea;
+            margin-bottom: 6px
+        }
+
+        .field input {
+            width: 100%;
+            padding: 12px 14px;
+            border-radius: 10px;
+            border: 1px solid #1e3a53;
+            background: #0f2233;
+            color: #e8f1f8;
+            outline: none
+        }
+
+        .field input:focus {
+            border-color: #56c1ff;
+            outline: 3px solid rgba(86, 193, 255, .25)
+        }
+
+        .btn {
+            width: 100%;
+            margin-top: 12px;
+            padding: 12px;
+            border: 0;
+            border-radius: 10px;
+            font-weight: 700;
+            background: #56c1ff;
+            color: #072033;
+            cursor: pointer
+        }
+
+        .btn:disabled {
+            opacity: .6;
+            cursor: not-allowed
+        }
+
+        .msg {
+            min-height: 18px;
+            margin-top: 10px;
+            font-size: .92rem
+        }
+
+        .msg.error {
+            color: #ff9e9e
+        }
+
+        .msg.ok {
+            color: #9effb0
+        }
+    </style>
+</head>
+
+<body class="layout">
+    <div class="nav"></div>
+    <div class="page-pad"></div>
+
+    <main class="section">
+        <div class="container">
+            <div class="panel">
+                <div class="title">Alterar senha</div>
+                <form id="formChange">
+                    <label class="field">
+                        <span>Senha atual</span>
+                        <input id="oldPwd" type="password" maxlength="100" required placeholder="••••••••" />
+                    </label>
+                    <label class="field">
+                        <span>Nova senha</span>
+                        <input id="newPwd" type="password" maxlength="100" required placeholder="••••••••" />
+                    </label>
+                    <label class="field">
+                        <span>Confirmar nova senha</span>
+                        <input id="newPwd2" type="password" maxlength="100" required placeholder="••••••••" />
+                    </label>
+                    <button id="btnSubmit" class="btn" type="submit">Salvar nova senha</button>
+                    <div id="msg" class="msg"></div>
+                </form>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // mesma normalização usada no auth.js
+        function normalizeToken(raw) {
+            if (!raw) return "";
+            if (raw.startsWith("{") || raw.startsWith("[")) {
+                try { const obj = JSON.parse(raw); return obj?.token?.token || obj?.token || "" } catch { return "" }
+            }
+            return String(raw).replace(/^"+|"+$/g, "");
+        }
+        function extractTokenFromResponse(data) {
+            return (data?.resultados?.token && (data.resultados.token.token || data.resultados.token))
+                || (data?.token && (data.token.token || data.token))
+                || "";
+        }
+
+        const form = document.getElementById('formChange');
+        const oldPwd = document.getElementById('oldPwd');
+        const newPwd = document.getElementById('newPwd');
+        const newPwd2 = document.getElementById('newPwd2');
+        const btn = document.getElementById('btnSubmit');
+        const msg = document.getElementById('msg');
+
+        // exige login
+        const raw = localStorage.getItem('auth_token');
+        const token = normalizeToken(raw);
+        if (!token) { window.location.href = '/login-html'; }
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            msg.textContent = ''; msg.className = 'msg';
+
+            if (newPwd.value !== newPwd2.value) {
+                msg.textContent = 'A confirmação não confere.'; msg.className = 'msg error'; return;
+            }
+            if (newPwd.value.length < 6) {
+                msg.textContent = 'A nova senha deve ter ao menos 6 caracteres.'; msg.className = 'msg error'; return;
+            }
+
+            btn.disabled = true;
+            try {
+                const res = await fetch('/alterar-senha', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ senha_anterior: oldPwd.value, nova_senha: newPwd.value })
+                });
+                const data = await res.json();
+
+                if (!res.ok) {
+                    msg.textContent = data?.mensagem || 'Erro ao alterar a senha.';
+                    msg.className = 'msg error';
+                    btn.disabled = false;
+                    return;
+                }
+
+                // atualiza token/usuário após troca
+                const newToken = extractTokenFromResponse(data);
+                if (newToken) localStorage.setItem('auth_token', newToken);
+                if (data?.resultados?.usuario) { localStorage.setItem('auth_user', JSON.stringify(data.resultados.usuario)); }
+
+                msg.textContent = 'Senha alterada com sucesso!';
+                msg.className = 'msg ok';
+                setTimeout(() => window.location.href = '/index', 800);
+            } catch (err) {
+                msg.textContent = 'Erro inesperado.'; msg.className = 'msg error';
+                btn.disabled = false;
+            }
+        });
+    </script>
+
+    <script src="/js/auth.js" defer></script>
+</body>
+
+</html>

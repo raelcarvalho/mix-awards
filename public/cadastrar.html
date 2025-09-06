@@ -1,8 +1,9 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Cadastrar — MIX AWARDS</title>
 
   <link rel="stylesheet" href="/css/base.css">
@@ -10,51 +11,168 @@
 
   <style>
     /* ===== Reset/Correção ===== */
-    * { box-sizing: border-box; }
+    * {
+      box-sizing: border-box;
+    }
 
     /* ====== estilos do modal ====== */
-    .mw-modal{ position:fixed; inset:0; display:none; z-index:1050; }
-    .mw-modal.is-open{ display:block; }
-    .mw-modal__backdrop{ position:absolute; inset:0; background:rgba(0,0,0,.55); backdrop-filter:blur(1px); }
-    .mw-modal__dialog{
-      position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
-      width:min(92vw,480px); background:#11293d; color:#e8f1f8;
-      border-radius:16px; padding:22px 20px 20px;
-      box-shadow:0 18px 60px rgba(0,0,0,.45), inset 0 0 0 1px rgba(255,255,255,.05);
-      font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
-      overflow:hidden; /* corta brilho do focus */
+    .mw-modal {
+      position: fixed;
+      inset: 0;
+      display: none;
+      z-index: 1050;
     }
-    .mw-modal__title{ margin:0 0 10px; font-size:1.25rem; text-align:center; }
-    .mw-modal__close{
-      position:absolute; right:10px; top:8px; width:36px; height:36px;
-      border:0; border-radius:10px; cursor:pointer; background:transparent;
-      color:#cfe8ff; font-size:22px; line-height:1;
+
+    .mw-modal.is-open {
+      display: block;
     }
-    .mw-modal__close:hover{ background:rgba(255,255,255,.06); }
-    .mw-field{ display:block; margin:12px 0; width:100%; }
-    .mw-field>span{ display:block; font-size:.9rem; color:#b9d4ea; margin-bottom:6px; }
-    .mw-field>input{
-      width:100%; padding:12px 14px; border-radius:10px; border:1px solid #1e3a53;
-      background:#0f2233; color:#e8f1f8; outline:none; min-width:0;
+
+    .mw-modal__backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, .55);
+      backdrop-filter: blur(1px);
     }
-    .mw-field>input:focus{
-      border-color:#56c1ff;
-      outline: 3px solid rgba(86,193,255,.25); /* foco elegante */
-      box-shadow:none;
+
+    .mw-modal__dialog {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      width: min(92vw, 480px);
+      background: #11293d;
+      color: #e8f1f8;
+      border-radius: 16px;
+      padding: 22px 20px 20px;
+      box-shadow: 0 18px 60px rgba(0, 0, 0, .45), inset 0 0 0 1px rgba(255, 255, 255, .05);
+      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      overflow: hidden;
+      /* corta brilho do focus */
     }
-    .mw-btn{ width:100%; margin-top:10px; padding:12px; border:0; border-radius:10px; font-weight:700; background:#56c1ff; color:#072033; cursor:pointer; }
-    .mw-btn:disabled{ opacity:.6; cursor:not-allowed; }
-    .mw-msg{ min-height:18px; margin-top:10px; font-size:.92rem; }
-    .mw-msg.error{ color:#ff9e9e; }
-    .mw-msg.ok{ color:#9effb0; }
-    .mw-row{ display:flex; gap:10px; }
-    .mw-row > .mw-field{ flex:1 1 0; min-width:0; }
-    @media (max-width:720px){ .mw-row{ flex-direction:column; } }
-    .mw-actions{ display:flex; gap:10px; margin-top:12px; }
-    .mw-btn.secondary{ background:#163750; color:#e8f1f8; }
-    .hint{ color:#b9d4ea; font-size:.88rem; margin-top:4px; opacity:.9 }
+
+    .mw-modal__title {
+      margin: 0 0 10px;
+      font-size: 1.25rem;
+      text-align: center;
+    }
+
+    .mw-modal__close {
+      position: absolute;
+      right: 10px;
+      top: 8px;
+      width: 36px;
+      height: 36px;
+      border: 0;
+      border-radius: 10px;
+      cursor: pointer;
+      background: transparent;
+      color: #cfe8ff;
+      font-size: 22px;
+      line-height: 1;
+    }
+
+    .mw-modal__close:hover {
+      background: rgba(255, 255, 255, .06);
+    }
+
+    .mw-field {
+      display: block;
+      margin: 12px 0;
+      width: 100%;
+    }
+
+    .mw-field>span {
+      display: block;
+      font-size: .9rem;
+      color: #b9d4ea;
+      margin-bottom: 6px;
+    }
+
+    .mw-field>input {
+      width: 100%;
+      padding: 12px 14px;
+      border-radius: 10px;
+      border: 1px solid #1e3a53;
+      background: #0f2233;
+      color: #e8f1f8;
+      outline: none;
+      min-width: 0;
+    }
+
+    .mw-field>input:focus {
+      border-color: #56c1ff;
+      outline: 3px solid rgba(86, 193, 255, .25);
+      /* foco elegante */
+      box-shadow: none;
+    }
+
+    .mw-btn {
+      width: 100%;
+      margin-top: 10px;
+      padding: 12px;
+      border: 0;
+      border-radius: 10px;
+      font-weight: 700;
+      background: #56c1ff;
+      color: #072033;
+      cursor: pointer;
+    }
+
+    .mw-btn:disabled {
+      opacity: .6;
+      cursor: not-allowed;
+    }
+
+    .mw-msg {
+      min-height: 18px;
+      margin-top: 10px;
+      font-size: .92rem;
+    }
+
+    .mw-msg.error {
+      color: #ff9e9e;
+    }
+
+    .mw-msg.ok {
+      color: #9effb0;
+    }
+
+    .mw-row {
+      display: flex;
+      gap: 10px;
+    }
+
+    .mw-row>.mw-field {
+      flex: 1 1 0;
+      min-width: 0;
+    }
+
+    @media (max-width:720px) {
+      .mw-row {
+        flex-direction: column;
+      }
+    }
+
+    .mw-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .mw-btn.secondary {
+      background: #163750;
+      color: #e8f1f8;
+    }
+
+    .hint {
+      color: #b9d4ea;
+      font-size: .88rem;
+      margin-top: 4px;
+      opacity: .9
+    }
   </style>
 </head>
+
 <body class="layout">
   <!-- NAVBAR (auth.js desenha aqui) -->
   <div class="nav"></div>
@@ -101,7 +219,9 @@
 
         <label class="mw-field">
           <span>Seu nick GC</span>
-          <input id="regNomeNorm" name="nome_normalizado" type="text" maxlength="100" required placeholder="O NICK TEM QUE SER IGUAL" />
+          <!-- NÃO é required e NÃO é preenchido automaticamente -->
+          <input id="regNomeNorm" name="nome_normalizado" type="text" maxlength="100"
+            placeholder="O NICK TEM QUE SER IGUAL" />
           <div class="hint">Você não poderá alterar o nick da GC enquanto rolar o Mix Awards</div>
         </label>
 
@@ -115,6 +235,7 @@
   </div>
 
   <script>
+    // ===== Refs =====
     const registerModal = document.getElementById('registerModal');
     const btnCloseRegister = document.getElementById('btnCloseRegister');
     const registerForm = document.getElementById('registerForm');
@@ -126,34 +247,70 @@
     const registerMsg = document.getElementById('registerMsg');
     const btnDoRegister = document.getElementById('btnDoRegister');
 
-    function openModal(){ registerModal.classList.add('is-open'); regNome.focus(); }
-    function closeModal(){ registerModal.classList.remove('is-open'); }
+    // ===== Modal helpers =====
+    function openModal() { registerModal.classList.add('is-open'); regNome.focus(); }
+    function closeModal() { registerModal.classList.remove('is-open'); }
 
     btnCloseRegister.addEventListener('click', closeModal);
-    registerModal.addEventListener('click', e=>{ if(e.target.dataset.close) closeModal(); });
-    document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeModal(); });
+    registerModal.addEventListener('click', e => { if (e.target.dataset.close) closeModal(); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
 
-    // normalização
-    const normalize = s => (s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim().toUpperCase();
-    regNome.addEventListener('input', ()=>{ if(!regNomeNorm.dataset.touched) regNomeNorm.value = normalize(regNome.value); });
-    regNomeNorm.addEventListener('input', ()=> regNomeNorm.dataset.touched = 1);
+    // ===== Util: normalizar NICK digitado (se o usuário quiser) =====
+    const normalize = s => (s || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim()
 
-    registerForm.addEventListener('submit', async e=>{
+    // NENHUM espelhamento do nome para o nick aqui!
+
+    // ===== Submit =====
+    registerForm.addEventListener('submit', async e => {
       e.preventDefault();
-      registerMsg.textContent=''; registerMsg.className='mw-msg';
+      registerMsg.textContent = ''; registerMsg.className = 'mw-msg';
 
-      if(regSenha.value!==regSenha2.value){
-        registerMsg.textContent='As senhas não conferem'; registerMsg.className='mw-msg error'; return;
+      if (regSenha.value !== regSenha2.value) {
+        registerMsg.textContent = 'As senhas não conferem';
+        registerMsg.className = 'mw-msg error';
+        return;
       }
-      const payload={ nome:regNome.value.trim(), email:regEmail.value.trim(), senha:regSenha.value, nome_normalizado:regNomeNorm.value.trim()||normalize(regNome.value) };
-      btnDoRegister.disabled=true;
-      try{
-        const res=await fetch('/cadastrar',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
-        const data=await res.json();
-        if(!res.ok){ registerMsg.textContent=data?.mensagem||'Erro no cadastro'; registerMsg.className='mw-msg error'; btnDoRegister.disabled=false; return; }
-        registerMsg.textContent=(data?.mensagem||'Cadastro ok!')+' '+(data?.resultados?.vinculo||''); registerMsg.className='mw-msg ok';
-        setTimeout(()=>window.location.href='/index',1000);
-      }catch(err){ registerMsg.textContent='Erro inesperado'; registerMsg.className='mw-msg error'; btnDoRegister.disabled=false; }
+
+      const nickTyped = regNomeNorm.value.trim();
+
+      // Só envia nome_normalizado se o usuário DIGITAR
+      const payload = {
+        nome: regNome.value.trim(),
+        email: regEmail.value.trim(),
+        senha: regSenha.value,
+        ...(nickTyped ? { nome_normalizado: normalize(nickTyped) } : {})
+      };
+
+      btnDoRegister.disabled = true;
+
+      try {
+        const res = await fetch('/cadastrar', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+          registerMsg.textContent = data?.mensagem || 'Erro no cadastro';
+          registerMsg.className = 'mw-msg error';
+          btnDoRegister.disabled = false;
+          return;
+        }
+
+        registerMsg.textContent = (data?.mensagem || 'Cadastro ok!') + ' ' + (data?.resultados?.vinculo || '');
+        registerMsg.className = 'mw-msg ok';
+        setTimeout(() => window.location.href = '/index', 1000);
+
+      } catch (err) {
+        registerMsg.textContent = 'Erro inesperado';
+        registerMsg.className = 'mw-msg error';
+        btnDoRegister.disabled = false;
+      }
     });
 
     document.addEventListener('DOMContentLoaded', openModal);
@@ -161,4 +318,5 @@
 
   <script src="/js/auth.js" defer></script>
 </body>
+
 </html>

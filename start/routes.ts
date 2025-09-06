@@ -40,6 +40,10 @@ Route.get("/cadastrar-html", ({ response }) => {
   );
 });
 
+Route.get("/alterar-senha-html", ({ response }) => {
+  response.stream(fs.createReadStream(Application.publicPath("alterar-senha.html")));
+});
+
 Route.get("/audios/:file", async ({ params, response }) => {
   const audioPath = Application.publicPath(`audios/${params.file}`);
 
