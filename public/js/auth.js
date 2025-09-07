@@ -29,7 +29,7 @@
 
   // ===== utils =====
   const GOLD_ICON_CANDIDATES = ["/uploads/figurinhas/3310001.png"];
-  const GOLD_ENDPOINTS = ["/api/jogadores/gold", "/api/jogadores/meuGold"];
+  const GOLD_ENDPOINTS = ["/api/jogadores/gold"];
 
   const getStoredUser = () => {
     const s = localStorage.getItem("auth_user");
@@ -67,22 +67,34 @@
     const token = normalizeToken(rawToken);
     if (!token) return null;
 
-    for (const url of GOLD_ENDPOINTS) {
+    const u = getStoredUser();
+    const id = u?.id || u?.usuario_id || u?.user_id;
+    const q = id ? `?usuario_id=${encodeURIComponent(id)}` : "";
+
+    for (const base of GOLD_ENDPOINTS) {
       try {
-        const r = await fetch(url, {
+        const r = await fetch(`${base}${q}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
+
         if (r.status === 401) {
           localStorage.removeItem("auth_token");
           localStorage.removeItem("auth_user");
           return null;
         }
-        if (!r.ok) continue;
+
+        if (!r.ok) {
+          try {
+            const j = await r.json();
+            console.debug("gold api err:", j);
+          } catch {}
+          continue;
+        }
+
         const data = await r.json();
         const gold = data?.resultados?.gold ?? data?.gold;
         if (Number.isFinite(+gold)) return +gold;
       } catch {
-        /* tenta o próximo */
       }
     }
     return null;

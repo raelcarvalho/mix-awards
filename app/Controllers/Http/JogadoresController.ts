@@ -1,5 +1,6 @@
 import { HttpContextContract } from "@ioc:Adonis/Core/HttpContext";
 import Jogadores from "App/Models/Jogadores";
+import UsuarioAdm from "App/Models/UsuarioAdm";
 import CustomResponse from "App/Utils/CustomResponse";
 
 function normalizeName(raw: string): string {
@@ -85,20 +86,33 @@ export default class JogadoresController {
    * Retorna a quantidade de gold do jogador autenticado
    * GET /api/jogador/gold
    */
-  public async meuGold({ auth, response }: HttpContextContract) {
-    const usuario = await auth.authenticate();
-    const jogador = await Jogadores.query()
-      .where("usuario_adm_id", usuario.id)
+  public async meuGold({ auth, request, response }: HttpContextContract) {
+    const user = await auth.authenticate();
+    const usuarioId = Number(request.input("usuario_id") ?? user.id);
+
+    let jogador = await Jogadores.query()
+      .where("usuario_adm_id", usuarioId)
       .first();
+
     if (!jogador) {
-      return this.customResponse.erro(response, "Jogador inválido.", {}, 400);
-    }
-    return this.customResponse.sucesso(
-      response,
-      "Gold do jogador listado com sucesso.",
-      {
-        gold: jogador.gold,
+      const ua = await UsuarioAdm.find(usuarioId);
+      if (ua?.nome_normalizado) {
+        jogador = await Jogadores.query()
+          .where("nome_normalizado", ua.nome_normalizado)
+          .first();
       }
-    );
+    }
+
+    if (!jogador) {
+      return response.ok({
+        gold: 0,
+        mensagem: "Jogador não vinculado a este usuário.",
+      });
+    }
+
+    return response.ok({
+      gold: Number(jogador.gold || 0),
+      jogador_id: jogador.id,
+    });
   }
 }
