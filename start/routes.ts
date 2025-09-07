@@ -186,7 +186,7 @@ Route.group(() => {
     "/jogadores/vincular/:id",
     "JogadoresController.vincularUsuarioJogador"
   );
-}).middleware("auth");
+}).prefix("api").middleware("auth:api")
 
 Route.group(() => {
   Route.post('/partidas/:id/creditar', 'RecompensaController.creditarPosPartida');
