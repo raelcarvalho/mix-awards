@@ -4,7 +4,6 @@ import Jogadores from "App/Models/Jogadores";
 import Pacotes from "App/Models/Pacotes";
 import Capsulas from "App/Models/Capsulas";
 
-// Se quiser, leve para .env depois
 const PRECO_PACOTE = 20;
 const PRECO_CAPSULA = 10;
 const ITENS_POR_PACOTE = 4;
@@ -19,12 +18,21 @@ export default class ShopController {
     this.customResponse = new CustomResponse();
   }
 
-  public async comprarPacotes({ auth, request, response }: HttpContextContract) {
+  public async comprarPacotes({
+    auth,
+    request,
+    response,
+  }: HttpContextContract) {
     const user = await auth.authenticate();
 
     const quantidade = Number(request.input("quantidade", 1));
     if (!Number.isInteger(quantidade) || quantidade <= 0) {
-      return this.customResponse.erro(response, "Quantidade inválida.", {}, 400);
+      return this.customResponse.erro(
+        response,
+        "Quantidade inválida.",
+        {},
+        400
+      );
     }
     if (quantidade > MAX_COMPRA_POR_VEZ) {
       return this.customResponse.erro(
@@ -116,12 +124,21 @@ export default class ShopController {
     }
   }
 
-  public async comprarCapsulas({ auth, request, response }: HttpContextContract) {
+  public async comprarCapsulas({
+    auth,
+    request,
+    response,
+  }: HttpContextContract) {
     const user = await auth.authenticate();
 
     const quantidade = Number(request.input("quantidade", 1));
     if (!Number.isInteger(quantidade) || quantidade <= 0) {
-      return this.customResponse.erro(response, "Quantidade inválida.", {}, 400);
+      return this.customResponse.erro(
+        response,
+        "Quantidade inválida.",
+        {},
+        400
+      );
     }
     if (quantidade > MAX_COMPRA_CAPSULAS) {
       return this.customResponse.erro(
@@ -185,7 +202,7 @@ export default class ShopController {
     }
   }
 
-   public async listarCapsulasFechadas({ auth, response }: HttpContextContract) {
+  public async listarCapsulasFechadas({ auth, response }: HttpContextContract) {
     const user = await auth.authenticate();
 
     try {

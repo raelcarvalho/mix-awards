@@ -10,7 +10,7 @@
   const BUY_CAPS_URL = "/shop/comprar-capsulas"; // body: { quantidade }
 
   // Gold: apenas o que existe no seu routes
-  const GOLD_URLS = ["/jogadores/gold"];
+  const GOLD_URLS = ["/api/jogador/gold"];
 
   // ===================== AUTH/STATE =====================
   // Você usa sessão (cookie). Não vamos enviar Authorization Bearer.
