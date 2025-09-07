@@ -459,7 +459,7 @@
       qs('#btnImport').disabled = true;
 
       try {
-        const r = await fetch('http://127.0.0.1:3399/api/partida/importar-json', {
+        const r = await fetch('/api/partida/importar-json', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
