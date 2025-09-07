@@ -5,6 +5,8 @@ import CustomResponse from "App/Utils/CustomResponse";
 import PartidasJogadores from "App/Models/PartidasJogadores";
 import UsuarioAdm from "App/Models/UsuarioAdm";
 import Database from "@ioc:Adonis/Lucid/Database";
+import PartidasRecompensas from "App/Models/PartidasRecompensas";
+import { DateTime } from "luxon";
 
 export default class PartidaController {
   private customResponse = new CustomResponse();
@@ -25,7 +27,6 @@ export default class PartidaController {
     const data = request.all();
 
     const resolveAvatarUrl = (j: any): string => {
-      // ... (sua função helper de avatar, sem alterações)
       try {
         const html: string = j?.player?.avatarHtml || "";
         const mHtml = html.match(
@@ -68,192 +69,247 @@ export default class PartidaController {
       return "";
     };
 
-    const partida = await Partidas.create({
-      ...data.partida,
-      mapa: data.jogos.map_name,
-      data: data.data,
-      codigo: data.id,
-      resultado_time1: data.jogos.score_a,
-      resultado_time2: data.jogos.score_b,
-      nome_time1: data.time_a,
-      nome_time2: data.time_b,
-    });
+    const trx = await Database.transaction();
+    try {
+      const partida = await Partidas.create(
+        {
+          ...(data.partida || {}),
+          mapa: data.jogos.map_name,
+          data: data.data,
+          codigo: data.id,
+          resultado_time1: data.jogos.score_a,
+          resultado_time2: data.jogos.score_b,
+          nome_time1: data.time_a,
+          nome_time2: data.time_b,
+        },
+        { client: trx }
+      );
 
-    const scoreA = Number(data.jogos.score_a);
-    const scoreB = Number(data.jogos.score_b);
+      const scoreA = Number(data.jogos.score_a);
+      const scoreB = Number(data.jogos.score_b);
+      let timeVencedor: "A" | "B" | null = null;
+      if (scoreA > scoreB) timeVencedor = "A";
+      else if (scoreB > scoreA) timeVencedor = "B";
 
-    let timeVencedor: "A" | "B" | null = null;
-    if (scoreA > scoreB) timeVencedor = "A";
-    else if (scoreB > scoreA) timeVencedor = "B";
+      const jogadoresInput = [
+        ...data.jogos.players.team_a.map((j: any) => ({
+          nome: j.player.nick,
+          imagem: resolveAvatarUrl(j),
+          adr: Number(j.adr),
+          kills: Number(j.nb_kill),
+          assistencias: Number(j.assist),
+          mortes: Number(j.death),
+          kda_player: j.kdr,
+          kast: Number(j.pkast),
+          flash_assist: Number(j.flash_assist),
+          first_kill: Number(j.firstkill),
+          multi_kill: Number(j.multikills),
+          _time: "A",
+        })),
+        ...data.jogos.players.team_b.map((j: any) => ({
+          nome: j.player.nick,
+          imagem: resolveAvatarUrl(j),
+          adr: Number(j.adr),
+          kills: Number(j.nb_kill),
+          assistencias: Number(j.assist),
+          mortes: Number(j.death),
+          kda_player: j.kdr,
+          kast: Number(j.pkast),
+          flash_assist: Number(j.flash_assist),
+          first_kill: Number(j.firstkill),
+          multi_kill: Number(j.multikills),
+          _time: "B",
+        })),
+      ];
 
-    const jogadoresInput = [
-      ...data.jogos.players.team_a.map((j: any) => ({
-        nome: j.player.nick,
-        imagem: resolveAvatarUrl(j),
-        adr: Number(j.adr),
-        kills: Number(j.nb_kill),
-        assistencias: Number(j.assist),
-        mortes: Number(j.death),
-        kda_player: j.kdr,
-        kast: Number(j.pkast),
-        flash_assist: Number(j.flash_assist),
-        first_kill: Number(j.firstkill),
-        multi_kill: Number(j.multikills),
-        _time: "A",
-      })),
-      ...data.jogos.players.team_b.map((j: any) => ({
-        nome: j.player.nick,
-        imagem: resolveAvatarUrl(j),
-        adr: Number(j.adr),
-        kills: Number(j.nb_kill),
-        assistencias: Number(j.assist),
-        mortes: Number(j.death),
-        kda_player: j.kdr,
-        kast: Number(j.pkast),
-        flash_assist: Number(j.flash_assist),
-        first_kill: Number(j.firstkill),
-        multi_kill: Number(j.multikills),
-        _time: "B",
-      })),
-    ];
+      const jogadoresCriados: { id: number; _time: "A" | "B"; origem: any }[] =
+        [];
 
-    const jogadoresCriados: { id: number; _time: string; origem: any }[] = [];
+      for (const jogador of jogadoresInput) {
+        const { _time, nome, imagem, ...estatisticas } = jogador;
+        const vitoria = _time === timeVencedor;
 
-    for (const jogador of jogadoresInput) {
-      const { _time, nome, imagem, ...estatisticas } = jogador;
-      const vitoria = _time === timeVencedor;
+        // ✅ findBy não aceita client — use query({ client }).where().first()
+        let jogadorModel =
+          (await Jogadores.query({ client: trx })
+            .where("nome", nome)
+            .first()) || null;
 
-      let jogadorModel = await Jogadores.findBy("nome", nome);
-
-      if (jogadorModel && !jogadorModel.usuario_adm_id) {
-        const nomeNorm = nome
-          .normalize("NFD")
-          .replace(/[\u0300-\u036f]/g, "")
-          .toLowerCase()
-          .trim();
-        const usuario = await UsuarioAdm.query()
-          .where("nome_normalizado", nomeNorm)
-          .first();
-        if (usuario) {
-          jogadorModel.usuario_adm_id = usuario.id;
-        }
-      }
-
-      let novaQtdPartidas = 1;
-      let pontosPartida = 0;
-
-      pontosPartida += estatisticas.kills;
-      pontosPartida += estatisticas.first_kill;
-      pontosPartida +=
-        estatisticas.adr < 50 ? 5 : estatisticas.adr <= 100 ? 10 : 20;
-      pontosPartida += vitoria ? 20 : 10;
-
-      if (jogadorModel) {
-        if (
-          (!jogadorModel.imagem || jogadorModel.imagem.trim() === "") &&
-          imagem
-        ) {
-          jogadorModel.imagem = imagem;
+        // tentar vínculo com usuario_adm
+        if (jogadorModel && !jogadorModel.usuario_adm_id) {
+          const nomeNorm = nome
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .toLowerCase()
+            .trim();
+          const usuarioPossivel = await UsuarioAdm.query({ client: trx })
+            .where("nome_normalizado", nomeNorm)
+            .first();
+          if (usuarioPossivel) {
+            jogadorModel.usuario_adm_id = usuarioPossivel.id;
+          }
         }
 
-        novaQtdPartidas = Number(jogadorModel.qtd_partidas || 0) + 1;
+        let novaQtdPartidas = 1;
+        let pontosPartida = 0;
 
-        // =====================================================================
-        // CORREÇÃO: Adiciona a lógica para incrementar as vitórias
-        // =====================================================================
-        if (vitoria) {
-          jogadorModel.vitorias = (
-            Number(jogadorModel.vitorias || 0) + 1
+        pontosPartida += estatisticas.kills;
+        pontosPartida += estatisticas.first_kill;
+        pontosPartida +=
+          estatisticas.adr < 50 ? 5 : estatisticas.adr <= 100 ? 10 : 20;
+        pontosPartida += vitoria ? 20 : 10;
+
+        if (jogadorModel) {
+          if (
+            (!jogadorModel.imagem || jogadorModel.imagem.trim() === "") &&
+            imagem
+          ) {
+            jogadorModel.imagem = imagem;
+          }
+
+          novaQtdPartidas = Number(jogadorModel.qtd_partidas || 0) + 1;
+
+          if (vitoria) {
+            jogadorModel.vitorias = (
+              Number(jogadorModel.vitorias || 0) + 1
+            ).toString();
+          }
+
+          jogadorModel.kills = (
+            Number(jogadorModel.kills || 0) + estatisticas.kills
           ).toString();
+          jogadorModel.assistencias = (
+            Number(jogadorModel.assistencias || 0) + estatisticas.assistencias
+          ).toString();
+          jogadorModel.mortes = (
+            Number(jogadorModel.mortes || 0) + estatisticas.mortes
+          ).toString();
+          jogadorModel.kast =
+            Number(jogadorModel.kast || 0) + estatisticas.kast;
+          jogadorModel.flash_assist = (
+            Number(jogadorModel.flash_assist || 0) + estatisticas.flash_assist
+          ).toString();
+          jogadorModel.first_kill = (
+            Number(jogadorModel.first_kill || 0) + estatisticas.first_kill
+          ).toString();
+          jogadorModel.multi_kill = (
+            Number(jogadorModel.multi_kill || 0) + estatisticas.multi_kill
+          ).toString();
+
+          jogadorModel.adr = (
+            (Number(jogadorModel.adr || 0) * (novaQtdPartidas - 1) +
+              estatisticas.adr) /
+            novaQtdPartidas
+          ).toFixed(2);
+
+          let bonus = 0;
+          if (novaQtdPartidas === 15) bonus = 20;
+          else if (novaQtdPartidas === 20) bonus = 40;
+          else if (novaQtdPartidas === 25) bonus = 60;
+          else if (novaQtdPartidas === 30) bonus = 80;
+
+          const pontosTotaisAnterior =
+            Number(jogadorModel.pontos || 0) * (novaQtdPartidas - 1);
+          const novoTotalPontos = pontosTotaisAnterior + pontosPartida + bonus;
+          const mediaComBonus = novoTotalPontos / novaQtdPartidas;
+
+          jogadorModel.qtd_partidas = novaQtdPartidas.toString();
+          jogadorModel.pontos = mediaComBonus.toFixed(0);
+
+          await jogadorModel.useTransaction(trx).save();
+        } else {
+          jogadorModel = await Jogadores.create(
+            {
+              nome,
+              imagem: imagem || "",
+              ...estatisticas,
+              qtd_partidas: "1",
+              pontos: pontosPartida.toString(),
+              vitorias: vitoria ? "1" : "0",
+            },
+            { client: trx }
+          );
         }
-        // =====================================================================
 
-        jogadorModel.kills = (
-          Number(jogadorModel.kills || 0) + estatisticas.kills
-        ).toString();
-        jogadorModel.assistencias = (
-          Number(jogadorModel.assistencias || 0) + estatisticas.assistencias
-        ).toString();
-        jogadorModel.mortes = (
-          Number(jogadorModel.mortes || 0) + estatisticas.mortes
-        ).toString();
-        jogadorModel.kast = Number(jogadorModel.kast || 0) + estatisticas.kast;
-        jogadorModel.flash_assist = (
-          Number(jogadorModel.flash_assist || 0) + estatisticas.flash_assist
-        ).toString();
-        jogadorModel.first_kill = (
-          Number(jogadorModel.first_kill || 0) + estatisticas.first_kill
-        ).toString();
-        jogadorModel.multi_kill = (
-          Number(jogadorModel.multi_kill || 0) + estatisticas.multi_kill
-        ).toString();
-
-        jogadorModel.adr = (
-          (Number(jogadorModel.adr || 0) * (novaQtdPartidas - 1) +
-            estatisticas.adr) /
-          novaQtdPartidas
-        ).toFixed(2);
-
-        let bonus = 0;
-        if (novaQtdPartidas === 15) bonus = 20;
-        else if (novaQtdPartidas === 20) bonus = 40;
-        else if (novaQtdPartidas === 25) bonus = 60;
-        else if (novaQtdPartidas === 30) bonus = 80;
-
-        const pontosTotaisAnterior =
-          Number(jogadorModel.pontos || 0) * (novaQtdPartidas - 1);
-        const novoTotalPontos = pontosTotaisAnterior + pontosPartida + bonus;
-        const mediaComBonus = novoTotalPontos / novaQtdPartidas;
-
-        jogadorModel.qtd_partidas = novaQtdPartidas.toString();
-        jogadorModel.pontos = mediaComBonus.toFixed(0);
-
-        await jogadorModel.save();
-      } else {
-        jogadorModel = await Jogadores.create({
-          nome,
-          imagem: imagem || "",
-          ...estatisticas,
-          qtd_partidas: "1",
-          pontos: pontosPartida.toString(),
-          vitorias: vitoria ? "1" : "0",
+        jogadoresCriados.push({
+          id: jogadorModel.id,
+          _time,
+          origem: {
+            ...estatisticas,
+            nome,
+            time: _time,
+            vitorias: jogadorModel.vitorias,
+            pontos: pontosPartida,
+            qtd_partidas: novaQtdPartidas,
+            partida_ganha: vitoria ? 1 : 0, // ✅ ESSENCIAL
+          },
         });
       }
 
-      jogadoresCriados.push({
-        id: jogadorModel.id,
-        _time,
-        origem: {
-          ...estatisticas,
-          nome,
-          time: _time,
-          // CORREÇÃO: Passa o valor total de vitórias para o pivot, não apenas 0 ou 1
-          vitorias: jogadorModel.vitorias,
-          pontos: pontosPartida,
-          qtd_partidas: novaQtdPartidas,
-        },
-      });
+      // monta pivot + bônus
+      const pivotData = jogadoresCriados.reduce((acc, jogador) => {
+        const { id, origem } = jogador;
+        let bonus = 0;
+        const qtdPartidas = Number(origem.qtd_partidas);
+        if (qtdPartidas === 15) bonus = 20;
+        else if (qtdPartidas === 20) bonus = 40;
+        else if (qtdPartidas === 25) bonus = 60;
+        else if (qtdPartidas === 30) bonus = 80;
+
+        acc[id] = {
+          ...origem,
+          pontos: origem.pontos + bonus,
+          partida_ganha: origem.partida_ganha,
+        };
+        return acc;
+      }, {} as Record<number, any>);
+
+      // ✅ usar a trx via useTransaction
+      await partida.useTransaction(trx).related("jogadores").attach(pivotData);
+
+      // creditar gold dentro da mesma trx
+      for (const j of jogadoresCriados) {
+        const ganhou = !!j.origem.partida_ganha;
+        const gold = ganhou ? 25 : 18;
+
+        const existe = await PartidasRecompensas.query({ client: trx })
+          .where("partida_id", partida.id)
+          .where("jogador_id", j.id)
+          .first();
+
+        if (!existe) {
+          await PartidasRecompensas.create(
+            {
+              partida_id: partida.id,
+              jogador_id: j.id,
+              gold_creditado: gold,
+              createdAt: DateTime.now(),
+            },
+            { client: trx }
+          );
+
+          const jogadorDb = await Jogadores.findOrFail(j.id, { client: trx });
+          jogadorDb.gold = (jogadorDb.gold || 0) + gold;
+          await jogadorDb.useTransaction(trx).save();
+        }
+      }
+
+      await trx.commit();
+      return this.customResponse.sucesso(
+        response,
+        "Partida e jogadores importados com sucesso!",
+        partida
+      );
+    } catch (error) {
+      await trx.rollback();
+      console.error("ERRO importarJson:", error); // ajuda no debug
+      return this.customResponse.erro(
+        response,
+        "Erro ao importar partida!",
+        error,
+        500
+      );
     }
-
-    const pivotData = jogadoresCriados.reduce((acc, jogador) => {
-      const { id, origem } = jogador;
-      let bonus = 0;
-      const qtdPartidas = Number(origem.qtd_partidas);
-      if (qtdPartidas === 15) bonus = 20;
-      else if (qtdPartidas === 20) bonus = 40;
-      else if (qtdPartidas === 25) bonus = 60;
-      else if (qtdPartidas === 30) bonus = 80;
-      acc[id] = { ...origem, pontos: origem.pontos + bonus };
-      return acc;
-    }, {} as Record<number, any>);
-
-    await partida.related("jogadores").attach(pivotData);
-
-    return this.customResponse.sucesso(
-      response,
-      "Partida e jogadores importados com sucesso!",
-      partida
-    );
   }
 
   public async consultarPartidas({ response }: HttpContextContract) {

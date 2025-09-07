@@ -188,6 +188,10 @@ Route.group(() => {
   );
 }).middleware("auth");
 
+Route.group(() => {
+  Route.post('/partidas/:id/creditar', 'RecompensaController.creditarPosPartida');
+}).middleware('auth');
+
 // STICKERS
 Route.group(() => {
   Route.get("/stickers", "StickersController.listar");

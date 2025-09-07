@@ -11,19 +11,28 @@ export default class RecompensaController {
     this.customResponse = new CustomResponse();
   }
 
-  public async creditarPosPartida({params,response,auth,}: HttpContextContract) {
+  public async creditarPosPartida({
+    params,
+    response,
+    auth,
+  }: HttpContextContract) {
     await auth.authenticate();
-    
+
     const partidaId = Number(params.id);
     if (!partidaId) {
-      return this.customResponse.erro(response, "Parâmetro de partida inválido.", partidaId, 400);
+      return this.customResponse.erro(
+        response,
+        "Parâmetro de partida inválido.",
+        partidaId,
+        400
+      );
     }
 
     try {
       const partida = await Partidas.query()
         .where("id", partidaId)
         .preload("jogadores", (q) => {
-          q.pivotColumns(["partida_ganha"]);
+          q.pivotColumns(["partida_ganha"]); // <-- precisa existir na tabela pivot
         })
         .firstOrFail();
 
@@ -39,13 +48,14 @@ export default class RecompensaController {
           .first();
 
         if (!recompensaExistente) {
-          const novaRecompensa = new PartidasRecompensas();
-          novaRecompensa.partida_id = partida.id;
-          novaRecompensa.jogador_id = jogador.id;
-          novaRecompensa.gold_creditado = gold;
-          novaRecompensa.createdAt = DateTime.now();
-          await novaRecompensa.save();
+          await PartidasRecompensas.create({
+            partida_id: partida.id,
+            jogador_id: jogador.id,
+            gold_creditado: gold,
+            createdAt: DateTime.now(),
+          });
 
+          // atualiza saldo do jogador
           jogador.gold = (jogador.gold || 0) + gold;
           await jogador.save();
         }
