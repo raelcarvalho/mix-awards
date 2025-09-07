@@ -56,6 +56,9 @@ export default class PartidasJogadores extends BaseModel {
   @column()
   public pontos: string;
 
+  @column()
+  public partida_ganha: boolean;
+
   @column.dateTime({ autoCreate: true })
   public createdAt: DateTime;
 

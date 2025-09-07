@@ -29,7 +29,7 @@
 
   // ===== utils =====
   const GOLD_ICON_CANDIDATES = ["/uploads/figurinhas/3310001.png"];
-  const GOLD_ENDPOINTS = ["/jogadores/gold", "/jogadores/meuGold"];
+  const GOLD_ENDPOINTS = ["/api/jogadores/gold", "/api/jogadores/meuGold"];
 
   const getStoredUser = () => {
     const s = localStorage.getItem("auth_user");

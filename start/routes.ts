@@ -180,13 +180,10 @@ Route.group(() => {
 
 // JOGADOR
 Route.group(() => {
-  Route.get("/jogadores", "JogadoresController.listar");
-  Route.get("/jogadores/gold", "JogadoresController.meuGold");
-  Route.post(
-    "/jogadores/vincular/:id",
-    "JogadoresController.vincularUsuarioJogador"
-  );
-}).prefix("api").middleware("auth:api")
+  Route.get('/jogadores', 'JogadoresController.listar')
+  Route.get('/jogadores/gold', 'JogadoresController.meuGold')
+  Route.post('/jogadores/vincular/:id', 'JogadoresController.vincularUsuarioJogador')
+}).prefix('api').middleware('auth:api')
 
 Route.group(() => {
   Route.post('/partidas/:id/creditar', 'RecompensaController.creditarPosPartida');

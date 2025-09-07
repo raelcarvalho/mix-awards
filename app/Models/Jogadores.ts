@@ -69,10 +69,10 @@ export default class Jogadores extends BaseModel {
   public vitorias: string;
 
   @column()
-  public qtd_partidas: string
+  public qtd_partidas: string;
 
   @column()
-  public pontos: string
+  public pontos: string;
 
   @belongsTo(() => UsuarioAdm, { foreignKey: "usuario_adm_id" })
   public usuarioAdm: BelongsTo<typeof UsuarioAdm>;
@@ -85,7 +85,14 @@ export default class Jogadores extends BaseModel {
 
   @manyToMany(() => Partidas, {
     pivotTable: "tb_partidas_jogadores",
+    localKey: "id",
+    relatedKey: "id",
+    pivotForeignKey: "jogadores_id",
+    pivotRelatedForeignKey: "partidas_id",
     pivotColumns: [
+      "nome",
+      "time",
+      "vitorias",
       "kills",
       "assistencias",
       "mortes",
@@ -94,10 +101,9 @@ export default class Jogadores extends BaseModel {
       "first_kill",
       "multi_kill",
       "adr",
-      "time",
-      "vitorias",
       "qtd_partidas",
-      "pontos"
+      "pontos",
+      "partida_ganha",
     ],
   })
   public partidas: ManyToMany<typeof Partidas>;
