@@ -20,7 +20,7 @@ export default class JogadoresController {
   }
 
   public async listar({ response }: HttpContextContract) {
-    const jogadores = await Jogadores.query().orderBy("kills", "desc"); // ou outra métrica
+    const jogadores = await Jogadores.query().orderBy("kills", "desc");
     return response.json(jogadores);
   }
 
@@ -45,7 +45,6 @@ export default class JogadoresController {
 
       const jogador = await Jogadores.findOrFail(jogadorId);
 
-      // já vinculado a outro usuário?
       if (
         jogador.usuario_adm_id &&
         Number(jogador.usuario_adm_id) !== Number(usuario.id)
@@ -70,6 +69,7 @@ export default class JogadoresController {
         {
           jogador_id: jogador.id,
           usuario_id: Number(usuario.id),
+          gold: Number(jogador.gold || 0), // <-- devolve o gold para o front
         }
       );
     } catch (error) {
@@ -83,23 +83,45 @@ export default class JogadoresController {
   }
 
   /**
-   * Retorna a quantidade de gold do jogador autenticado
-   * GET /api/jogador/gold
+   * GET /api/jogadores/gold
+   * Retorna o gold do jogador vinculado. Se não houver vínculo,
+   * tenta localizar por nome_normalizado (case-insensitive) e já vincula.
    */
   public async meuGold({ auth, request, response }: HttpContextContract) {
     const user = await auth.authenticate();
     const usuarioId = Number(request.input("usuario_id") ?? user.id);
 
+    // 1) tenta por vínculo direto
     let jogador = await Jogadores.query()
       .where("usuario_adm_id", usuarioId)
       .first();
 
+    // 2) se não achar, tenta por nome_normalizado (insensível a caixa/acentos)
     if (!jogador) {
       const ua = await UsuarioAdm.find(usuarioId);
-      if (ua?.nome_normalizado) {
+      const chave = normalizeName(ua?.nome_normalizado || ua?.nome || "");
+
+      if (chave) {
         jogador = await Jogadores.query()
-          .where("nome_normalizado", ua.nome_normalizado)
+          .whereRaw("LOWER(nome_normalizado) = ?", [chave]) // <--
+          .orWhereRaw("LOWER(nome) = ?", [chave]) // fallback pelo nome "cru"
           .first();
+
+        // se encontrou e não está preso a outro usuário, já vincula
+        if (
+          jogador &&
+          (!jogador.usuario_adm_id ||
+            Number(jogador.usuario_adm_id) === usuarioId)
+        ) {
+          jogador.usuario_adm_id = usuarioId;
+          if (
+            !jogador.nome_normalizado ||
+            jogador.nome_normalizado.trim() === ""
+          ) {
+            jogador.nome_normalizado = chave;
+          }
+          await jogador.save();
+        }
       }
     }
 

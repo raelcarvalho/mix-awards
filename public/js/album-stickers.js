@@ -9,7 +9,7 @@
   const token = localStorage.getItem("auth_token");
   const auth = token ? { Authorization: `Bearer ${token}` } : {};
 
-  const TOTAL_STICKERS = 28;
+  const TOTAL_STICKERS = 24;
   const PER_PAGE = 10;
   const PAGES = Math.ceil(TOTAL_STICKERS / PER_PAGE);
 
