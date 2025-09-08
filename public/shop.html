@@ -9,11 +9,9 @@
   <!-- Estilos globais -->
   <link rel="stylesheet" href="/css/base.css">
   <link rel="stylesheet" href="/css/layout.css">
-  <link rel="preload" href="/js/auth.js" as="script" />
 
   <style>
-    /* ================= NAV-BTN (linhas animadas, sem aumentar a altura) ================ */
-    /* Neutraliza o hover genérico dos links do nav para .nav-btn */
+    /* ====== estilos (idênticos aos seus) ====== */
     .nav a.nav-btn,
     .nav .nav-right a.nav-btn {
       position: relative;
@@ -22,7 +20,6 @@
       gap: 6px;
       padding: 10px 15px;
       font-size: 14px;
-      /* mantém o tamanho certo */
       font-weight: 600;
       text-transform: uppercase;
       text-decoration: none;
@@ -31,7 +28,6 @@
       border: none !important;
       cursor: pointer;
       line-height: 1;
-      /* não inflar altura */
       transition: letter-spacing .3s ease;
     }
 
@@ -40,7 +36,6 @@
       background: none !important;
     }
 
-    /* Linhas absolutas (não participam do fluxo, não aumentam a barra) */
     .nav a.nav-btn::before,
     .nav a.nav-btn::after {
       content: "";
@@ -53,7 +48,6 @@
       pointer-events: none;
     }
 
-    /* distância pequena do texto (topo e base do botão) */
     .nav a.nav-btn::before {
       top: 4px;
     }
@@ -67,7 +61,6 @@
       width: 70%;
     }
 
-    /* Cores por data-color */
     .nav a.nav-btn[data-color="#2db2ff"]:hover::before,
     .nav a.nav-btn[data-color="#2db2ff"]:hover::after {
       border-color: #2db2ff;
@@ -108,7 +101,6 @@
       border-color: #FBC638;
     }
 
-    /* ===================== AJUSTES DA PÁGINA SHOP ===================== */
     .toolbar {
       display: flex;
       align-items: center;
@@ -282,7 +274,7 @@
       background: conic-gradient(from 180deg, rgba(255, 255, 255, .35), rgba(0, 255, 255, .15), rgba(255, 0, 255, .15), rgba(255, 255, 255, .25));
       mix-blend-mode: overlay;
       opacity: .35;
-      transform: translate(calc((var(--mx, .5)-.5) * 10%), calc((var(--my, .5)-.5) * 10%)) rotate(5deg);
+      transform: translate(calc((var(--mx, .5)-.5)*10%), calc((var(--my, .5)-.5)*10%)) rotate(5deg);
       filter: blur(12px) saturate(1.1);
       transition: opacity .25s ease;
     }
@@ -355,7 +347,7 @@
       padding: 10px;
       border-radius: 10px;
       background: #0b1824;
-      color: #e6f1f8;
+      color: #e8f1f8;
       border: 1px solid #264761;
     }
 
@@ -374,7 +366,7 @@
       min-width: 260px;
       max-width: 92vw;
       background: #0f2435;
-      color: #e6f1f8;
+      color: #e8f1f8;
       border: 1px solid #264761;
       border-radius: 10px;
       padding: 12px 14px;
@@ -462,16 +454,14 @@
       margin: auto;
     }
 
-    /* ============ NOVOS ESTILOS PARA OS EFEITOS ============ */
-
-    /* Efeito de cartinhas voando (pacote) */
+    /* Efeitos compra */
     .sticker {
       position: absolute;
       width: 30px;
       height: 40px;
       background: linear-gradient(135deg, #ffeb3b, #ff9800);
       border-radius: 4px;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, .3);
       z-index: 10;
       display: flex;
       align-items: center;
@@ -482,7 +472,6 @@
       pointer-events: none;
     }
 
-    /* Efeito de cápsulas caindo */
     .mini-capsule {
       position: absolute;
       width: 20px;
@@ -492,10 +481,9 @@
       pointer-events: none;
     }
 
-    /* Efeito de brilho ao comprar */
     @keyframes purchase-glow {
       0% {
-        box-shadow: 0 0 0 0 rgba(42, 125, 228, 0.7);
+        box-shadow: 0 0 0 0 rgba(42, 125, 228, .7);
       }
 
       70% {
@@ -511,7 +499,6 @@
       animation: purchase-glow 1s ease-out;
     }
 
-    /* Efeito de pulo para o pacote */
     @keyframes package-jump {
       0% {
         transform: translateY(0) scale(1);
@@ -527,10 +514,9 @@
     }
 
     .package-jump {
-      animation: package-jump 0.5s ease;
+      animation: package-jump .5s ease;
     }
 
-    /* Efeito de abertura para a cápsula */
     @keyframes capsule-open {
       0% {
         transform: scale(1);
@@ -541,7 +527,7 @@
       }
 
       50% {
-        transform: scale(0.9);
+        transform: scale(.9);
       }
 
       75% {
@@ -554,7 +540,7 @@
     }
 
     .capsule-open {
-      animation: capsule-open 0.6s ease;
+      animation: capsule-open .6s ease;
     }
   </style>
 </head>
@@ -563,16 +549,13 @@
   <!-- NAV -->
   <div class="nav">
     <a class="navbar-brand" href="/index">MIX AWARDS</a>
-
     <a href="/importar-partida-html" class="nav-btn" data-color="#2db2ff">Importar Partida</a>
     <a href="/consultar-partidas-html" class="nav-btn" data-color="#ff1f71">Consultar Partida</a>
     <a href="/ranking-jogadores-html" class="nav-btn" data-color="#1eff45">Ranking Jogadores</a>
     <a href="/shop-html" class="nav-btn" data-color="#6225E6">Loja</a>
     <a href="/album-html" class="nav-btn" data-color="#a78bfa">Álbum</a>
     <a href="/album-stickers-html" class="nav-btn" data-color="#a78bfb">Álbum Stickers</a>
-
     <div class="nav-right">
-      <!-- auth.js substitui pelo layout logado; mantém proporções corretas do gold -->
       <a id="btnOpenRegister" class="nav-btn" data-color="#a78bfa" href="/cadastrar-html">Cadastrar</a>
       <a id="btnOpenLogin" class="nav-btn" data-color="#56c1ff" href="/login-html">Logar</a>
     </div>
@@ -679,7 +662,7 @@
   <canvas id="fxCanvas" class="fx-canvas"
     style="position:fixed; inset:0; width:100vw; height:100vh; pointer-events:none; z-index:85;"></canvas>
 
-  <!-- Scripts -->
+  <!-- Scripts necessários (somente UMA vez cada) -->
   <script src="/js/auth.js" defer></script>
   <script src="/js/shop.js" defer></script>
 
@@ -714,171 +697,84 @@
     })();
   </script>
 
-  <!-- Script para os efeitos de compra -->
+  <!-- Script para efeitos visuais de compra -->
   <script>
     document.addEventListener('DOMContentLoaded', function () {
-      // Elementos dos produtos
       const packHolder = document.getElementById('packHolder');
       const capsHolder = document.getElementById('capsHolder');
       const pack3d = document.getElementById('pack3d');
       const caps3d = document.getElementById('caps3d');
 
-      // Botões de compra do pacote
       const btnComprar1 = document.getElementById('btnComprar1');
       const btnComprar5 = document.getElementById('btnComprar5');
       const btnComprar10 = document.getElementById('btnComprar10');
-
-      // Botões de compra da cápsula
       const btnComprarCap1 = document.getElementById('btnComprarCap1');
       const btnComprarCap5 = document.getElementById('btnComprarCap5');
       const btnComprarCap10 = document.getElementById('btnComprarCap10');
 
-      // Função para criar efeito de figurinhas voando (para pacote)
       function createFlyingStickers(container, quantity) {
         for (let i = 0; i < quantity; i++) {
           const sticker = document.createElement('div');
           sticker.className = 'sticker';
           sticker.innerHTML = '⭐';
-
-          // Posição inicial aleatória
-          const startX = Math.random() * 100;
-          const startY = Math.random() * 100;
-
-          sticker.style.left = startX + '%';
-          sticker.style.top = startY + '%';
-
+          const startX = Math.random() * 100, startY = Math.random() * 100;
+          sticker.style.left = startX + '%'; sticker.style.top = startY + '%';
           container.appendChild(sticker);
-
-          // Animação
-          const angle = Math.random() * Math.PI * 2;
-          const distance = 50 + Math.random() * 100;
-          const duration = 1000 + Math.random() * 1000;
-
-          const endX = startX + Math.cos(angle) * distance;
-          const endY = startY + Math.sin(angle) * distance;
-
+          const angle = Math.random() * Math.PI * 2, distance = 50 + Math.random() * 100, duration = 1000 + Math.random() * 1000;
+          const endX = startX + Math.cos(angle) * distance, endY = startY + Math.sin(angle) * distance;
           sticker.animate(
-            [
-              {
-                transform: 'translate(0, 0) rotate(0deg) scale(1)',
-                opacity: 1
-              },
-              {
-                transform: `translate(${endX}px, ${endY}px) rotate(${360 + Math.random() * 360}deg) scale(0.5)`,
-                opacity: 0
-              }
-            ],
-            {
-              duration: duration,
-              easing: 'cubic-bezier(0.1, 0.8, 0.2, 1)',
-              fill: 'forwards'
-            }
+            [{ transform: 'translate(0,0) rotate(0deg) scale(1)', opacity: 1 },
+            { transform: `translate(${endX}px, ${endY}px) rotate(${360 + Math.random() * 360}deg) scale(0.5)`, opacity: 0 }],
+            { duration, easing: 'cubic-bezier(0.1,0.8,0.2,1)', fill: 'forwards' }
           ).onfinish = () => sticker.remove();
         }
       }
 
-      // Função para criar efeito de cápsulas caindo (para cápsula)
       function createFallingCapsules(container, quantity) {
         for (let i = 0; i < quantity; i++) {
           const capsule = document.createElement('div');
           capsule.className = 'mini-capsule';
-
-          // Posição inicial no topo
           const startX = Math.random() * 100;
-
-          capsule.style.left = startX + '%';
-          capsule.style.top = '0%';
-
+          capsule.style.left = startX + '%'; capsule.style.top = '0%';
           container.appendChild(capsule);
-
-          // Animação de queda
-          const duration = 800 + Math.random() * 400;
-          const endY = 80 + Math.random() * 20;
-          const rotation = (Math.random() - 0.5) * 360;
-
+          const duration = 800 + Math.random() * 400, endY = 80 + Math.random() * 20, rotation = (Math.random() - .5) * 360;
           capsule.animate(
-            [
-              {
-                transform: 'translate(0, 0) rotate(0deg)',
-                opacity: 1
-              },
-              {
-                transform: `translate(0, ${endY}%) rotate(${rotation}deg)`,
-                opacity: 0.8
-              }
-            ],
-            {
-              duration: duration,
-              easing: 'cubic-bezier(0.4, 0, 0.6, 1)',
-              fill: 'forwards'
-            }
+            [{ transform: 'translate(0,0) rotate(0deg)', opacity: 1 },
+            { transform: `translate(0, ${endY}%) rotate(${rotation}deg)`, opacity: .8 }],
+            { duration, easing: 'cubic-bezier(0.4,0,0.6,1)', fill: 'forwards' }
           ).onfinish = () => {
-            // Pequeno salto no final
             capsule.animate(
               [
                 { transform: `translate(0, ${endY}%) rotate(${rotation}deg) scale(1)` },
                 { transform: `translate(0, ${endY - 10}%) rotate(${rotation}deg) scale(1.2)` },
                 { transform: `translate(0, ${endY}%) rotate(${rotation}deg) scale(1)` }
-              ],
-              {
-                duration: 300,
-                easing: 'ease-out'
-              }
+              ], { duration: 300, easing: 'ease-out' }
             ).onfinish = () => capsule.remove();
           };
         }
       }
 
-      // Adicionar eventos aos botões de compra do pacote
       [btnComprar1, btnComprar5, btnComprar10].forEach(btn => {
-        btn.addEventListener('click', function () {
-          // Efeito visual no pacote
+        btn?.addEventListener('click', function () {
           packHolder.classList.add('purchase-effect');
           pack3d.classList.add('package-jump');
-
-          // Quantidade de figurinhas baseada no botão clicado
-          let stickerCount = 4; // padrão para 1 pacote
-          if (btn.id === 'btnComprar5') stickerCount = 12;
-          if (btn.id === 'btnComprar10') stickerCount = 24;
-
-          // Criar efeito de figurinhas
+          let stickerCount = 4; if (btn.id === 'btnComprar5') stickerCount = 12; if (btn.id === 'btnComprar10') stickerCount = 24;
           createFlyingStickers(packHolder, stickerCount);
-
-          // Remover classes após animação
-          setTimeout(() => {
-            packHolder.classList.remove('purchase-effect');
-            pack3d.classList.remove('package-jump');
-          }, 1000);
+          setTimeout(() => { packHolder.classList.remove('purchase-effect'); pack3d.classList.remove('package-jump'); }, 1000);
         });
       });
 
-      // Adicionar eventos aos botões de compra da cápsula
       [btnComprarCap1, btnComprarCap5, btnComprarCap10].forEach(btn => {
-        btn.addEventListener('click', function () {
-          // Efeito visual na cápsula
+        btn?.addEventListener('click', function () {
           capsHolder.classList.add('purchase-effect');
           caps3d.classList.add('capsule-open');
-
-          // Quantidade de mini-cápsulas baseada no botão clicado
-          let capsuleCount = 3; // padrão para 1 cápsula
-          if (btn.id === 'btnComprarCap5') capsuleCount = 8;
-          if (btn.id === 'btnComprarCap10') capsuleCount = 15;
-
-          // Criar efeito de cápsulas caindo
+          let capsuleCount = 3; if (btn.id === 'btnComprarCap5') capsuleCount = 8; if (btn.id === 'btnComprarCap10') capsuleCount = 15;
           createFallingCapsules(capsHolder, capsuleCount);
-
-          // Remover classes após animação
-          setTimeout(() => {
-            capsHolder.classList.remove('purchase-effect');
-            caps3d.classList.remove('capsule-open');
-          }, 1000);
+          setTimeout(() => { capsHolder.classList.remove('purchase-effect'); caps3d.classList.remove('capsule-open'); }, 1000);
         });
       });
     });
   </script>
-
-  <script src="/js/shop.js?v=2" defer></script>
-  <script src="/js/auth.js" defer></script>
 </body>
 
 </html>

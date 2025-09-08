@@ -1,5 +1,8 @@
 // public/js/shop.js
 (function () {
+  if (window.__SHOP_JS_INIT__) return;
+  window.__SHOP_JS_INIT__ = true;
+
   // ===================== ENDPOINTS (iguais aos seus routes) =====================
   const LOGIN_URL = "/login-html";
 
@@ -9,11 +12,11 @@
   const BUY_PACOTE_URL = "/shop/comprar"; // body: { quantidade }
   const BUY_CAPS_URL = "/shop/comprar-capsulas"; // body: { quantidade }
 
-  // Gold: apenas o que existe no seu routes
-  const GOLD_URLS = ["/api/jogador/gold"];
+  // Gold: tenta plural e singular (evita 404)
+  const GOLD_URLS = ["/api/jogadores/gold", "/api/jogador/gold"];
 
   // ===================== AUTH/STATE =====================
-  // Você usa sessão (cookie). Não vamos enviar Authorization Bearer.
+  // Você usa sessão (cookie). Não vamos enviar Authorization Bearer, a menos que exista token salvo.
   const isLogged = () => true;
 
   // ===================== REFS =====================
@@ -95,20 +98,19 @@
     }, 2000);
   }
 
-  // ===================== API helper (só cookie) =====================
+  // ===================== API helper (cookie + token se existir) =====================
   async function api(method, url, body) {
     const headers = {
       "Content-Type": "application/json",
       Accept: "application/json",
     };
-    // se existir token salvo, manda junto (funciona com auth:web,api)
     const t = localStorage.getItem("auth_token");
     if (t) headers.Authorization = `Bearer ${t}`;
 
     const res = await fetch(url, {
       method,
       headers,
-      credentials: "include", // garante envio do cookie mesmo em subdomínio/mesmo site
+      credentials: "include", // envia cookie de sessão
       cache: "no-store",
       body: body ? JSON.stringify(body) : undefined,
     });
@@ -118,10 +120,7 @@
       json = await res.json();
     } catch (_) {}
 
-    if (res.status === 401) {
-      // feedback amigável e redireciona pro login
-      throw new Error("Sessão expirada");
-    }
+    if (res.status === 401) throw new Error("Sessão expirada");
     if (!res.ok || (json && json.sucesso === false)) {
       const msg =
         (json && (json.mensagem || json.message)) || `Erro HTTP ${res.status}`;
@@ -448,9 +447,9 @@
       if (
         Math.abs(currRX - targetRX) > 0.1 ||
         Math.abs(currRY - targetRY) > 0.1
-      )
+      ) {
         raf = requestAnimationFrame(update);
-      else {
+      } else {
         cancelAnimationFrame(raf);
         raf = 0;
       }

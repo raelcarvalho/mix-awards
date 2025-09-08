@@ -1,5 +1,8 @@
-// public/js/album.js — versão completa (raridades + modal ajustadas)
+// public/js/album.js — versão completa (raridades + modal + fix de páginas)
 (function () {
+  if (window.__ALBUM_JS_INIT__) return;
+  window.__ALBUM_JS_INIT__ = true;
+
   const $ = (s, c = document) => c.querySelector(s);
   const $$ = (s, c = document) => Array.from(c.querySelectorAll(s));
 
@@ -78,6 +81,7 @@
   async function fetchAlbum() {
     if (!token) {
       slots = makeStaticSlots();
+      totalPages = 6;
       renderPager();
       renderPage();
       return;
@@ -85,11 +89,13 @@
     try {
       const r = await fetch("/album", { headers: authHeader });
       const j = unwrap(await safeJson(r)) || {};
+
       if (Array.isArray(j?.slots) && j.slots.length) {
+        // resposta no formato { slots: [...] }
         slots = j.slots.map((s) => ({
           slot: Number(s.slot ?? 0),
-          page: Number(s.page ?? pageOf(s.slot)),
-          pos: Number(s.pos ?? posOf(s.slot)),
+          page: Number(s.page ?? pageOf(Number(s.slot ?? 0))),
+          pos: Number(s.pos ?? posOf(Number(s.slot ?? 0))),
           raridade: s.raridade || rarityOf(Number(s.slot)),
           colada: !!s.colada,
           nova: !!s.nova,
@@ -101,8 +107,15 @@
               }
             : null,
         }));
-        totalPages = Number(j?.paginas ?? 6);
+
+        // ⚠️ não confia em j.paginas; calcula pelas cartas/slots
+        const maxSlot = slots.reduce(
+          (m, s) => Math.max(m, Number(s.slot || 0)),
+          0
+        );
+        totalPages = Math.max(6, Math.ceil((maxSlot || 60) / 10));
       } else if (Array.isArray(j?.figurinhas)) {
+        // resposta no formato legacy { figurinhas: [...] }
         const figs = j.figurinhas;
         slots = figs
           .map((f, idx) => {
@@ -120,7 +133,7 @@
             };
           })
           .sort((a, b) => a.slot - b.slot);
-        totalPages = Math.max(1, Math.ceil(slots.length / 10));
+        totalPages = Math.max(6, Math.ceil((slots.length || 60) / 10));
       } else {
         slots = makeStaticSlots();
         totalPages = 6;
@@ -167,14 +180,8 @@
   function onPagerClick(e) {
     const t = e.target.closest(".pbtn");
     if (!t) return;
-    if (t.dataset.act === "prev") {
-      goto(page - 1);
-      return;
-    }
-    if (t.dataset.act === "next") {
-      goto(page + 1);
-      return;
-    }
+    if (t.dataset.act === "prev") return goto(page - 1);
+    if (t.dataset.act === "next") return goto(page + 1);
     const p = Number(t.dataset.page || 1);
     if (p && p !== page) goto(p);
   }
@@ -289,15 +296,10 @@
   // ======== MODAL ========
   function openModal(slot) {
     if (!modal) return;
-
-    // imagem
     cardImg.src = slot.figurinha?.img || "";
     cardImg.alt = slot.figurinha?.nome || "Figurinha";
 
-    // raridade
     const rar = String(slot.raridade || "normal").toLowerCase();
-
-    // legenda colorida
     cardInfo.className = "";
     cardInfo.classList.add(rar);
     cardInfo.textContent =
@@ -307,23 +309,16 @@
         ? "Carta Épica"
         : "Carta Normal";
 
-    // título da modal
-    if (ttlFig) {
+    if (ttlFig)
       ttlFig.textContent =
         rar === "lendaria" ? "Lendária" : rar === "epica" ? "Épica" : "Normal";
-    }
 
-    // holo por raridade na modal
     const modalHolo = $(".card-preview .holo-effect");
-    if (modalHolo) {
-      modalHolo.className = "holo-effect " + rar;
-    }
+    if (modalHolo) modalHolo.className = "holo-effect " + rar;
 
-    // abrir
     modal.classList.add("open");
     modal.setAttribute("aria-hidden", "false");
 
-    // interatividade do holo na modal
     const cardPreview = $(".card-preview");
     if (cardPreview && modalHolo) {
       const move = (e) => {
