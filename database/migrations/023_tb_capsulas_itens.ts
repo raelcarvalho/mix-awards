@@ -5,6 +5,7 @@ export default class CapsulasItens extends BaseSchema {
 
   public async up() {
     this.schema.createTable(this.tableName, (table) => {
+      // migration
       table.increments("id");
       table
         .integer("capsulas_id")
