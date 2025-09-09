@@ -4,27 +4,16 @@ export default class CapsulasItens extends BaseSchema {
   protected tableName = "tb_capsulas_itens";
 
   public async up() {
+    // Primeiro criar a tabela SEM foreign keys
     this.schema.createTable(this.tableName, (table) => {
-      // migration
       table.increments("id");
-      table
-        .integer("capsulas_id")
-        .unsigned()
-        .references("id")
-        .inTable("tb_capsulas")
-        .onDelete("CASCADE")
-        .notNullable();
-      table
-        .integer("sticker_id")
-        .unsigned()
-        .references("id")
-        .inTable("tb_stickers")
-        .onDelete("CASCADE")
-        .notNullable();
+      table.integer("capsulas_id").unsigned().notNullable();
+      table.integer("sticker_id").unsigned().notNullable();
       table.boolean("duplicada").notNullable().defaultTo(false);
       table.timestamp("created_at", { useTz: true });
       table.timestamp("updated_at", { useTz: true });
     });
+
   }
 
   public async down() {
