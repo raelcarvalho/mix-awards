@@ -191,7 +191,13 @@ export default class PartidaController {
         pontosPartida += estatisticas.kills;
         pontosPartida += estatisticas.first_kill;
         pontosPartida +=
-          estatisticas.adr < 50 ? 5 : estatisticas.adr <= 100 ? 10 : 20;
+          estatisticas.adr < 50
+            ? 5
+            : estatisticas.adr > 50 && estatisticas.adr < 79
+            ? 10
+            : estatisticas.adr >= 79 && estatisticas.adr < 100
+            ? 15
+            : 20;
         pontosPartida += vitoria ? 20 : 10;
 
         if (jogadorModel) {
@@ -223,8 +229,17 @@ export default class PartidaController {
           jogadorModel.mortes = (
             Number(jogadorModel.mortes || 0) + estatisticas.mortes
           ).toString();
-          jogadorModel.kast =
-            Number(jogadorModel.kast || 0) + estatisticas.kast;
+          const totalKills = Number(jogadorModel.kills || 0);
+          const totalDeaths = Number(jogadorModel.mortes || 0);
+          jogadorModel.kda_player =
+            totalDeaths > 0
+              ? (totalKills / totalDeaths).toFixed(2)
+              : totalKills.toFixed(2);
+          const kastAnterior = Number(jogadorModel.kast || 0);
+          const kastNovo = Number(estatisticas.kast || 0);
+          jogadorModel.kast = Math.round(
+            (kastAnterior * (novaQtdPartidas - 1) + kastNovo) / novaQtdPartidas
+          );
           jogadorModel.flash_assist = (
             Number(jogadorModel.flash_assist || 0) + estatisticas.flash_assist
           ).toString();
@@ -265,9 +280,20 @@ export default class PartidaController {
               nome_normalizado: nomeNorm,
               usuario_adm_id: usuarioPossivel?.id,
               imagem: imagem || "",
-              ...estatisticas,
+              adr: String(estatisticas.adr ?? 0),
+              kills: String(estatisticas.kills ?? 0),
+              assistencias: String(estatisticas.assistencias ?? 0),
+              mortes: String(estatisticas.mortes ?? 0),
+              kda_player:
+                estatisticas.mortes > 0
+                  ? (estatisticas.kills / estatisticas.mortes).toFixed(2)
+                  : String(estatisticas.kills ?? 0),
+              kast: Math.round(Number(estatisticas.kast ?? 0)),
+              flash_assist: String(estatisticas.flash_assist ?? 0),
+              first_kill: String(estatisticas.first_kill ?? 0),
+              multi_kill: String(estatisticas.multi_kill ?? 0),
               qtd_partidas: "1",
-              pontos: pontosPartida.toString(),
+              pontos: String(pontosPartida),
               vitorias: vitoria ? "1" : "0",
             },
             { client: trx }

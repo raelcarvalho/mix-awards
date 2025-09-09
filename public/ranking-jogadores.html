@@ -35,7 +35,7 @@
       --radius: 16px;
       --container: max(320px, min(1400px, 96vw));
       --player-min: 180px;
-      --stat-min: 60px;
+      --stat-min: 56px;
       --rank-min: 40px;
       --gap: 12px;
       --gold: linear-gradient(135deg, #ffd700, #daa520);
@@ -284,7 +284,8 @@
       align-items: center;
       width: 100%;
       gap: var(--gap);
-      grid-template-columns: minmax(var(--rank-min), .8fr) minmax(var(--player-min), 3.6fr) repeat(13, minmax(var(--stat-min), 1fr));
+      grid-template-columns:
+        minmax(var(--rank-min), .8fr) minmax(var(--player-min), 3.6fr) repeat(15, minmax(var(--stat-min), 1fr));
     }
 
     .head {
@@ -598,9 +599,11 @@
           <div class="cell clickable" data-sort="kills">Kills</div>
           <div class="cell clickable" data-sort="assistencias">Assists</div>
           <div class="cell clickable" data-sort="mortes">Deaths</div>
+          <div class="cell clickable" data-sort="diff">DIFF</div>
           <div class="cell clickable" data-sort="kda_player">KDR</div>
-          <div class="cell clickable" data-sort="multi_kill">M.Kills</div>
-          <div class="cell clickable" data-sort="first_kill">First</div>
+          <div class="cell clickable" data-sort="kast">KAST</div>
+          <div class="cell clickable" data-sort="multi_kill">M.K</div>
+          <div class="cell clickable" data-sort="first_kill">F.K</div>
           <div class="cell clickable" data-sort="flash_assist">Flash</div>
           <div class="cell clickable" data-sort="defuses">Defuses</div>
           <div class="cell clickable" data-sort="bomb_plants">Plant</div>
@@ -631,6 +634,9 @@
     const fmt = (v, d = 0) =>
     (v === null || v === undefined || v === "" || isNaN(v) ? "-" :
       Number(v).toLocaleString("pt-BR", { maximumFractionDigits: d, minimumFractionDigits: d }));
+    const fmtPct = (v, d = 0) =>
+    (v === null || v === undefined || v === "" || isNaN(v) ? "-" :
+      `${Number(v).toLocaleString("pt-BR", { maximumFractionDigits: d, minimumFractionDigits: d })}%`);
 
     // fallback transparente para evitar "broken image"
     const FALLBACK_AVATAR = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
@@ -639,14 +645,24 @@
 
     /* Normaliza campos (inclui imagem) */
     function normalizePlayer(p) {
+      const kills = p.kills ?? p.frags ?? 0;
+      const mortes = p.mortes ?? p.deaths ?? 0;
+      const kdrBack = p.kda_player ?? p.kdr ?? p.kd ?? 0;
+      const kdrCalc = Number(mortes) > 0 ? Number(kills) / Number(mortes) : Number(kills);
+      const kdr = Number(kdrBack) > 0 ? Number(kdrBack) : kdrCalc;
+      const kastNum = Number(p.kast ?? p.KAST ?? p.kast_percent ?? 0);
+      const diff = (p.diff !== undefined) ? p.diff : (Number(kills) - Number(mortes));
+
       return {
         nome: p.nome ?? p.name ?? p.player ?? "-",
         imagem: p.imagem ?? p.jogador_imagem ?? p.avatar ?? "",
         adr: p.adr ?? p.ADR ?? 0,
-        kills: p.kills ?? p.frags ?? 0,
+        kills,
         assistencias: p.assistencias ?? p.assists ?? 0,
-        mortes: p.mortes ?? p.deaths ?? 0,
-        kda_player: p.kda_player ?? p.kdr ?? p.kd ?? 0,
+        mortes,
+        diff,
+        kda_player: kdr,
+        kast: kastNum,
         multi_kill: p.multi_kill ?? p.multiKills ?? 0,
         first_kill: p.first_kill ?? p.firstKills ?? 0,
         flash_assist: p.flash_assist ?? p.flashAssists ?? 0,
@@ -719,7 +735,9 @@
         <div class="val">${fmt(j.kills)}</div>
         <div class="val">${fmt(j.assistencias)}</div>
         <div class="val">${fmt(j.mortes)}</div>
+        <div class="val">${fmt(j.diff)}</div>
         <div class="val">${fmt(j.kda_player, 2)}</div>
+        <div class="val">${fmtPct(j.kast, 0)}</div>
         <div class="val">${fmt(j.multi_kill)}</div>
         <div class="val">${fmt(j.first_kill)}</div>
         <div class="val">${fmt(j.flash_assist)}</div>
