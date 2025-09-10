@@ -7,18 +7,19 @@
   const pack = $("#pack");
   const fan = $("#fan");
 
-  const btnOpen = $("#btnOpen");
-  const btnReveal = $("#btnReveal");
-  const btnReset = $("#btnReset");
+  const btnOpen = $("#btnOpen"); // Abrir pacote
+  const btnReveal = $("#btnReveal"); // Revelar tudo
+  const btnReset = $("#btnReset"); // Novo pacote
   const btnBack = $("#btnBack");
 
   const token = localStorage.getItem("auth_token");
   const auth = token ? { Authorization: `Bearer ${token}` } : {};
 
-  let opened = false;
-  let cards = [];
-  let packCount = 0;
+  let opened = false; // indica se o pack atual foi aberto (UI)
+  let cards = []; // cartas do pack atual
+  let packCount = 0; // quantidade de pacotes fechados restantes (servidor)
 
+  /* =================== HELPERS =================== */
   const safeJson = async (res) => {
     try {
       return await res.json();
@@ -27,40 +28,38 @@
     }
   };
   const unwrap = (data) => data?.resultados ?? data ?? {};
-
   const getId = (x) =>
     Number(x?.id ?? x?.figurinha_id ?? x?.figurinha?.id ?? NaN);
 
-  /* =================== HELPERS =================== */
   const fixImgPath = (p) => {
     if (!p) return null;
     if (p.startsWith("http")) return p;
     return p.startsWith("/") ? p : "/" + p;
   };
 
-  // Aceita: 0..2, 1..3, strings "épica"/"lendária", objetos { id, nome }
+  // Normaliza entrada de raridade em "normal" | "epica" | "lendaria"
   function canonRarity(r) {
     if (r == null) return "normal";
-
     if (typeof r === "object") {
       if ("nome" in r) return canonRarity(r.nome);
       if ("name" in r) return canonRarity(r.name);
       if ("id" in r) return canonRarity(String(r.id));
     }
-
     const s = String(r).trim().toLowerCase();
-
-    // esquemas numéricos (preferimos 1..3; se for 0..2 também cobre)
     if (s === "3") return "lendaria";
     if (s === "2") return "epica";
     if (s === "1" || s === "0") return "normal";
-
-    // textos
     if (["normal", "comum", "common"].includes(s)) return "normal";
     if (["épica", "epica", "epic", "rara", "rare"].includes(s)) return "epica";
     if (/(legend|lend[aá]r[io]a)/.test(s)) return "lendaria";
-
     return "normal";
+  }
+
+  // Controla o estado habilitado/disabled dos botões
+  function updateButtons() {
+    if (btnOpen) btnOpen.disabled = !token || packCount <= 0 || opened;
+    if (btnReveal) btnReveal.disabled = !opened;
+    if (btnReset) btnReset.disabled = !(opened && packCount > 0);
   }
 
   async function fetchAlbumMap() {
@@ -86,19 +85,20 @@
   }
 
   /* =================== BACKEND =================== */
+  // Lê quantos pacotes fechados existem para o usuário
   async function fetchPacks() {
     try {
       const r = await fetch("/shop/listar-pacote-fechado", { headers: auth });
       const j = unwrap(await safeJson(r));
       const arr = j?.pacotes ?? j?.resultados?.pacotes ?? [];
       packCount = Array.isArray(arr) ? arr.length : j?.quantidade ?? 0;
-      if (btnOpen) btnOpen.disabled = !token || packCount <= 0;
     } catch {
-      if (btnOpen) btnOpen.disabled = false; // demo
+      packCount = 0; // em erro, bloqueia abertura
     }
+    updateButtons();
   }
 
-  // pega raridade no maior número de formatos possível
+  // Extrai/normaliza raridade
   function extractRarity(it) {
     const f = it?.figurinha || it;
     const candidate =
@@ -116,8 +116,8 @@
     return canonRarity(candidate);
   }
 
+  // Normaliza a estrutura de cartas vinda do servidor
   function normalizeCards(payload) {
-    // tenta formatos mais antigos
     let bag =
       payload?.cartas ??
       payload?.figurinhas ??
@@ -127,7 +127,6 @@
       payload?.abertura?.figurinhas ??
       null;
 
-    // seu backend atual: { novas:[], duplicadas:[] }
     if (!Array.isArray(bag)) {
       const tmp = [];
       if (Array.isArray(payload?.novas)) tmp.push(...payload.novas);
@@ -139,7 +138,7 @@
 
     return bag.map((it, i) => {
       const f = it?.figurinha || it;
-      const rar = extractRarity(it); // usa todos os campos possíveis
+      const rar = extractRarity(it);
       return {
         id: f?.id ?? i + 1,
         nome: f?.nome ?? it?.nome ?? it?.title ?? `Carta #${i + 1}`,
@@ -150,21 +149,29 @@
     });
   }
 
+  // Chama API de abertura e respeita o status HTTP
   async function openPackOnServer() {
     const r = await fetch("/album/pacotes/abrir", {
       method: "POST",
       headers: { "Content-Type": "application/json", ...auth },
       body: JSON.stringify({ quantidade: 1 }),
     });
+
     const data = unwrap(await safeJson(r));
 
-    // ids vindos do back para sabermos quem é nova e quem é repetida
+    if (!r.ok) {
+      const msg = data?.mensagem || data?.message || "Sem pacotes para abrir.";
+      const err = new Error(msg);
+      err.name = "NoPacks";
+      throw err;
+    }
+
     const dupIds = new Set((data?.duplicadas || []).map(getId).filter(Boolean));
     const newIds = new Set((data?.novas || []).map(getId).filter(Boolean));
 
     let list = normalizeCards(data);
 
-    // completar imagem se vier faltando
+    // Completa imagens que vierem vazias
     if (list.some((c) => !c.img)) {
       const albumMap = await fetchAlbumMap();
       list = list.map((c) => {
@@ -185,7 +192,6 @@
       });
     }
 
-    // flags usadas no visual
     return list.map((c) => ({
       ...c,
       raridade: canonRarity(c.raridade),
@@ -206,6 +212,7 @@
     );
   }
 
+  // Tilt 3D do pack
   (function packTilt() {
     if (!pack) return;
     pack.addEventListener("mousemove", (e) => {
@@ -224,7 +231,6 @@
   function createCard(index, item, total) {
     const rar = canonRarity(item.raridade);
 
-    // wrap permite colocar a mensagem abaixo
     const wrap = document.createElement("div");
     wrap.className = "card-wrap";
 
@@ -232,7 +238,6 @@
     card.className = `card ${rar}${item.isDuplicate ? " duplicate" : ""}`;
     card.dataset.raridade = rar;
 
-    // rotações leves para o leque
     const rots = total === 4 ? [-8, -2, 2, 8] : [-10, -3, 3, 10];
     card.style.setProperty("--rot", `${rots[index] || 0}deg`);
 
@@ -287,7 +292,6 @@
 
     wrap.appendChild(card);
 
-    // legenda de repetida
     if (item.isDuplicate) {
       const note = document.createElement("div");
       note.className = "dup-msg";
@@ -299,12 +303,18 @@
     return wrap;
   }
 
+  /* =================== FLUXOS =================== */
   async function openPackFlow() {
+    // Bloqueio: sem pacotes não abre
+    if (packCount <= 0) {
+      alert("Você não possui pacotes fechados para abrir.");
+      updateButtons();
+      return;
+    }
     if (opened) return;
+
     opened = true;
-    if (btnOpen) btnOpen.disabled = true;
-    if (btnReveal) btnReveal.disabled = false;
-    if (btnReset) btnReset.disabled = false;
+    updateButtons();
 
     pack.animate(
       [
@@ -336,40 +346,33 @@
 
     try {
       cards = token ? await openPackOnServer() : [];
-    } catch {
-      cards = [];
+      // Sucesso: um pacote foi consumido
+      packCount = Math.max(0, packCount - 1);
+      updateButtons();
+    } catch (err) {
+      alert(err?.message || "Erro ao abrir pacote.");
+      resetAll(); // volta UI
+      await fetchPacks(); // re-sincroniza do servidor
+      return;
     }
 
-    // Fallback: para não confundir visuais, tudo normal (sem efeito)
+    // Sem cartas válidas => volta
     if (!Array.isArray(cards) || cards.length === 0) {
-      const N = 4;
-      const picks = Array.from({ length: 60 }, (_, i) => i + 1)
-        .sort(() => Math.random() - 0.5)
-        .slice(0, N);
-      cards = picks.map((n, i) => ({
-        id: n,
-        nome: `Carta #${n}`,
-        raridade: "normal",
-        img: `/uploads/figurinhas/figurinha${n}.png`,
-      }));
+      alert("Não foi possível carregar as cartas deste pacote.");
+      resetAll();
+      await fetchPacks();
+      return;
     }
 
-    // ====== NOVO: ajustar centralização considerando halo nas pontas ======
+    // Render
     const list = cards.map((c) => ({
       ...c,
       raridade: canonRarity(c.raridade),
-    })); // normaliza
-
-    // informa número de colunas ao CSS (grid)
-    fan.style.setProperty("--n", String(list.length)); // <<
-
-    const hasHalo = (r) => ["epica", "lendaria"].includes(r); // <<
-
-    // liga/desliga “acolchoamento” do lado que tem halo
-    fan.classList.toggle("padL", hasHalo(list[0]?.raridade)); // <<
-    fan.classList.toggle("padR", hasHalo(list[list.length - 1]?.raridade)); // <<
-
-    // cria as cartas
+    }));
+    fan.style.setProperty("--n", String(list.length));
+    const hasHalo = (r) => ["epica", "lendaria"].includes(r);
+    fan.classList.toggle("padL", hasHalo(list[0]?.raridade));
+    fan.classList.toggle("padR", hasHalo(list[list.length - 1]?.raridade));
     list.forEach((c, i) => fan.appendChild(createCard(i, c, list.length)));
   }
 
@@ -383,15 +386,10 @@
     opened = false;
     fan.classList.add("ready");
     fan.innerHTML = "";
-
-    // ====== NOVO: limpar ajustes de centralização ======
-    fan.style.removeProperty("--n"); // <<
-    fan.classList.remove("padL", "padR"); // <<
-
+    fan.style.removeProperty("--n");
+    fan.classList.remove("padL", "padR");
     packArea.classList.remove("opened");
-    if (btnReveal) btnReveal.disabled = true;
-    if (btnReset) btnReset.disabled = true;
-    if (btnOpen) btnOpen.disabled = !token || packCount <= 0;
+    updateButtons(); // respeita packCount atual
   }
 
   /* =================== EVENTS =================== */
@@ -410,16 +408,13 @@
       if (!opened) openPackFlow();
       else revealAll();
     }
-    if (e.key.toLowerCase() === "r") {
-      resetAll();
-    }
-    if (e.key === "Escape") {
-      window.location.href = "/album-html";
-    }
+    if (e.key.toLowerCase() === "r") resetAll();
+    if (e.key === "Escape") window.location.href = "/album-html";
   });
 
   /* =================== INIT =================== */
   (async function init() {
     await fetchPacks();
+    updateButtons();
   })();
 })();
