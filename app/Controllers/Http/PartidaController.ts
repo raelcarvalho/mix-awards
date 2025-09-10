@@ -316,22 +316,32 @@ export default class PartidaController {
       }
 
       // monta pivot com bônus por marcos
-      const pivotData = jogadoresCriados.reduce((acc, jogador) => {
-        const { id, origem } = jogador;
+      const pivotData = jogadoresCriados.reduce((acc, j) => {
+        const qtd = Number(j.origem.qtd_partidas); // apenas para calcular bônus
         let bonus = 0;
-        const qtd = Number(origem.qtd_partidas);
         if (qtd === 15) bonus = 20;
         else if (qtd === 20) bonus = 40;
         else if (qtd === 25) bonus = 60;
         else if (qtd === 30) bonus = 80;
 
-        acc[id] = {
-          ...origem,
-          adr: Number(origem.adr).toFixed
-            ? Number(origem.adr).toFixed(2)
-            : String(origem.adr),
-          pontos: origem.pontos + bonus,
-          partida_ganha: origem.partida_ganha,
+        acc[j.id] = {
+          nome: j.origem.nome,
+          time: j.origem.time,
+          kills: j.origem.kills,
+          assistencias: j.origem.assistencias,
+          mortes: j.origem.mortes,
+          kda_player:
+            j.origem.mortes > 0
+              ? (j.origem.kills / j.origem.mortes).toFixed(2)
+              : String(j.origem.kills),
+          kast: Number(j.origem.kast),
+          flash_assist: j.origem.flash_assist,
+          first_kill: j.origem.first_kill,
+          multi_kill: j.origem.multi_kill,
+          adr: Number(j.origem.adr).toFixed(2),
+          partida_ganha: j.origem.partida_ganha ? 1 : 0,
+          vitorias: j.origem.partida_ganha ? 1 : 0,
+          pontos: j.origem.pontos + bonus,
         };
         return acc;
       }, {} as Record<number, any>);
@@ -439,35 +449,35 @@ export default class PartidaController {
           Number(r.jogadores_id)
         );
 
-        // 1. Excluir registros da tabela tb_partidas_jogadores para a partida
+        // 1. Excluir registros da pivot
         await trx
           .from("tb_partidas_jogadores")
           .where("partidas_id", partida.id)
           .delete();
 
-        // 2. Excluir a partida da tabela tb_partidas
+        // 2. Excluir a partida
         await trx.from("tb_partidas").where("id", partida.id).delete();
 
         // 3. Recalcular estatísticas para os jogadores afetados
         if (jogadorIdsParaAtualizar.length > 0) {
           for (const jogadorId of jogadorIdsParaAtualizar) {
-            const estatisticasAgregadas = await trx
+            const est = await trx
               .from("tb_partidas_jogadores")
               .where("jogadores_id", jogadorId)
               .select(
                 trx.raw(`
-                  SUM(CAST(kills AS NUMERIC)) as total_kills,
-                  SUM(CAST(assistencias AS NUMERIC)) as total_assistencias,
-                  SUM(CAST(mortes AS NUMERIC)) as total_mortes,
-                  SUM(CAST(kast AS NUMERIC)) as total_kast,
-                  SUM(CAST(flash_assist AS NUMERIC)) as total_flash_assist,
-                  SUM(CAST(first_kill AS NUMERIC)) as total_first_kill,
-                  SUM(CAST(multi_kill AS NUMERIC)) as total_multi_kill,
-                  SUM(CAST(adr AS NUMERIC)) as total_adr,
-                  SUM(CAST(vitorias AS NUMERIC)) as total_vitorias,
-                  COUNT(id) as total_qtd_partidas,
-                  SUM(CAST(pontos AS NUMERIC)) as total_pontos
-                `)
+                COUNT(*)::int                                   as jogos,
+                SUM(CAST(kills AS NUMERIC))                     as sum_kills,
+                SUM(CAST(assistencias AS NUMERIC))              as sum_assists,
+                SUM(CAST(mortes AS NUMERIC))                    as sum_mortes,
+                AVG(CAST(kast AS NUMERIC))                      as avg_kast,
+                AVG(CAST(adr AS NUMERIC))                       as avg_adr,
+                SUM(CAST(flash_assist AS NUMERIC))              as sum_flash,
+                SUM(CAST(first_kill AS NUMERIC))                as sum_fk,
+                SUM(CAST(multi_kill AS NUMERIC))                as sum_mk,
+                SUM(CAST(partida_ganha AS INTEGER))             as sum_wins,
+                AVG(CAST(pontos AS NUMERIC))                    as avg_points
+              `)
               )
               .first();
 
@@ -476,55 +486,41 @@ export default class PartidaController {
               .first();
 
             if (jogador) {
-              jogador.kills = (
-                estatisticasAgregadas.total_kills || 0
-              ).toString();
-              jogador.assistencias = (
-                estatisticasAgregadas.total_assistencias || 0
-              ).toString();
-              jogador.mortes = (
-                estatisticasAgregadas.total_mortes || 0
-              ).toString();
-              jogador.kast = estatisticasAgregadas.total_kast || 0;
-              jogador.flash_assist = (
-                estatisticasAgregadas.total_flash_assist || 0
-              ).toString();
-              jogador.first_kill = (
-                estatisticasAgregadas.total_first_kill || 0
-              ).toString();
-              jogador.multi_kill = (
-                estatisticasAgregadas.total_multi_kill || 0
-              ).toString();
-              jogador.adr = (estatisticasAgregadas.total_adr || 0).toString();
-              jogador.vitorias = (
-                estatisticasAgregadas.total_vitorias || 0
-              ).toString();
-              jogador.qtd_partidas = (
-                estatisticasAgregadas.total_qtd_partidas || 0
-              ).toString();
-              jogador.pontos = (
-                estatisticasAgregadas.total_pontos || 0
+              const jogos = Number(est?.jogos || 0);
+              const kills = Number(est?.sum_kills || 0);
+              const mortes = Number(est?.sum_mortes || 0);
+              const assists = Number(est?.sum_assists || 0);
+
+              jogador.kills = String(kills);
+              jogador.assistencias = String(assists);
+              jogador.mortes = String(mortes);
+
+              // KDR
+              jogador.kda_player =
+                mortes > 0 ? (kills / mortes).toFixed(2) : kills.toFixed(2);
+
+              // médias (não somas!)
+              jogador.kast = Math.round(Number(est?.avg_kast || 0));
+              jogador.adr = Number(est?.avg_adr || 0).toFixed(2);
+
+              // demais estatísticas
+              jogador.flash_assist = String(Number(est?.sum_flash || 0));
+              jogador.first_kill = String(Number(est?.sum_fk || 0));
+              jogador.multi_kill = String(Number(est?.sum_mk || 0));
+
+              jogador.vitorias = String(Number(est?.sum_wins || 0));
+              jogador.qtd_partidas = String(jogos);
+
+              // pontos → média por partida
+              jogador.pontos = Math.round(
+                Number(est?.avg_points || 0)
               ).toString();
 
-              // Recalcular KDA se necessário (assumindo que kda_player é calculado com base em kills, assistencias, mortes)
-              // Exemplo simples de cálculo de KDA: (kills + assistencias) / mortes
-              const killsNum = parseFloat(jogador.kills);
-              const assistenciasNum = parseFloat(jogador.assistencias);
-              const mortesNum = parseFloat(jogador.mortes);
-              if (mortesNum > 0) {
-                jogador.kda_player = (
-                  (killsNum + assistenciasNum) /
-                  mortesNum
-                ).toFixed(2);
-              } else {
-                jogador.kda_player = (killsNum + assistenciasNum).toFixed(2); // Se mortes for 0, KDA é kills + assistencias
-              }
-
-              await jogador.save();
+              await jogador.useTransaction(trx).save();
             }
           }
 
-          // 4. Excluir jogadores que não têm mais partidas associadas
+          // 4. Excluir jogadores sem nenhuma partida
           const aindaComPartidas = await trx
             .from("tb_partidas_jogadores")
             .whereIn("jogadores_id", jogadorIdsParaAtualizar)
