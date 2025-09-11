@@ -11,15 +11,16 @@
   const btnReveal = $("#btnReveal"); // Revelar tudo
   const btnReset = $("#btnReset"); // Novo pacote
   const btnBack = $("#btnBack");
+  const packBadge = $("#packBadge"); // 🔵 badge de contador
 
   const token = localStorage.getItem("auth_token");
   const auth = token ? { Authorization: `Bearer ${token}` } : {};
 
-  let opened = false; // indica se o pack atual foi aberto (UI)
+  let opened = false; // pack atual já aberto?
   let cards = []; // cartas do pack atual
-  let packCount = 0; // quantidade de pacotes fechados restantes (servidor)
+  let packCount = 0; // pacotes fechados restantes
 
-  /* =================== HELPERS =================== */
+  /* ===== helpers ===== */
   const safeJson = async (res) => {
     try {
       return await res.json();
@@ -27,7 +28,7 @@
       return null;
     }
   };
-  const unwrap = (data) => data?.resultados ?? data ?? {};
+  const unwrap = (d) => d?.resultados ?? d ?? {};
   const getId = (x) =>
     Number(x?.id ?? x?.figurinha_id ?? x?.figurinha?.id ?? NaN);
 
@@ -37,7 +38,18 @@
     return p.startsWith("/") ? p : "/" + p;
   };
 
-  // Normaliza entrada de raridade em "normal" | "epica" | "lendaria"
+  // 🔵 atualiza o badge visual
+  function setPackBadge(n) {
+    if (!packBadge) return;
+    const strong = packBadge.querySelector("strong");
+    if (strong) strong.textContent = String(n);
+    packBadge.classList.toggle("empty", n <= 0);
+    packBadge.title =
+      n > 0
+        ? `${n} pacote${n > 1 ? "s" : ""} disponível${n > 1 ? "eis" : ""}`
+        : "Sem pacotes disponíveis";
+  }
+
   function canonRarity(r) {
     if (r == null) return "normal";
     if (typeof r === "object") {
@@ -55,7 +67,6 @@
     return "normal";
   }
 
-  // Controla o estado habilitado/disabled dos botões
   function updateButtons() {
     if (btnOpen) btnOpen.disabled = !token || packCount <= 0 || opened;
     if (btnReveal) btnReveal.disabled = !opened;
@@ -84,8 +95,7 @@
     }
   }
 
-  /* =================== BACKEND =================== */
-  // Lê quantos pacotes fechados existem para o usuário
+  /* ===== backend ===== */
   async function fetchPacks() {
     try {
       const r = await fetch("/shop/listar-pacote-fechado", { headers: auth });
@@ -93,12 +103,12 @@
       const arr = j?.pacotes ?? j?.resultados?.pacotes ?? [];
       packCount = Array.isArray(arr) ? arr.length : j?.quantidade ?? 0;
     } catch {
-      packCount = 0; // em erro, bloqueia abertura
+      packCount = 0;
     }
+    setPackBadge(packCount); // 🔵 mostra no badge
     updateButtons();
   }
 
-  // Extrai/normaliza raridade
   function extractRarity(it) {
     const f = it?.figurinha || it;
     const candidate =
@@ -116,7 +126,6 @@
     return canonRarity(candidate);
   }
 
-  // Normaliza a estrutura de cartas vinda do servidor
   function normalizeCards(payload) {
     let bag =
       payload?.cartas ??
@@ -133,7 +142,6 @@
       if (Array.isArray(payload?.duplicadas)) tmp.push(...payload.duplicadas);
       bag = tmp;
     }
-
     if (!Array.isArray(bag)) bag = [];
 
     return bag.map((it, i) => {
@@ -149,16 +157,13 @@
     });
   }
 
-  // Chama API de abertura e respeita o status HTTP
   async function openPackOnServer() {
     const r = await fetch("/album/pacotes/abrir", {
       method: "POST",
       headers: { "Content-Type": "application/json", ...auth },
       body: JSON.stringify({ quantidade: 1 }),
     });
-
     const data = unwrap(await safeJson(r));
-
     if (!r.ok) {
       const msg = data?.mensagem || data?.message || "Sem pacotes para abrir.";
       const err = new Error(msg);
@@ -170,8 +175,6 @@
     const newIds = new Set((data?.novas || []).map(getId).filter(Boolean));
 
     let list = normalizeCards(data);
-
-    // Completa imagens que vierem vazias
     if (list.some((c) => !c.img)) {
       const albumMap = await fetchAlbumMap();
       list = list.map((c) => {
@@ -200,7 +203,7 @@
     }));
   }
 
-  /* =================== VISUAL =================== */
+  /* ===== visual ===== */
   function burst() {
     pack.animate(
       [
@@ -212,15 +215,14 @@
     );
   }
 
-  // Tilt 3D do pack
   (function packTilt() {
     if (!pack) return;
     pack.addEventListener("mousemove", (e) => {
       const r = pack.getBoundingClientRect();
       const dx = (e.clientX - (r.left + r.width / 2)) / (r.width / 2);
       const dy = (e.clientY - (r.top + r.height / 2)) / (r.height / 2);
-      const rx = 10 - dy * 14;
-      const ry = -8 + dx * 16;
+      const rx = 10 - dy * 14,
+        ry = -8 + dx * 16;
       pack.style.transform = `translate(-50%,-55%) rotateX(${rx}deg) rotateY(${ry}deg)`;
     });
     pack.addEventListener("mouseleave", () => {
@@ -230,10 +232,8 @@
 
   function createCard(index, item, total) {
     const rar = canonRarity(item.raridade);
-
     const wrap = document.createElement("div");
     wrap.className = "card-wrap";
-
     const card = document.createElement("div");
     card.className = `card ${rar}${item.isDuplicate ? " duplicate" : ""}`;
     card.dataset.raridade = rar;
@@ -296,16 +296,14 @@
       const note = document.createElement("div");
       note.className = "dup-msg";
       note.textContent =
-        "Carta repetida — as cartas repetidas são vendidas por gold conforme a sua raridade: normal 2 golds, épica 5 golds e lendária 10 golds.";
+        "Carta repetida — vendida automaticamente por gold conforme a raridade (normal 2, épica 5, lendária 10).";
       wrap.appendChild(note);
     }
-
     return wrap;
   }
 
-  /* =================== FLUXOS =================== */
+  /* ===== fluxos ===== */
   async function openPackFlow() {
-    // Bloqueio: sem pacotes não abre
     if (packCount <= 0) {
       alert("Você não possui pacotes fechados para abrir.");
       updateButtons();
@@ -346,17 +344,17 @@
 
     try {
       cards = token ? await openPackOnServer() : [];
-      // Sucesso: um pacote foi consumido
+      // sucesso: 1 pacote consumido no servidor
       packCount = Math.max(0, packCount - 1);
+      setPackBadge(packCount); // 🔵 atualiza badge
       updateButtons();
     } catch (err) {
       alert(err?.message || "Erro ao abrir pacote.");
-      resetAll(); // volta UI
-      await fetchPacks(); // re-sincroniza do servidor
+      resetAll();
+      await fetchPacks(); // re-sincroniza
       return;
     }
 
-    // Sem cartas válidas => volta
     if (!Array.isArray(cards) || cards.length === 0) {
       alert("Não foi possível carregar as cartas deste pacote.");
       resetAll();
@@ -364,7 +362,6 @@
       return;
     }
 
-    // Render
     const list = cards.map((c) => ({
       ...c,
       raridade: canonRarity(c.raridade),
@@ -389,10 +386,10 @@
     fan.style.removeProperty("--n");
     fan.classList.remove("padL", "padR");
     packArea.classList.remove("opened");
-    updateButtons(); // respeita packCount atual
+    updateButtons();
   }
 
-  /* =================== EVENTS =================== */
+  /* ===== events ===== */
   pack.addEventListener("click", openPackFlow);
   if (btnOpen) btnOpen.addEventListener("click", openPackFlow);
   if (btnReveal) btnReveal.addEventListener("click", revealAll);
@@ -412,9 +409,9 @@
     if (e.key === "Escape") window.location.href = "/album-html";
   });
 
-  /* =================== INIT =================== */
+  /* ===== init ===== */
   (async function init() {
-    await fetchPacks();
-    updateButtons();
+    await fetchPacks(); // busca quantidade
+    updateButtons(); // aplica estado inicial dos botões
   })();
 })();
