@@ -64,10 +64,10 @@ export default class FigurinhasController {
       const nome: string = (request.input("nome") || "").toString().trim();
       const raridade: string = (request.input("raridade") || "").toString().trim();
 
-      if (!imagem || !nome || !["normal", "epica", "lendaria"].includes(raridade)) {
+      if (!imagem || !nome || !["normal", "epica", "lendaria", "mitica"].includes(raridade)) {
         return this.customResponse.erro(
           response,
-          "Campos inválidos. Envie imagem, nome e raridade (normal|epica|lendaria).",
+          "Campos inválidos. Envie imagem, nome e raridade (normal|epica|lendaria|mitica).",
           {},
           400
         );

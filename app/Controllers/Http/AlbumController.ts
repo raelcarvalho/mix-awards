@@ -226,7 +226,6 @@ export default class AlbumController {
       const albumId = await this.ensureAlbum(jogador.id);
       const qtdItens = pacote.qtd_itens || 4;
 
-      // Busca todas as figurinhas ativas
       const todasAtivas = await Figurinhas.query()
         .select("id", "nome", "imagem", "raridade")
         .where("ativo", true);
@@ -240,36 +239,74 @@ export default class AlbumController {
         );
       }
 
-      // Pools por raridade
       const poolNormal = todasAtivas.filter((f) => f.raridade === "normal");
       const poolEpica = todasAtivas.filter((f) => f.raridade === "epica");
       const poolLendaria = todasAtivas.filter((f) => f.raridade === "lendaria");
+      const poolMitica = todasAtivas.filter((f) => f.raridade === "mitica");
 
-      // Probabilidades: 60% normal | 30% épica | 10% lendária
-      function sortearRaridade() {
+      // Probabilidades: 60% normal | 30% épica | 9% lendária | 1% mítica
+      type Raridade = "normal" | "epica" | "lendaria" | "mitica";
+      const PESOS: Record<Raridade, number> = {
+        normal: 0.6,
+        epica: 0.3,
+        lendaria: 0.08,
+        mitica: 0.02,
+      };
+
+      function sortearRaridade(): Raridade {
         const r = Math.random();
-        if (r < 0.6) return "normal";
-        if (r < 0.9) return "epica";
-        return "lendaria";
+        let acc = 0;
+        for (const [rar, peso] of Object.entries(PESOS) as [
+          Raridade,
+          number
+        ][]) {
+          acc += peso;
+          if (r < acc) return rar;
+        }
+        return "normal";
       }
 
-      function pickRandom(arr: any[]) {
+      function pickRandom<T>(arr: T[]): T | null {
         if (!arr.length) return null;
         const idx = Math.floor(Math.random() * arr.length);
         return arr[idx];
       }
 
-      // Sorteio (sem repetir a MESMA carta dentro do pacote)
+      function poolByRaridade(r: Raridade): any[] {
+        if (r === "normal") return poolNormal;
+        if (r === "epica") return poolEpica;
+        if (r === "lendaria") return poolLendaria;
+        return poolMitica;
+      }
+
       const cartas: any[] = [];
       let tentativas = 0;
+
       while (cartas.length < qtdItens && tentativas < 20 * qtdItens) {
         tentativas++;
-        const raridade = sortearRaridade();
 
-        let pool: any[] = [];
-        if (raridade === "normal") pool = poolNormal;
-        else if (raridade === "epica") pool = poolEpica;
-        else pool = poolLendaria;
+        let rar: Raridade = sortearRaridade();
+        let pool = poolByRaridade(rar);
+
+        if (!pool.length) {
+          const ordemFallback: Raridade[] =
+            rar === "mitica"
+              ? ["lendaria", "epica", "normal"]
+              : rar === "lendaria"
+              ? ["epica", "normal"]
+              : rar === "epica"
+              ? ["normal"]
+              : [];
+
+          for (const rfb of ordemFallback) {
+            const p = poolByRaridade(rfb);
+            if (p.length) {
+              rar = rfb;
+              pool = p;
+              break;
+            }
+          }
+        }
 
         const sorteada = pickRandom(pool);
         if (sorteada && !cartas.some((c) => c.id === sorteada.id)) {
@@ -280,11 +317,12 @@ export default class AlbumController {
       const novas: any[] = [];
       const duplicadas: any[] = [];
 
-      const VALOR_DUP = {
+      const VALOR_DUP: Record<Raridade, number> = {
         normal: 2,
         epica: 5,
         lendaria: 10,
-      } as const;
+        mitica: 20,
+      };
 
       let goldVendidoTotal = 0;
 
@@ -301,8 +339,7 @@ export default class AlbumController {
           novas.push(f);
         } else {
           duplicadas.push(f);
-          const val =
-            VALOR_DUP[f.raridade as "normal" | "epica" | "lendaria"] || 0;
+          const val = VALOR_DUP[f.raridade as Raridade] || 0;
           goldVendidoTotal += val;
         }
       }

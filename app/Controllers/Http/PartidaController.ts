@@ -320,9 +320,9 @@ export default class PartidaController {
         const qtd = Number(j.origem.qtd_partidas); // apenas para calcular bônus
         let bonus = 0;
         if (qtd === 15) bonus = 20;
-        else if (qtd === 20) bonus = 40;
-        else if (qtd === 25) bonus = 60;
-        else if (qtd === 30) bonus = 80;
+        else if (qtd === 20) bonus = 30;
+        else if (qtd === 30) bonus = 40;
+        else if (qtd === 40) bonus = 50;
 
         acc[j.id] = {
           nome: j.origem.nome,

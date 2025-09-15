@@ -7,18 +7,18 @@
   const pack = $("#pack");
   const fan = $("#fan");
 
-  const btnOpen = $("#btnOpen"); // Abrir pacote
-  const btnReveal = $("#btnReveal"); // Revelar tudo
-  const btnReset = $("#btnReset"); // Novo pacote
+  const btnOpen = $("#btnOpen");
+  const btnReveal = $("#btnReveal");
+  const btnReset = $("#btnReset");
   const btnBack = $("#btnBack");
-  const packBadge = $("#packBadge"); // 🔵 badge de contador
+  const packBadge = $("#packBadge");
 
   const token = localStorage.getItem("auth_token");
   const auth = token ? { Authorization: `Bearer ${token}` } : {};
 
-  let opened = false; // pack atual já aberto?
-  let cards = []; // cartas do pack atual
-  let packCount = 0; // pacotes fechados restantes
+  let opened = false;
+  let cards = [];
+  let packCount = 0;
 
   /* ===== helpers ===== */
   const safeJson = async (res) => {
@@ -38,7 +38,6 @@
     return p.startsWith("/") ? p : "/" + p;
   };
 
-  // 🔵 atualiza o badge visual
   function setPackBadge(n) {
     if (!packBadge) return;
     const strong = packBadge.querySelector("strong");
@@ -58,12 +57,14 @@
       if ("id" in r) return canonRarity(String(r.id));
     }
     const s = String(r).trim().toLowerCase();
+    if (s === "4") return "mitica";
     if (s === "3") return "lendaria";
     if (s === "2") return "epica";
     if (s === "1" || s === "0") return "normal";
     if (["normal", "comum", "common"].includes(s)) return "normal";
     if (["épica", "epica", "epic", "rara", "rare"].includes(s)) return "epica";
     if (/(legend|lend[aá]r[io]a)/.test(s)) return "lendaria";
+    if (/(mythic|mitic[ao])/i.test(s)) return "mitica";
     return "normal";
   }
 
@@ -105,7 +106,7 @@
     } catch {
       packCount = 0;
     }
-    setPackBadge(packCount); // 🔵 mostra no badge
+    setPackBadge(packCount);
     updateButtons();
   }
 
@@ -203,6 +204,124 @@
     }));
   }
 
+  /* ===== HOLO "MITICA" – overlay independente ===== */
+  function ensureHoloStyles() {
+    if (document.getElementById("holoStyles-pack")) return;
+    const css = `
+    .card { position: relative; }
+    .card .holo-layer{
+      position:absolute; inset:0; border-radius: 12px;
+      pointer-events:none; z-index: 99; /* acima de .front/.meta */
+      mix-blend-mode: color-dodge; opacity:.85;
+      background-blend-mode: overlay;
+      background-repeat: no-repeat;
+      /* 1) sparkles (gif)  2) textura holo  3) gradiente arco-íris */
+      background-image:
+        url("https://assets.codepen.io/13471/sparkles.gif"),
+        url("https://assets.codepen.io/13471/holo.png"),
+        linear-gradient(125deg,
+          #ff00cc55 15%, #a14dff44 28%, #00f0ff33 42%,
+          #00ff8a28 58%, #00cfff44 70%, #cc4cfa55 85%);
+      background-size: 160%;
+      background-position: var(--spx,50%) var(--spy,50%);
+      filter: brightness(1) contrast(1.1);
+      transition: opacity .2s ease, filter .2s ease;
+    }
+    /* faixa de luz por cima (segundo layer) */
+    .card .holo-gradient{
+      position:absolute; inset:0; border-radius:12px;
+      pointer-events:none; z-index: 98; mix-blend-mode: color-dodge;
+      opacity:.6; filter: brightness(.7) contrast(1.05);
+      background: linear-gradient(115deg,
+        transparent 0%,
+        var(--c1,#efb2fb) 25%,
+        transparent 47%,
+        transparent 53%,
+        var(--c2,#acc6f8) 75%,
+        transparent 100%);
+      background-size: 280% 280%;
+      background-position: var(--lp,50%) var(--tp,50%);
+      transition: opacity .2s ease, filter .2s ease;
+    }
+    /* moldura glow sutil */
+    .card.mitica{
+      box-shadow:
+        -12px -12px 24px -18px #efb2fb,
+         12px 12px 24px -18px #acc6f8,
+         0 0 18px 0 rgba(255,255,255,.08);
+      transition: box-shadow .15s ease;
+    }
+    .card.mitica:hover{
+      box-shadow:
+        -24px -24px 36px -26px #efb2fb,
+         24px 24px 36px -26px #acc6f8,
+         0 0 22px 6px rgba(255,255,255,.22);
+    }
+    `;
+    const style = document.createElement("style");
+    style.id = "holoStyles-pack";
+    style.textContent = css;
+    document.head.appendChild(style);
+  }
+
+  function attachHolo(cardEl) {
+    ensureHoloStyles();
+
+    // cria os layers de efeito (dentro da carta para evitar stacking 3D)
+    const gradient = document.createElement("div");
+    gradient.className = "holo-gradient";
+    const layer = document.createElement("div");
+    layer.className = "holo-layer";
+
+    // joga por cima de tudo (após meta/arte)
+    cardEl.appendChild(gradient);
+    cardEl.appendChild(layer);
+
+    // paleta rosa/azul (pode customizar aqui)
+    cardEl.style.setProperty("--c1", "#efb2fb");
+    cardEl.style.setProperty("--c2", "#acc6f8");
+
+    const onMove = (e) => {
+      const r = cardEl.getBoundingClientRect();
+      const isTouch = e.touches && e.touches.length;
+      const cx = isTouch ? e.touches[0].clientX : e.clientX;
+      const cy = isTouch ? e.touches[0].clientY : e.clientY;
+
+      const l = Math.max(0, Math.min(1, (cx - r.left) / r.width));
+      const t = Math.max(0, Math.min(1, (cy - r.top) / r.height));
+
+      const px = Math.abs(100 - Math.floor(100 * l));
+      const py = Math.abs(100 - Math.floor(100 * t));
+      const pa = 50 - px + (50 - py);
+
+      const lp = 50 + (px - 50) / 1.5;
+      const tp = 50 + (py - 50) / 1.5;
+      const spx = 50 + (px - 50) / 7;
+      const spy = 50 + (py - 50) / 7;
+      const opc = (20 + Math.abs(pa) * 1.5) / 100;
+
+      cardEl.style.setProperty("--lp", lp + "%");
+      cardEl.style.setProperty("--tp", tp + "%");
+      cardEl.style.setProperty("--spx", spx + "%");
+      cardEl.style.setProperty("--spy", spy + "%");
+
+      layer.style.opacity = String(Math.min(1, Math.max(0.45, opc)));
+    };
+
+    const onLeave = () => {
+      cardEl.style.setProperty("--lp", "50%");
+      cardEl.style.setProperty("--tp", "50%");
+      cardEl.style.setProperty("--spx", "50%");
+      cardEl.style.setProperty("--spy", "50%");
+      layer.style.opacity = ".85";
+    };
+
+    cardEl.addEventListener("mousemove", onMove, { passive: true });
+    cardEl.addEventListener("touchmove", onMove, { passive: true });
+    cardEl.addEventListener("mouseleave", onLeave);
+    cardEl.addEventListener("touchend", onLeave);
+  }
+
   /* ===== visual ===== */
   function burst() {
     pack.animate(
@@ -264,7 +383,13 @@
     const tag = document.createElement("span");
     tag.className = `tag ${rar}`;
     tag.textContent =
-      rar === "lendaria" ? "Lendária" : rar === "epica" ? "Épica" : "Normal";
+      rar === "lendaria"
+        ? "Lendária"
+        : rar === "epica"
+        ? "Épica"
+        : rar === "mitica"
+        ? "Mítica"
+        : "Normal";
 
     meta.appendChild(left);
     meta.appendChild(tag);
@@ -274,6 +399,7 @@
     inner.appendChild(front);
     card.appendChild(inner);
 
+    // estrelas extras só na lendária (mantive teu efeito antigo)
     if (rar === "lendaria") {
       const tw = document.createElement("div");
       tw.className = "twinkle";
@@ -287,6 +413,10 @@
       card.appendChild(tw);
     }
 
+    if (rar === "mitica") {
+      attachHolo(card);
+    }
+
     card.addEventListener("click", () => inner.classList.toggle("flip"));
     setTimeout(() => card.classList.add("show"), 60 + index * 120);
 
@@ -296,7 +426,7 @@
       const note = document.createElement("div");
       note.className = "dup-msg";
       note.textContent =
-        "Carta repetida — vendida automaticamente por gold conforme a raridade (normal 2, épica 5, lendária 10).";
+        "Carta repetida — vendida automaticamente por gold conforme a raridade (normal 2, épica 5, lendária 10 e mítica 20).";
       wrap.appendChild(note);
     }
     return wrap;
@@ -344,14 +474,13 @@
 
     try {
       cards = token ? await openPackOnServer() : [];
-      // sucesso: 1 pacote consumido no servidor
       packCount = Math.max(0, packCount - 1);
-      setPackBadge(packCount); // 🔵 atualiza badge
+      setPackBadge(packCount);
       updateButtons();
     } catch (err) {
       alert(err?.message || "Erro ao abrir pacote.");
       resetAll();
-      await fetchPacks(); // re-sincroniza
+      await fetchPacks();
       return;
     }
 
@@ -411,7 +540,7 @@
 
   /* ===== init ===== */
   (async function init() {
-    await fetchPacks(); // busca quantidade
-    updateButtons(); // aplica estado inicial dos botões
+    await fetchPacks();
+    updateButtons();
   })();
 })();

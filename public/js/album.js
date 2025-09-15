@@ -1,4 +1,4 @@
-// public/js/album.js — versão completa (raridades + modal + fix de páginas)
+// public/js/album.js — versão completa (contador X/81 + raridades + modal + fix de páginas)
 (function () {
   if (window.__ALBUM_JS_INIT__) return;
   window.__ALBUM_JS_INIT__ = true;
@@ -12,6 +12,11 @@
   const grid = $("#albumGrid");
   const pager = $("#pager");
 
+  // NOVO: badge de progresso
+  const cardsOwnedEl = $("#cardsOwned");
+  const chipProgress = $("#chipProgress");
+  const TOTAL_CARDS = 81;
+
   // Modal
   const modal = $("#cardModal");
   const btnCloseModal = $("#btnCloseModal");
@@ -21,7 +26,7 @@
 
   // ----- Estado -----
   let slots = [];
-  let totalPages = 6;
+  let totalPages = 9;
   let page = 1;
   let packCount = 0;
 
@@ -43,12 +48,16 @@
 
   const pageOf = (slot) => Math.ceil(slot / 10);
   const posOf = (slot) => ((slot - 1) % 10) + 1;
-  const rarityOf = (slot) =>
-    slot <= 35 ? "normal" : slot <= 50 ? "epica" : "lendaria";
+  const rarityOf = (slot) => {
+    if (slot <= 50) return "normal";
+    if (slot <= 70) return "epica";
+    if (slot <= 78) return "lendaria";
+    return "mitica";
+  };
 
   function makeStaticSlots() {
     const arr = [];
-    for (let s = 1; s <= 60; s++) {
+    for (let s = 1; s <= TOTAL_CARDS; s++) {
       arr.push({
         slot: s,
         page: pageOf(s),
@@ -60,6 +69,17 @@
       });
     }
     return arr;
+  }
+
+  // === NOVO: contador X/81 ===
+  function updateProgress() {
+    if (!cardsOwnedEl) return;
+    const owned = Array.isArray(slots)
+      ? slots.filter((s) => s && s.colada && s.figurinha).length
+      : 0;
+    cardsOwnedEl.textContent = owned;
+    const pct = Math.round((owned / TOTAL_CARDS) * 100);
+    if (chipProgress) chipProgress.title = `${owned}/${TOTAL_CARDS} (${pct}%)`;
   }
 
   // ======== FETCH ========
@@ -81,9 +101,10 @@
   async function fetchAlbum() {
     if (!token) {
       slots = makeStaticSlots();
-      totalPages = 6;
+      totalPages = 9;
       renderPager();
       renderPage();
+      updateProgress(); // NOVO
       return;
     }
     try {
@@ -91,7 +112,7 @@
       const j = unwrap(await safeJson(r)) || {};
 
       if (Array.isArray(j?.slots) && j.slots.length) {
-        // resposta no formato { slots: [...] }
+        // formato { slots: [...] }
         slots = j.slots.map((s) => ({
           slot: Number(s.slot ?? 0),
           page: Number(s.page ?? pageOf(Number(s.slot ?? 0))),
@@ -107,15 +128,13 @@
               }
             : null,
         }));
-
-        // ⚠️ não confia em j.paginas; calcula pelas cartas/slots
         const maxSlot = slots.reduce(
           (m, s) => Math.max(m, Number(s.slot || 0)),
           0
         );
-        totalPages = Math.max(6, Math.ceil((maxSlot || 60) / 10));
+        totalPages = Math.max(9, Math.ceil((maxSlot || TOTAL_CARDS) / 10));
       } else if (Array.isArray(j?.figurinhas)) {
-        // resposta no formato legacy { figurinhas: [...] }
+        // legado { figurinhas: [...] }
         const figs = j.figurinhas;
         slots = figs
           .map((f, idx) => {
@@ -133,18 +152,19 @@
             };
           })
           .sort((a, b) => a.slot - b.slot);
-        totalPages = Math.max(6, Math.ceil((slots.length || 60) / 10));
+        totalPages = Math.max(9, Math.ceil((slots.length || TOTAL_CARDS) / 10));
       } else {
         slots = makeStaticSlots();
-        totalPages = 6;
+        totalPages = 9;
       }
     } catch (e) {
       console.warn("GET /album falhou, usando placeholders", e);
       slots = makeStaticSlots();
-      totalPages = 6;
+      totalPages = 9;
     }
     renderPager();
     renderPage();
+    updateProgress(); // NOVO
   }
 
   async function openPackHere() {
@@ -302,16 +322,20 @@
     const rar = String(slot.raridade || "normal").toLowerCase();
     cardInfo.className = "";
     cardInfo.classList.add(rar);
-    cardInfo.textContent =
-      rar === "lendaria"
-        ? "Carta Lendária"
-        : rar === "epica"
-        ? "Carta Épica"
-        : "Carta Normal";
+    if (rar === "mitica") cardInfo.textContent = "Carta Mítica";
+    else if (rar === "lendaria") cardInfo.textContent = "Carta Lendária";
+    else if (rar === "epica") cardInfo.textContent = "Carta Épica";
+    else cardInfo.textContent = "Carta Normal";
 
     if (ttlFig)
       ttlFig.textContent =
-        rar === "lendaria" ? "Lendária" : rar === "epica" ? "Épica" : "Normal";
+        rar === "mitica"
+          ? "Mítica"
+          : rar === "lendaria"
+          ? "Lendária"
+          : rar === "epica"
+          ? "Épica"
+          : "Normal";
 
     const modalHolo = $(".card-preview .holo-effect");
     if (modalHolo) modalHolo.className = "holo-effect " + rar;
@@ -354,8 +378,7 @@
   btnOpenPack?.addEventListener("click", () => {
     if (btnOpenPack.disabled) return;
     window.location.href = "/abrir-pacote-html";
-    // ou, para abrir aqui:
-    // openPackHere();
+    // ou, para abrir aqui sem sair da página: openPackHere();
   });
 
   // Init

@@ -542,6 +542,40 @@
     .capsule-open {
       animation: capsule-open .6s ease;
     }
+
+    /* Caixa de totais da compra */
+    .totals-box {
+      margin-top: 12px;
+      padding: 12px;
+      border-radius: 12px;
+      background: #0b1824;
+      border: 1px solid #264761;
+    }
+
+    .totals-box .trow {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 6px 0;
+      border-bottom: 1px dashed rgba(255, 255, 255, .07);
+    }
+
+    .totals-box .trow:last-child {
+      border-bottom: 0;
+    }
+
+    .totals-box strong {
+      font-weight: 900;
+    }
+
+    .totals-box .ok {
+      color: #31d17b;
+    }
+
+    .totals-box .bad {
+      color: #ff6b6b;
+    }
   </style>
 </head>
 
@@ -607,7 +641,7 @@
         </article>
 
         <!-- ===== CARD: CÁPSULA ===== -->
-       <!-- <article class="product-card">
+        <!-- <article class="product-card">
           <div id="capsHolder" class="product__thumb" title="Efeito 3D holográfico">
             <div id="caps3d" class="tilt3d holo">
               <img id="capsImg" src="/uploads/stickers/sticker_capsula.png" alt="Cápsula (frente)" />
@@ -639,6 +673,7 @@
         <h4 id="ttlComprar">Comprar pacotes</h4>
         <button id="btnFecharModal" class="btn-close" type="button" aria-label="Fechar">✕</button>
       </header>
+
       <div>
         <div class="qty">
           <button id="menos" class="btn" type="button">–</button>
@@ -646,7 +681,19 @@
           <button id="mais" class="btn" type="button">+</button>
         </div>
         <p class="muted" style="margin:10px 0 0">Máximo por compra: <strong>50</strong></p>
+
+        <!-- Resumo da compra -->
+        <div id="totalsBox" class="totals-box" aria-live="polite">
+          <div class="trow"><span>Preço unitário:</span> <strong><span id="unitPrice">—</span> gold</strong></div>
+          <div class="trow"><span>Você tem:</span> <strong><span id="goldNow">—</span> gold</strong></div>
+          <div class="trow"><span>Total:</span> <strong><span id="totalPrice">—</span> gold</strong></div>
+          <div class="trow">
+            <span id="diffLabel">Vai sobrar:</span>
+            <strong><span id="diffValue">—</span> gold</strong>
+          </div>
+        </div>
       </div>
+
       <footer>
         <button id="btnConfirmar" class="btn primary" type="button">Comprar agora</button>
         <button id="btnCancelar" class="btn" type="button">Cancelar</button>

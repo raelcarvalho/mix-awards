@@ -253,25 +253,44 @@
       outline-offset: 0;
     }
 
-    /* ===== Fundo base por raridade ===== */
+    /* raridades */
     .slot.normal {
       background: linear-gradient(180deg, rgba(10, 18, 28, .88), rgba(10, 20, 30, .94));
       border: 2px dashed rgba(220, 240, 255, .22);
     }
 
     .slot.epica {
-      /* roxo */
       background: linear-gradient(180deg, rgba(45, 25, 70, .85), rgba(25, 15, 45, .92));
       border: 2px dashed rgba(192, 132, 252, .45);
     }
 
     .slot.lendaria {
-      /* dourado */
       background: linear-gradient(180deg, rgba(84, 58, 0, .80), rgba(51, 30, 0, .92));
       border: 2px dashed rgba(255, 189, 89, .55);
     }
 
-    /* ===== Destaque "nova" sem trocar fundo ===== */
+    .slot.mitica {
+      background: linear-gradient(135deg, rgba(156, 39, 176, .85), rgba(188, 35, 248, .85), rgba(23, 120, 211, .85), rgba(192, 103, 243, .85), rgba(39, 23, 189, .85));
+      border: 2px dashed rgba(255, 255, 255, .7);
+    }
+
+    .slot.mitica.is-new {
+      --pulse-color: rgba(255, 105, 180, .6);
+      animation: pulseMythic 1.3s ease-in-out infinite;
+    }
+
+    @keyframes pulseMythic {
+
+      0%,
+      100% {
+        box-shadow: 0 0 0 0 rgba(255, 105, 180, .6), 0 0 0 0 rgba(100, 200, 255, .6);
+      }
+
+      50% {
+        box-shadow: 0 0 0 8px rgba(255, 105, 180, .3), 0 0 0 16px rgba(100, 200, 255, .2);
+      }
+    }
+
     .slot.is-new {
       position: relative;
     }
@@ -284,6 +303,14 @@
       pointer-events: none;
       box-shadow: 0 0 0 0 var(--pulse-color, rgba(255, 189, 89, .45));
       animation: pulseVar 1.3s ease-in-out infinite;
+    }
+
+    #cardInfo.mitica {
+      background: linear-gradient(135deg, #9c27b0, #00bcd4, #4caf50, #ffeb3b, #ff5722);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, .3);
     }
 
     .slot.normal.is-new {
@@ -310,7 +337,7 @@
       }
     }
 
-    /* ===== EFEITO HOLO ===== */
+    /* HOLO */
     .holo-effect {
       position: absolute;
       inset: 0;
@@ -320,6 +347,13 @@
       mix-blend-mode: overlay;
       opacity: .7;
       transition: opacity .3s ease;
+    }
+
+    .card-preview .holo-effect.mitica::before {
+      background: linear-gradient(125deg, #9c27b0, #00bcd4, #4caf50, #ffeb3b, #ff5722, #9c27b0);
+      background-size: 400% 400%;
+      opacity: .5;
+      animation: holoMythic 4s linear infinite;
     }
 
     .holo-effect::before {
@@ -343,7 +377,6 @@
       transition: all .1s ease;
     }
 
-    /* cor do holo por raridade (grid) */
     .slot.normal .holo-effect::before {
       background: linear-gradient(125deg, #00bfff, #1e90ff, #87cefa, #00bfff);
       background-size: 400% 400%;
@@ -360,6 +393,30 @@
       background: linear-gradient(125deg, #ffd700, #ff8c00, #ff4500, #ffd700);
       background-size: 400% 400%;
       opacity: .4;
+    }
+
+    .slot.mitica .holo-effect::before {
+      background: linear-gradient(125deg, #9c27b0, #00bcd4, #4caf50, #ffeb3b, #ff5722, #9c27b0);
+      background-size: 400% 400%;
+      opacity: .5;
+      animation: holoMythic 4s linear infinite;
+    }
+
+    @keyframes holoMythic {
+      0% {
+        background-position: 0% 0%;
+        filter: hue-rotate(0deg);
+      }
+
+      50% {
+        background-position: 100% 100%;
+        filter: hue-rotate(180deg);
+      }
+
+      100% {
+        background-position: 0% 0%;
+        filter: hue-rotate(360deg);
+      }
     }
 
     @keyframes holoGradient {
@@ -390,7 +447,7 @@
       padding: 14px;
     }
 
-    /* ===== MODAL ===== */
+    /* MODAL */
     .modal-backdrop {
       position: fixed;
       inset: 0;
@@ -478,7 +535,6 @@
       opacity: .9;
     }
 
-    /* Holo por raridade (modal) */
     .card-preview .holo-effect.normal::before {
       background: linear-gradient(125deg, #00bfff, #1e90ff, #87cefa, #00bfff);
       background-size: 400% 400%;
@@ -527,6 +583,11 @@
           </span>
 
           <button id="btnOpenPack" class="btn primary" type="button">Abrir pacote</button>
+
+          <!-- NOVO: progresso de cartas -->
+          <span class="badge" id="chipProgress" title="0/81 (0%)">
+            <strong>Cartas:</strong> <span id="cardsOwned">0</span>/81
+          </span>
 
           <div id="pager" class="pager">
             <button class="pbtn" data-act="prev">«</button>
