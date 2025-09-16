@@ -21,11 +21,10 @@ import Application from "@ioc:Adonis/Core/Application";
 import fs from "fs";
 import Route from "@ioc:Adonis/Core/Route";
 
-Route.get("/", async () => {
-  return { hello: "world" };
+Route.get("/", ({ response }) => {
+  response.stream(fs.createReadStream(Application.publicPath("index.html")));
 });
 
-// STATIC CONTROLLER
 Route.get("/index", ({ response }) => {
   response.stream(fs.createReadStream(Application.publicPath("index.html")));
 });
@@ -41,7 +40,9 @@ Route.get("/cadastrar-html", ({ response }) => {
 });
 
 Route.get("/alterar-senha-html", ({ response }) => {
-  response.stream(fs.createReadStream(Application.publicPath("alterar-senha.html")));
+  response.stream(
+    fs.createReadStream(Application.publicPath("alterar-senha.html"))
+  );
 });
 
 Route.get("/audios/:file", async ({ params, response }) => {
@@ -138,6 +139,15 @@ Route.get("/uploads/stickers/:file", ({ params, response }) => {
   return response.download(abs);
 });
 
+Route.get("/uploads/pix/:file", ({ params, response }) => {
+  const abs = Application.publicPath(`uploads/pix/${params.file}`);
+  if (!fs.existsSync(abs)) {
+    return response.status(404).send("Arquivo não encontrado");
+  }
+  response.type("image/png");
+  return response.download(abs);
+});
+
 Route.get(
   "/.well-known/appspecific/com.chrome.devtools.json",
   ({ response }) => {
@@ -180,14 +190,22 @@ Route.group(() => {
 
 // JOGADOR
 Route.group(() => {
-  Route.get('/jogadores', 'JogadoresController.listar')
-  Route.get('/jogadores/gold', 'JogadoresController.meuGold')
-  Route.post('/jogadores/vincular/:id', 'JogadoresController.vincularUsuarioJogador')
-}).prefix('api').middleware('auth:api')
+  Route.get("/jogadores", "JogadoresController.listar");
+  Route.get("/jogadores/gold", "JogadoresController.meuGold");
+  Route.post(
+    "/jogadores/vincular/:id",
+    "JogadoresController.vincularUsuarioJogador"
+  );
+})
+  .prefix("api")
+  .middleware("auth:api");
 
 Route.group(() => {
-  Route.post('/partidas/:id/creditar', 'RecompensaController.creditarPosPartida');
-}).middleware('auth');
+  Route.post(
+    "/partidas/:id/creditar",
+    "RecompensaController.creditarPosPartida"
+  );
+}).middleware("auth");
 
 // STICKERS
 Route.group(() => {
@@ -216,7 +234,9 @@ Route.group(() => {
 
 Route.post("/cadastrar", "LoginController.cadastrar");
 Route.post("/recuperar-senha", "LoginController.recuperarSenha");
-Route.post("/alterar-senha", "LoginController.alterarSenha").middleware("auth:api");
+Route.post("/alterar-senha", "LoginController.alterarSenha").middleware(
+  "auth:api"
+);
 
 Route.group(() => {
   Route.post("/logout", async ({ auth, response }) => {

@@ -313,6 +313,41 @@
     .admin-only {
       display: none;
     }
+
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .toolbar-spacer {
+      flex: 1;
+    }
+
+    .stat-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border: 1px solid var(--line2);
+      border-radius: 10px;
+      background: #0f2a40;
+      box-shadow: 0 2px 0 rgba(0, 0, 0, .25), inset 0 0 0 1px rgba(255, 255, 255, .03);
+    }
+
+    .stat-label {
+      font-weight: 800;
+      color: var(--muted);
+      letter-spacing: .3px;
+      text-transform: uppercase;
+      font-size: .78rem;
+    }
+
+    .stat-value {
+      font-weight: 900;
+      color: #e8f1f8;
+    }
   </style>
 </head>
 
@@ -341,31 +376,38 @@
         <div class="toolbar">
           <div class="title">Consultar Partidas</div>
           <div class="crumb">MIX AWARDS</div>
-        </div>
 
-        <div class="content">
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th style="min-width:120px">Código</th>
-                  <th style="min-width:120px">Mapa</th>
-                  <th style="min-width:160px">Time A</th>
-                  <th style="min-width:160px">Time B</th>
-                  <th style="min-width:120px">Resultado</th>
-                  <th style="min-width:220px">Data / Ações</th>
-                </tr>
-              </thead>
-              <tbody id="tabela-partidas">
-                <tr id="row-loading">
-                  <td colspan="6" class="loading">Carregando partidas...</td>
-                </tr>
-              </tbody>
-            </table>
+          <div class="toolbar-spacer"></div>
+          <div class="stat-chip" id="stat-total">
+            <span class="stat-label">Total</span>
+            <span class="stat-value" id="total-partidas">—</span>
           </div>
         </div>
       </div>
-      <!-- /panel -->
+
+      <div class="content">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th style="min-width:120px">Código</th>
+                <th style="min-width:120px">Mapa</th>
+                <th style="min-width:160px">Time A</th>
+                <th style="min-width:160px">Time B</th>
+                <th style="min-width:120px">Resultado</th>
+                <th style="min-width:220px">Data / Ações</th>
+              </tr>
+            </thead>
+            <tbody id="tabela-partidas">
+              <tr id="row-loading">
+                <td colspan="6" class="loading">Carregando partidas...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <!-- /panel -->
     </div>
   </main>
 
@@ -395,16 +437,28 @@
         return d.toLocaleString('pt-BR', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
       } catch { return iso; }
     }
+    function labelPartidas(n) {
+      return `${n} partida${n === 1 ? '' : 's'}`;
+    }
 
     // ===== Carregar partidas =====
     async function carregarPartidas() {
       const tbody = document.getElementById('tabela-partidas');
+      const totalEl = document.getElementById('total-partidas');
+
+      // enquanto carrega, mostra travessão
+      if (totalEl) totalEl.textContent = '—';
+
       try {
         const resposta = await fetch(`/api/partida/listar?t=${Date.now()}`, {
           cache: 'no-store',
           headers: { 'Accept': 'application/json' }
         });
         const partidas = await resposta.json();
+
+        // ✅ atualiza o contador
+        const total = Array.isArray(partidas) ? partidas.length : 0;
+        if (totalEl) totalEl.textContent = labelPartidas(total);
 
         tbody.innerHTML = '';
 
@@ -418,23 +472,24 @@
         for (const p of partidas) {
           const tr = document.createElement('tr');
           tr.innerHTML = `
-            <td><strong>${p.codigo}</strong></td>
-            <td>${p.mapa}</td>
-            <td>${p.nome_time1}</td>
-            <td>${p.nome_time2}</td>
-            <td><strong>${p.resultado_time1} x ${p.resultado_time2}</strong></td>
-            <td>
-              <div class="muted">${formatDate(p.data)}</div>
-              <div class="row-actions">
-                <a class="btn primary" href="/detalhes-partida-html?codigo=${encodeURIComponent(p.codigo)}">Ver detalhes</a>
-                ${admin ? `<button class="btn danger" data-del="${p.id}" onclick="excluirPartida(${p.id}, '${p.codigo}')">Excluir</button>` : ''}
-              </div>
-            </td>
-          `;
+          <td><strong>${p.codigo}</strong></td>
+          <td>${p.mapa}</td>
+          <td>${p.nome_time1}</td>
+          <td>${p.nome_time2}</td>
+          <td><strong>${p.resultado_time1} x ${p.resultado_time2}</strong></td>
+          <td>
+            <div class="muted">${formatDate(p.data)}</div>
+            <div class="row-actions">
+              <a class="btn primary" href="/detalhes-partida-html?codigo=${encodeURIComponent(p.codigo)}">Ver detalhes</a>
+              ${admin ? `<button class="btn danger" data-del="${p.id}" onclick="excluirPartida(${p.id}, '${p.codigo}')">Excluir</button>` : ''}
+            </div>
+          </td>
+        `;
           tbody.appendChild(tr);
         }
       } catch (err) {
         console.error(err);
+        if (totalEl) totalEl.textContent = labelPartidas(0);
         tbody.innerHTML = `<tr><td colspan="6" class="empty">Falha ao carregar partidas.</td></tr>`;
       }
     }

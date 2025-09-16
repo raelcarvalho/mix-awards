@@ -296,6 +296,79 @@
       max-height: 28px;
       height: auto;
     }
+
+    .text-fill {
+      font-weight: 800;
+      font-size: 18px;
+      line-height: 1.6;
+
+      text-shadow: 0 0 60px rgba(255, 255, 255, .25);
+
+      background: url(https://i.ibb.co/RDTnNrT/animated-text-fill.png) repeat-y;
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+
+      -webkit-animation: aitf 80s linear infinite;
+      animation: aitf 80s linear infinite;
+
+      -webkit-transform: translate3d(0, 0, 0);
+      transform: translate3d(0, 0, 0);
+      -webkit-backface-visibility: hidden;
+      backface-visibility: hidden;
+    }
+
+    @-webkit-keyframes aitf {
+      0% {
+        background-position: 0% 50%;
+      }
+
+      100% {
+        background-position: 100% 50%;
+      }
+    }
+
+    @keyframes aitf {
+      0% {
+        background-position: 0% 50%;
+      }
+
+      100% {
+        background-position: 100% 50%;
+      }
+    }
+
+    /* ===== DOAÇÃO PIX ===== */
+    .donate-grid {
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      gap: 32px;
+      flex-wrap: wrap;
+    }
+
+    .qr-wrap {
+      background: #0f2337;
+      border: 1px solid #244a6a;
+      border-radius: 14px;
+      padding: 18px;
+      text-align: center;
+    }
+
+    .qr-img {
+      width: 260px;
+      height: 260px;
+      object-fit: contain;
+      image-rendering: crisp-edges;
+    }
+
+    .donate-text {
+      flex: 1;
+      font-size: 18px;
+      color: var(--ink);
+      line-height: 1.6;
+      max-width: 500px;
+    }
   </style>
 </head>
 
@@ -348,11 +421,32 @@
             <h3>Álbum</h3>
             <p>Veja seu álbum de figurinhas.</p>
           </a>
-
-        
         </div>
       </div>
     </div>
+
+    <section class="section">
+      <div class="container">
+        <div class="panel donate-panel">
+          <div class="donate-header">
+            <div class="title">Contribua com o desenvolvimento da plataforma</div>
+          </div>
+
+          <div class="donate-grid">
+            <div class="qr-wrap">
+              <img src="/uploads/pix/pix.png" alt="QR Code PIX" class="qr-img" />
+              <div class="qr-caption">Aponte a câmera do seu celular</div>
+            </div>
+
+            <div class="donate-text">
+              <span class="text-fill">
+                Toda contribuição arrecadada será utilizada para o pagamento e melhorias do servidor.
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
   </main>
 
   <script src="/js/auth.js" defer></script>
