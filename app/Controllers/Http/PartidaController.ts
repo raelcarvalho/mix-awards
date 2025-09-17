@@ -259,9 +259,9 @@ export default class PartidaController {
           // bônus por marcos
           let bonus = 0;
           if (novaQtdPartidas === 15) bonus = 20;
-          else if (novaQtdPartidas === 20) bonus = 40;
-          else if (novaQtdPartidas === 25) bonus = 60;
-          else if (novaQtdPartidas === 30) bonus = 80;
+          else if (novaQtdPartidas === 20) bonus = 30;
+          else if (novaQtdPartidas === 30) bonus = 40;
+          else if (novaQtdPartidas === 40) bonus = 50;
 
           const pontosTotaisAnterior =
             Number(jogadorModel.pontos || 0) * (novaQtdPartidas - 1);
