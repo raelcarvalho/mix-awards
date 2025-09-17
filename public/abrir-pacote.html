@@ -633,6 +633,124 @@
         .nav-btn[data-color="#6225E6"]:hover:before {
             border-color: #FBC638
         }
+
+        /* === EFEITOS PRE-REVELAÇÃO (tremores e raios) === */
+        .card.god:not(.show) {
+            animation: godPreReveal 2.6s ease-in-out infinite;
+            box-shadow:
+                0 0 15px rgba(0, 150, 255, 0.7),
+                inset 0 0 15px rgba(255, 255, 255, 0.3);
+        }
+
+        @keyframes godPreReveal {
+
+            0%,
+            100% {
+                transform: translateY(0) rotateZ(var(--rot, 0deg)) rotate(0deg);
+            }
+
+            25% {
+                transform: translateY(-2px) rotateZ(var(--rot, 0deg)) rotate(-0.5deg);
+            }
+
+            50% {
+                transform: translateY(2px) rotateZ(var(--rot, 0deg)) rotate(0.5deg);
+            }
+
+            75% {
+                transform: translateY(-1px) rotateZ(var(--rot, 0deg)) rotate(-0.3deg);
+            }
+        }
+
+        .card.god:not(.show)::before {
+            content: '';
+            position: absolute;
+            inset: -4px;
+            border-radius: 20px;
+            background: conic-gradient(from 0deg,
+                    transparent 0deg 30deg,
+                    rgba(0, 170, 255, 0.7) 40deg,
+                    transparent 50deg 200deg,
+                    rgba(0, 170, 255, 0.7) 210deg,
+                    transparent 220deg);
+            filter: blur(8px);
+            opacity: 0.8;
+            animation: godPreGlow 3s linear infinite;
+            z-index: -1;
+        }
+
+        @keyframes godPreGlow {
+            to {
+                transform: rotate(1turn);
+            }
+        }
+
+        /* === ANIMAÇÃO DE CONJURAÇÃO/EXPLOSÃO === */
+        .card.god.summoning {
+            z-index: 1000 !important;
+            transform: translateY(0) rotateZ(var(--rot, 0deg)) scale(1.2) !important;
+            transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1.5);
+        }
+
+        .summon-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            pointer-events: none;
+            z-index: 999;
+        }
+
+        .summon-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.85);
+            opacity: 0;
+            transition: opacity 0.8s ease;
+        }
+
+        .summon-circle {
+            position: relative;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(0, 170, 255, 0.2), transparent 70%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .summon-rune {
+            position: absolute;
+            font-size: 32px;
+            color: rgba(255, 255, 255, 0.8);
+            opacity: 0;
+        }
+
+        .summon-energy {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.9), transparent 70%);
+            opacity: 0;
+            filter: blur(10px);
+        }
+
+        .summon-burst {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.95), transparent 70%);
+            opacity: 0;
+            filter: blur(15px);
+            transform: scale(0);
+        }
     </style>
 </head>
 

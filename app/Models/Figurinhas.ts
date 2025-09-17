@@ -19,7 +19,7 @@ export default class Figurinhas extends BaseModel {
   public imagem: string;
 
   @column()
-  public raridade: "normal" | "epica" | "lendaria" | "mitica";
+  public raridade: "normal" | "epica" | "lendaria" | "mitica" | "god";
 
   @column()
   public ordem: number

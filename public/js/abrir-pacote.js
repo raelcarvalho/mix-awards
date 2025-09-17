@@ -1,5 +1,6 @@
 // public/js/abrir-pacote.js
 (function () {
+  // ---------- helpers DOM ----------
   const $ = (sel, ctx = document) => ctx.querySelector(sel);
   const $$ = (sel, ctx = document) => Array.from(ctx.querySelectorAll(sel));
 
@@ -20,7 +21,7 @@
   let cards = [];
   let packCount = 0;
 
-  /* ===== helpers ===== */
+  // ---------- util ----------
   const safeJson = async (res) => {
     try {
       return await res.json();
@@ -31,12 +32,8 @@
   const unwrap = (d) => d?.resultados ?? d ?? {};
   const getId = (x) =>
     Number(x?.id ?? x?.figurinha_id ?? x?.figurinha?.id ?? NaN);
-
-  const fixImgPath = (p) => {
-    if (!p) return null;
-    if (p.startsWith("http")) return p;
-    return p.startsWith("/") ? p : "/" + p;
-  };
+  const fixImgPath = (p) =>
+    !p ? null : p.startsWith("http") ? p : p.startsWith("/") ? p : "/" + p;
 
   function setPackBadge(n) {
     if (!packBadge) return;
@@ -65,6 +62,7 @@
     if (["épica", "epica", "epic", "rara", "rare"].includes(s)) return "epica";
     if (/(legend|lend[aá]r[io]a)/.test(s)) return "lendaria";
     if (/(mythic|mitic[ao])/i.test(s)) return "mitica";
+    if (/(god|zeus)/.test(s)) return "god";
     return "normal";
   }
 
@@ -85,7 +83,7 @@
           map.set(Number(s.figurinha.id), {
             img: fixImgPath(s.figurinha.img || s.figurinha.imagem || ""),
             nome: s.figurinha.nome || "",
-            raridade: s.raridade || s.figurinha.raridade || "normal",
+            raridade: (s.raridade || "normal").toString().toLowerCase(),
             slot: s.slot,
           });
         }
@@ -96,7 +94,7 @@
     }
   }
 
-  /* ===== backend ===== */
+  // ---------- backend ----------
   async function fetchPacks() {
     try {
       const r = await fetch("/shop/listar-pacote-fechado", { headers: auth });
@@ -204,125 +202,421 @@
     }));
   }
 
-  /* ===== HOLO "MITICA" – overlay independente ===== */
-  function ensureHoloStyles() {
-    if (document.getElementById("holoStyles-pack")) return;
+  // ---------- estilos injetados ----------
+  function ensureCineStyles() {
+    if (document.getElementById("cineStyles")) return;
     const css = `
-    .card { position: relative; }
-    .card .holo-layer{
-      position:absolute; inset:0; border-radius: 12px;
-      pointer-events:none; z-index: 99; /* acima de .front/.meta */
-      mix-blend-mode: color-dodge; opacity:.85;
-      background-blend-mode: overlay;
-      background-repeat: no-repeat;
-      /* 1) sparkles (gif)  2) textura holo  3) gradiente arco-íris */
-      background-image:
-        url("https://assets.codepen.io/13471/sparkles.gif"),
-        url("https://assets.codepen.io/13471/holo.png"),
-        linear-gradient(125deg,
-          #ff00cc55 15%, #a14dff44 28%, #00f0ff33 42%,
-          #00ff8a28 58%, #00cfff44 70%, #cc4cfa55 85%);
-      background-size: 160%;
-      background-position: var(--spx,50%) var(--spy,50%);
-      filter: brightness(1) contrast(1.1);
-      transition: opacity .2s ease, filter .2s ease;
+    /* Cena cinematográfica GOD */
+    .cine-scene{
+      position:fixed; inset:0; z-index:10000; pointer-events:none;
+      opacity:0; transition:opacity .35s ease;
+      background: radial-gradient(1200px 700px at 50% 38%, rgba(0,0,0,.25), rgba(0,0,0,.85) 65%),
+        url('https://static.vecteezy.com/ti/fotos-gratis/p2/27247985-uma-escadaria-conduz-dentro-a-ceu-com-nuvens-gratis-foto.jpg') center/cover no-repeat;
     }
-    /* faixa de luz por cima (segundo layer) */
-    .card .holo-gradient{
-      position:absolute; inset:0; border-radius:12px;
-      pointer-events:none; z-index: 98; mix-blend-mode: color-dodge;
-      opacity:.6; filter: brightness(.7) contrast(1.05);
-      background: linear-gradient(115deg,
-        transparent 0%,
-        var(--c1,#efb2fb) 25%,
-        transparent 47%,
-        transparent 53%,
-        var(--c2,#acc6f8) 75%,
-        transparent 100%);
-      background-size: 280% 280%;
-      background-position: var(--lp,50%) var(--tp,50%);
-      transition: opacity .2s ease, filter .2s ease;
+    .cine-scene.on{ opacity:1 }
+    .cine-beam{
+      position:absolute; inset:0; pointer-events:none;
+      background:
+        radial-gradient(14% 90% at 50% 0%, rgba(86,193,255,.25), transparent 75%),
+        linear-gradient(180deg, rgba(86,193,255,0) 0%, rgba(86,193,255,.35) 22%, rgba(86,193,255,.55) 45%, rgba(86,193,255,.32) 68%, rgba(86,193,255,0) 100%);
+      mask: radial-gradient(48% 100% at 50% 20%, black 0%, black 45%, transparent 70%);
+      filter: blur(6px);
+      mix-blend-mode: screen;
+      opacity:.75;
     }
-    /* moldura glow sutil */
-    .card.mitica{
-      box-shadow:
-        -12px -12px 24px -18px #efb2fb,
-         12px 12px 24px -18px #acc6f8,
-         0 0 18px 0 rgba(255,255,255,.08);
-      transition: box-shadow .15s ease;
+    .cine-star{ position:absolute; width:2px; height:2px; background:#fff; border-radius:50%; opacity:0 }
+    .cine-rain{ position:absolute; width:2px; height:140px; background:linear-gradient(to bottom, rgba(255,255,255,0) 0%, rgba(190,225,255,.95) 40%, rgba(255,255,255,0) 100%);
+                filter: blur(.6px); opacity:0.0; transform:translateX(-50%) rotate(10deg); }
+    .cine-cam{ position:absolute; left:50%; top:56%; transform:translate(-50%,-50%) rotateX(8deg); perspective:1600px; }
+    .cine-card{ width: var(--card-w,260px); height: var(--card-h,360px); position:relative; transform-style:preserve-3d; }
+    .cine-card .face{ position:absolute; inset:0; border-radius:16px; backface-visibility:hidden; overflow:hidden }
+    .cine-card .back{ transform:rotateY(0deg); }
+    .cine-card .front{ transform:rotateY(180deg); }
+    @keyframes cineFlyFlip {
+      0%   { transform: translateZ(-1400px) rotateY(0deg)    scale(.60) translateY(0px);    }
+      30%  { transform: translateZ(-900px)  rotateY(75deg)   scale(.78) translateY(-10px);  }
+      55%  { transform: translateZ(-450px)  rotateY(150deg)  scale(.98) translateY(2px);    }
+      100% { transform: translateZ(0px)     rotateY(180deg)  scale(1.18) translateY(0px);   }
     }
-    .card.mitica:hover{
-      box-shadow:
-        -24px -24px 36px -26px #efb2fb,
-         24px 24px 36px -26px #acc6f8,
-         0 0 22px 6px rgba(255,255,255,.22);
+    @keyframes cineGhost {
+      from { opacity:.0; transform: translateZ(-800px) scale(.75) }
+      to   { opacity:.35; transform: translateZ(-300px) scale(.95) }
+    }
+    .cine-ghost{
+      position:absolute; inset:0; border-radius:16px; pointer-events:none; opacity:.0; mix-blend-mode:screen; filter:blur(1px);
+      background: radial-gradient(circle at 50% 50%, rgba(86,193,255,.25), transparent 65%);
+      animation: cineGhost 1400ms ease-out forwards;
+    }
+
+    /* Brilho/azul pós-revelação + suporte ao ZeusFX */
+    .card.god.reveal-done .front{
+      border:2px solid #8fd8ff !important;
+      box-shadow: 0 0 32px rgba(120,210,255,.65), inset 0 0 0 2px rgba(255,255,255,.08);
+    }
+    .card.god.reveal-done::before{
+      content:""; position:absolute; inset:-8px; border-radius:22px; pointer-events:none;
+      background: conic-gradient(from 0deg, rgba(0,170,255,.35), rgba(0,170,255,0) 10%, rgba(0,170,255,.35) 20%, rgba(0,170,255,0) 30%, rgba(0,170,255,.35) 40%, rgba(0,170,255,0) 100%);
+      filter: blur(12px); opacity:.9; animation: spinBlue 7s linear infinite;
+    }
+    @keyframes spinBlue { to { transform: rotate(1turn) } }
+
+    /* Zeus canvas camadas */
+    .zeus-layer,.zeus-clouds,.zeus-flash{
+      position:absolute; inset:0; border-radius:12px; pointer-events:none;
+    }
+    .zeus-layer{ z-index:6; mix-blend-mode:screen; }
+    .zeus-clouds{
+      z-index:2; opacity:.48; filter: blur(8px) saturate(1.2);
+      background:
+        radial-gradient(140% 70% at 50% -25%, rgba(14,131,241,.38) 0%, transparent 55%),
+        radial-gradient(90% 45% at 15% -15%, rgba(0,150,255,.25) 0%, transparent 60%),
+        radial-gradient(90% 45% at 85% -15%, rgba(0,150,255,.25) 0%, transparent 60%);
+    }
+    .zeus-flash{
+      z-index:5; opacity:0; transition:opacity .22s ease;
+      background: radial-gradient(65% 45% at 50% 35%, rgba(255,255,255,.55) 0%, rgba(0,180,255,.20) 35%, transparent 70%);
     }
     `;
     const style = document.createElement("style");
-    style.id = "holoStyles-pack";
+    style.id = "cineStyles";
     style.textContent = css;
     document.head.appendChild(style);
   }
 
-  function attachHolo(cardEl) {
-    ensureHoloStyles();
-
-    // cria os layers de efeito (dentro da carta para evitar stacking 3D)
-    const gradient = document.createElement("div");
-    gradient.className = "holo-gradient";
-    const layer = document.createElement("div");
-    layer.className = "holo-layer";
-
-    // joga por cima de tudo (após meta/arte)
-    cardEl.appendChild(gradient);
-    cardEl.appendChild(layer);
-
-    // paleta rosa/azul (pode customizar aqui)
-    cardEl.style.setProperty("--c1", "#efb2fb");
-    cardEl.style.setProperty("--c2", "#acc6f8");
-
-    const onMove = (e) => {
-      const r = cardEl.getBoundingClientRect();
-      const isTouch = e.touches && e.touches.length;
-      const cx = isTouch ? e.touches[0].clientX : e.clientX;
-      const cy = isTouch ? e.touches[0].clientY : e.clientY;
-
-      const l = Math.max(0, Math.min(1, (cx - r.left) / r.width));
-      const t = Math.max(0, Math.min(1, (cy - r.top) / r.height));
-
-      const px = Math.abs(100 - Math.floor(100 * l));
-      const py = Math.abs(100 - Math.floor(100 * t));
-      const pa = 50 - px + (50 - py);
-
-      const lp = 50 + (px - 50) / 1.5;
-      const tp = 50 + (py - 50) / 1.5;
-      const spx = 50 + (px - 50) / 7;
-      const spy = 50 + (py - 50) / 7;
-      const opc = (20 + Math.abs(pa) * 1.5) / 100;
-
-      cardEl.style.setProperty("--lp", lp + "%");
-      cardEl.style.setProperty("--tp", tp + "%");
-      cardEl.style.setProperty("--spx", spx + "%");
-      cardEl.style.setProperty("--spy", spy + "%");
-
-      layer.style.opacity = String(Math.min(1, Math.max(0.45, opc)));
-    };
-
-    const onLeave = () => {
-      cardEl.style.setProperty("--lp", "50%");
-      cardEl.style.setProperty("--tp", "50%");
-      cardEl.style.setProperty("--spx", "50%");
-      cardEl.style.setProperty("--spy", "50%");
-      layer.style.opacity = ".85";
-    };
-
-    cardEl.addEventListener("mousemove", onMove, { passive: true });
-    cardEl.addEventListener("touchmove", onMove, { passive: true });
-    cardEl.addEventListener("mouseleave", onLeave);
-    cardEl.addEventListener("touchend", onLeave);
+  // ---------- ZEUS FX (o mesmo do álbum) ----------
+  const ZEUS_MAP = new WeakMap();
+  function attachZeusFX(host) {
+    if (ZEUS_MAP.has(host)) return ZEUS_MAP.get(host);
+    const handle = ZeusStorm(host);
+    ZEUS_MAP.set(host, handle);
+    return handle;
   }
 
-  /* ===== visual ===== */
+  function ZeusStorm(host) {
+    const clouds = document.createElement("div");
+    clouds.className = "zeus-clouds";
+    const flash = document.createElement("div");
+    flash.className = "zeus-flash";
+    const cnv = document.createElement("canvas");
+    cnv.className = "zeus-layer";
+    // preferimos aplicar sobre a FACE DA FRENTE para não vazar no verso
+    const face = host.querySelector(".front") || host;
+    face.appendChild(clouds);
+    face.appendChild(flash);
+    face.appendChild(cnv);
+
+    const ctx = cnv.getContext("2d");
+    const DPR = Math.min(2, window.devicePixelRatio || 1);
+
+    let w = 0,
+      h = 0,
+      running = true,
+      last = performance.now();
+    let bolts = [];
+    let spawnAt = 0;
+
+    const ro = new ResizeObserver(resize);
+    ro.observe(face);
+    resize();
+
+    function resize() {
+      const r = face.getBoundingClientRect();
+      w = Math.max(1, r.width);
+      h = Math.max(1, r.height);
+      cnv.width = Math.round(w * DPR);
+      cnv.height = Math.round(h * DPR);
+      cnv.style.width = w + "px";
+      cnv.style.height = h + "px";
+      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+      ctx.clearRect(0, 0, w, h);
+    }
+
+    const rand = (a, b) => a + Math.random() * (b - a);
+
+    function makeBoltSimple(x0, y0, x1, y1, iters = 3) {
+      let pts = [
+        { x: x0, y: y0 },
+        { x: x1, y: y1 },
+      ];
+      let offset = Math.hypot(x1 - x0, y1 - y0) * 0.2;
+      for (let i = 0; i < iters; i++) {
+        const next = [pts[0]];
+        for (let j = 0; j < pts.length - 1; j++) {
+          const a = pts[j],
+            b = pts[j + 1];
+          const mx = (a.x + b.x) / 2,
+            my = (a.y + b.y) / 2;
+          const dx = b.x - a.x,
+            dy = b.y - a.y;
+          const len = Math.hypot(dx, dy) || 1;
+          const nx = -dy / len,
+            ny = dx / len;
+          const disp = (Math.random() * 2 - 1) * offset;
+          next.push({ x: mx + nx * disp, y: my + ny * disp }, b);
+        }
+        pts = next;
+        offset *= 0.55;
+      }
+      return pts;
+    }
+
+    function makeBolt(x0, y0, x1, y1) {
+      let pts = [
+        { x: x0, y: y0 },
+        { x: x1, y: y1 },
+      ];
+      let offset = Math.hypot(x1 - x0, y1 - y0) * 0.18;
+      for (let i = 0; i < 6; i++) {
+        const next = [pts[0]];
+        for (let j = 0; j < pts.length - 1; j++) {
+          const a = pts[j],
+            b = pts[j + 1];
+          const mx = (a.x + b.x) / 2,
+            my = (a.y + b.y) / 2;
+          const dx = b.x - a.x,
+            dy = b.y - a.y;
+          const len = Math.hypot(dx, dy) || 1;
+          const nx = -dy / len,
+            ny = dx / len;
+          const disp = (Math.random() * 2 - 1) * offset;
+          next.push({ x: mx + nx * disp, y: my + ny * disp }, b);
+
+          if (Math.random() < 0.35 && offset > 2.2) {
+            const bx = mx + nx * disp * 0.6,
+              by = my + ny * disp * 0.6;
+            const ang =
+              Math.atan2(dy, dx) +
+              (Math.random() < 0.5 ? 1 : -1) * rand(Math.PI / 6, Math.PI / 3);
+            const blen = rand(len * 0.18, len * 0.33);
+            const ex = bx + Math.cos(ang) * blen;
+            const ey = by + Math.sin(ang) * blen;
+            bolts.push({
+              pts: makeBoltSimple(bx, by, ex, ey, 2),
+              life: rand(120, 220),
+              age: 0,
+              thick: rand(0.6, 1.2),
+              branch: true,
+            });
+          }
+        }
+        pts = next;
+        offset *= 0.55;
+      }
+      return pts;
+    }
+
+    function spawn() {
+      const startX = rand(w * 0.15, w * 0.85);
+      const endX = startX + rand(-w * 0.2, w * 0.2);
+      const pts = makeBolt(startX, -w * 0.05, endX, h * rand(0.6, 0.95));
+      bolts.push({
+        pts,
+        life: rand(240, 360),
+        age: 0,
+        thick: rand(1.2, 2.2),
+        branch: false,
+      });
+      flash.style.opacity = ".38";
+      setTimeout(() => (flash.style.opacity = "0"), 120);
+    }
+
+    function drawBoltPath(pts, baseAlpha, thick) {
+      if (!pts || pts.length < 2) return;
+      ctx.globalCompositeOperation = "lighter";
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+
+      ctx.shadowColor = "rgba(0,160,255,.8)";
+      ctx.shadowBlur = 18;
+      ctx.strokeStyle = `rgba(0,160,255,${0.28 * baseAlpha})`;
+      ctx.lineWidth = thick * 8;
+      ctx.beginPath();
+      ctx.moveTo(pts[0].x, pts[0].y);
+      for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+      ctx.stroke();
+
+      ctx.shadowBlur = 10;
+      ctx.strokeStyle = `rgba(120,210,255,${0.55 * baseAlpha})`;
+      ctx.lineWidth = thick * 4.5;
+      ctx.stroke();
+
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = `rgba(255,255,255,${0.95 * baseAlpha})`;
+      ctx.lineWidth = thick * 1.6;
+      ctx.stroke();
+    }
+
+    let raf = 0;
+    function tick(ts) {
+      if (!running) return;
+      const dt = Math.min(60, ts - last);
+      last = ts;
+
+      ctx.clearRect(0, 0, w, h);
+      for (let i = bolts.length - 1; i >= 0; i--) {
+        const b = bolts[i];
+        b.age += dt;
+        const t = b.age / b.life;
+        drawBoltPath(b.pts, Math.max(0, 1 - t), b.thick);
+        if (b.age >= b.life) bolts.splice(i, 1);
+      }
+      if (ts > spawnAt) {
+        spawn();
+        spawnAt = ts + (300 + Math.random() * 900);
+      }
+      raf = requestAnimationFrame(tick);
+    }
+    raf = requestAnimationFrame(tick);
+
+    return {
+      stop() {
+        running = false;
+        cancelAnimationFrame(raf);
+        ro.disconnect();
+        try {
+          cnv.remove();
+          flash.remove();
+          clouds.remove();
+        } catch {}
+      },
+    };
+  }
+
+  // ---------- cena cinematográfica GOD ----------
+  function playGodCinematic(originalCard) {
+    ensureCineStyles();
+
+    // constrói a cena
+    const scene = document.createElement("div");
+    scene.className = "cine-scene";
+    const beam = document.createElement("div");
+    beam.className = "cine-beam";
+    scene.appendChild(beam);
+
+    // estrelas/brilhos
+    for (let i = 0; i < 60; i++) {
+      const s = document.createElement("div");
+      s.className = "cine-star";
+      s.style.left = 40 + Math.random() * 20 + "%";
+      s.style.top = Math.random() * 70 + "%";
+      scene.appendChild(s);
+      const d = 800 + Math.random() * 2800;
+      setTimeout(() => {
+        s.animate([{ opacity: 0 }, { opacity: 0.8 }, { opacity: 0 }], {
+          duration: d,
+          iterations: 1,
+          easing: "ease-in-out",
+        });
+      }, Math.random() * 1500);
+    }
+    // chuvisco de luz (traços finos)
+    for (let i = 0; i < 12; i++) {
+      const r = document.createElement("div");
+      r.className = "cine-rain";
+      r.style.left = 46 + Math.random() * 8 + "%";
+      r.style.top = "-80px";
+      scene.appendChild(r);
+      const delay = Math.random() * 800;
+      const dur = 3000 + Math.random() * 2600;
+      setTimeout(() => {
+        r.style.opacity = ".7";
+        r.animate(
+          [
+            { transform: "translate(-50%,-120px) rotate(10deg)" },
+            { transform: "translate(-50%, 110vh) rotate(10deg)" },
+          ],
+          {
+            duration: dur,
+            easing: "cubic-bezier(.1,.7,.3,1)",
+          }
+        );
+        setTimeout(() => r.remove(), dur + 400);
+      }, delay);
+    }
+
+    // câmera/card 3D
+    const cam = document.createElement("div");
+    cam.className = "cine-cam";
+    const c3d = document.createElement("div");
+    c3d.className = "cine-card";
+
+    // clona faces da carta original
+    const inner = originalCard.querySelector(".card-inner");
+    const back =
+      inner?.querySelector(".back")?.cloneNode(true) ||
+      (() => {
+        const b = document.createElement("div");
+        b.className = "face back";
+        b.style.background = "#0e1a2b";
+        return b;
+      })();
+    const front =
+      inner?.querySelector(".front")?.cloneNode(true) ||
+      (() => {
+        const f = document.createElement("div");
+        f.className = "face front";
+        f.style.background = "#fff";
+        return f;
+      })();
+
+    c3d.appendChild(back);
+    c3d.appendChild(front);
+
+    // fantasma de aura na trajetória
+    const ghost = document.createElement("div");
+    ghost.className = "cine-ghost";
+    c3d.appendChild(ghost);
+
+    cam.appendChild(c3d);
+    scene.appendChild(cam);
+    document.body.appendChild(scene);
+
+    // aciona cena
+    // dimensiona a carta clone para o mesmo tamanho da real
+    const r = originalCard.getBoundingClientRect();
+    c3d.style.setProperty("--card-w", r.width + "px");
+    c3d.style.setProperty("--card-h", r.height + "px");
+
+    // mostra
+    requestAnimationFrame(() => scene.classList.add("on"));
+
+    // animação principal (voo + flip)
+    const anim = c3d.animate(
+      [
+        { transform: "translateZ(-1400px) rotateY(0deg) scale(.6)" },
+        { transform: "translateZ(-900px) rotateY(75deg) scale(.78)" },
+        { transform: "translateZ(-450px) rotateY(150deg) scale(.98)" },
+        { transform: "translateZ(0) rotateY(180deg) scale(1.18)" },
+      ],
+      { duration: 2800, easing: "cubic-bezier(.2,.8,.2,1)", fill: "forwards" }
+    );
+
+    return new Promise((resolve) => {
+      anim.onfinish = () => {
+        // vira a carta real e aplica pós-efeitos
+        const realInner = originalCard.querySelector(".card-inner");
+        realInner.classList.add("flip");
+        originalCard.classList.add("reveal-done");
+        // luz/raios azuis
+        attachZeusFX(originalCard);
+        // fade out da cena
+        const HOLD = 1200; // ← ajuste aqui para segurar mais/menos
+        const FADE = 900; // ← fade-out mais lento
+        setTimeout(() => {
+          scene.style.transition = `opacity ${FADE}ms ease`;
+          scene.style.opacity = "0";
+          setTimeout(() => {
+            try {
+              scene.remove();
+            } catch {}
+            resolve();
+          }, FADE + 50);
+        }, HOLD);
+      };
+    });
+  }
+
+  // ---------- visual pack ----------
   function burst() {
     pack.animate(
       [
@@ -349,10 +643,12 @@
     });
   })();
 
+  // ---------- criação de carta ----------
   function createCard(index, item, total) {
     const rar = canonRarity(item.raridade);
     const wrap = document.createElement("div");
     wrap.className = "card-wrap";
+
     const card = document.createElement("div");
     card.className = `card ${rar}${item.isDuplicate ? " duplicate" : ""}`;
     card.dataset.raridade = rar;
@@ -389,6 +685,8 @@
         ? "Épica"
         : rar === "mitica"
         ? "Mítica"
+        : rar === "god"
+        ? "God"
         : "Normal";
 
     meta.appendChild(left);
@@ -399,7 +697,7 @@
     inner.appendChild(front);
     card.appendChild(inner);
 
-    // estrelas extras só na lendária (mantive teu efeito antigo)
+    // efeitos visuais por raridade (leves enquanto exibindo no leque)
     if (rar === "lendaria") {
       const tw = document.createElement("div");
       tw.className = "twinkle";
@@ -413,13 +711,7 @@
       card.appendChild(tw);
     }
 
-    if (rar === "mitica") {
-      attachHolo(card);
-    }
-
-    card.addEventListener("click", () => inner.classList.toggle("flip"));
     setTimeout(() => card.classList.add("show"), 60 + index * 120);
-
     wrap.appendChild(card);
 
     if (item.isDuplicate) {
@@ -429,10 +721,31 @@
         "Carta repetida — vendida automaticamente por gold conforme a raridade (normal 2, épica 5, lendária 10 e mítica 20).";
       wrap.appendChild(note);
     }
+
+    // clique para revelar
+    card.addEventListener("click", async function () {
+      const inner = this.querySelector(".card-inner");
+      const isGod = this.classList.contains("god");
+
+      // se já está virada, permitir alternar normalmente
+      if (inner.classList.contains("flip")) {
+        inner.classList.remove("flip");
+        return;
+      }
+
+      if (isGod) {
+        // cinema GOD: voo + flip + raios azuis
+        await playGodCinematic(this);
+        this.classList.add("reveal-done"); // azul
+      } else {
+        inner.classList.add("flip");
+      }
+    });
+
     return wrap;
   }
 
-  /* ===== fluxos ===== */
+  // ---------- fluxos ----------
   async function openPackFlow() {
     if (packCount <= 0) {
       alert("Você não possui pacotes fechados para abrir.");
@@ -503,9 +816,20 @@
   }
 
   function revealAll() {
-    $$(".card-inner").forEach((inner, i) =>
-      setTimeout(() => inner.classList.add("flip"), i * 120)
-    );
+    // revela em cascata; cartas GOD usam o cinema (promessa) em sequência
+    (async () => {
+      for (const card of $$(".card", fan)) {
+        if (card.dataset.raridade === "god") {
+          if (!card.querySelector(".card-inner").classList.contains("flip")) {
+            await playGodCinematic(card);
+            card.classList.add("reveal-done");
+          }
+        } else {
+          card.querySelector(".card-inner").classList.add("flip");
+          await new Promise((r) => setTimeout(r, 350));
+        }
+      }
+    })();
   }
 
   function resetAll() {
@@ -518,27 +842,25 @@
     updateButtons();
   }
 
-  /* ===== events ===== */
+  // ---------- eventos ----------
   pack.addEventListener("click", openPackFlow);
-  if (btnOpen) btnOpen.addEventListener("click", openPackFlow);
-  if (btnReveal) btnReveal.addEventListener("click", revealAll);
-  if (btnReset) btnReset.addEventListener("click", resetAll);
-  if (btnBack)
-    btnBack.addEventListener("click", () => {
-      window.location.href = "/album-html";
-    });
+  btnOpen?.addEventListener("click", openPackFlow);
+  btnReveal?.addEventListener("click", revealAll);
+  btnReset?.addEventListener("click", resetAll);
+  btnBack?.addEventListener("click", () => {
+    window.location.href = "/album-html";
+  });
 
   window.addEventListener("keydown", (e) => {
     if (e.key === " " || e.key === "Enter") {
       e.preventDefault();
-      if (!opened) openPackFlow();
-      else revealAll();
+      !opened ? openPackFlow() : revealAll();
     }
     if (e.key.toLowerCase() === "r") resetAll();
     if (e.key === "Escape") window.location.href = "/album-html";
   });
 
-  /* ===== init ===== */
+  // ---------- init ----------
   (async function init() {
     await fetchPacks();
     updateButtons();

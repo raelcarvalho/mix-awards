@@ -243,14 +243,16 @@ export default class AlbumController {
       const poolEpica = todasAtivas.filter((f) => f.raridade === "epica");
       const poolLendaria = todasAtivas.filter((f) => f.raridade === "lendaria");
       const poolMitica = todasAtivas.filter((f) => f.raridade === "mitica");
+      const poolGod = todasAtivas.filter((f) => f.raridade === "god");
 
-      // Probabilidades: 60% normal | 30% épica | 9% lendária | 1% mítica
-      type Raridade = "normal" | "epica" | "lendaria" | "mitica";
+      // Probabilidades: 60% normal | 30% épica | 9% lendária | 1% mítica | 0,1% god
+      type Raridade = "normal" | "epica" | "lendaria" | "mitica" | "god";
       const PESOS: Record<Raridade, number> = {
-        normal: 0.6,
+        normal: 0.60,
         epica: 0.3,
         lendaria: 0.08,
         mitica: 0.02,
+        god: 0.001,
       };
 
       function sortearRaridade(): Raridade {
@@ -276,7 +278,8 @@ export default class AlbumController {
         if (r === "normal") return poolNormal;
         if (r === "epica") return poolEpica;
         if (r === "lendaria") return poolLendaria;
-        return poolMitica;
+        if (r === "mitica") return poolMitica;
+        return poolGod;
       }
 
       const cartas: any[] = [];
@@ -322,6 +325,7 @@ export default class AlbumController {
         epica: 5,
         lendaria: 10,
         mitica: 20,
+        god: 50,
       };
 
       let goldVendidoTotal = 0;

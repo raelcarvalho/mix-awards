@@ -1,4 +1,4 @@
-// public/js/album.js — versão completa (contador X/81 + raridades + modal + fix de páginas)
+// public/js/album.js
 (function () {
   if (window.__ALBUM_JS_INIT__) return;
   window.__ALBUM_JS_INIT__ = true;
@@ -12,10 +12,10 @@
   const grid = $("#albumGrid");
   const pager = $("#pager");
 
-  // NOVO: badge de progresso
+  // Progresso
   const cardsOwnedEl = $("#cardsOwned");
   const chipProgress = $("#chipProgress");
-  const TOTAL_CARDS = 81;
+  const TOTAL_CARDS = 82;
 
   // Modal
   const modal = $("#cardModal");
@@ -23,6 +23,8 @@
   const ttlFig = $("#ttlFig");
   const cardImg = $("#cardImg");
   const cardInfo = $("#cardInfo");
+
+  const modalPreview = $(".card-preview"); // usamos como host do FX
 
   // ----- Estado -----
   let slots = [];
@@ -48,11 +50,13 @@
 
   const pageOf = (slot) => Math.ceil(slot / 10);
   const posOf = (slot) => ((slot - 1) % 10) + 1;
+  // >>> só o slot 82 é GOD <<<
   const rarityOf = (slot) => {
     if (slot <= 50) return "normal";
     if (slot <= 70) return "epica";
     if (slot <= 78) return "lendaria";
-    return "mitica";
+    if (slot <= 81) return "mitica";
+    return "god";
   };
 
   function makeStaticSlots() {
@@ -71,7 +75,6 @@
     return arr;
   }
 
-  // === NOVO: contador X/81 ===
   function updateProgress() {
     if (!cardsOwnedEl) return;
     const owned = Array.isArray(slots)
@@ -104,7 +107,7 @@
       totalPages = 9;
       renderPager();
       renderPage();
-      updateProgress(); // NOVO
+      updateProgress();
       return;
     }
     try {
@@ -112,7 +115,6 @@
       const j = unwrap(await safeJson(r)) || {};
 
       if (Array.isArray(j?.slots) && j.slots.length) {
-        // formato { slots: [...] }
         slots = j.slots.map((s) => ({
           slot: Number(s.slot ?? 0),
           page: Number(s.page ?? pageOf(Number(s.slot ?? 0))),
@@ -134,7 +136,6 @@
         );
         totalPages = Math.max(9, Math.ceil((maxSlot || TOTAL_CARDS) / 10));
       } else if (Array.isArray(j?.figurinhas)) {
-        // legado { figurinhas: [...] }
         const figs = j.figurinhas;
         slots = figs
           .map((f, idx) => {
@@ -157,14 +158,13 @@
         slots = makeStaticSlots();
         totalPages = 9;
       }
-    } catch (e) {
-      console.warn("GET /album falhou, usando placeholders", e);
+    } catch {
       slots = makeStaticSlots();
       totalPages = 9;
     }
     renderPager();
     renderPage();
-    updateProgress(); // NOVO
+    updateProgress();
   }
 
   async function openPackHere() {
@@ -253,6 +253,11 @@
         slotEl.appendChild(img);
 
         ensureHolo(slotEl);
+
+        if (s.raridade === "god") {
+          attachZeusFX(slotEl); // <<< novo efeito Zeus
+        }
+
         slotEl.addEventListener("click", () => openModal(s));
       } else {
         slotEl.style.background = "rgba(255,255,255,.06)";
@@ -294,7 +299,7 @@
     } catch {}
   }
 
-  // ======== HOLO EFFECT no GRID ========
+  // HOLO no GRID
   function ensureHolo(slot) {
     if (slot.querySelector(".holo-effect")) return;
     const holo = document.createElement("div");
@@ -314,6 +319,8 @@
   }
 
   // ======== MODAL ========
+  let modalZeusHandle = null;
+
   function openModal(slot) {
     if (!modal) return;
     cardImg.src = slot.figurinha?.img || "";
@@ -322,14 +329,22 @@
     const rar = String(slot.raridade || "normal").toLowerCase();
     cardInfo.className = "";
     cardInfo.classList.add(rar);
-    if (rar === "mitica") cardInfo.textContent = "Carta Mítica";
-    else if (rar === "lendaria") cardInfo.textContent = "Carta Lendária";
-    else if (rar === "epica") cardInfo.textContent = "Carta Épica";
-    else cardInfo.textContent = "Carta Normal";
+    cardInfo.textContent =
+      rar === "god"
+        ? "Carta God"
+        : rar === "mitica"
+        ? "Carta Mítica"
+        : rar === "lendaria"
+        ? "Carta Lendária"
+        : rar === "epica"
+        ? "Carta Épica"
+        : "Carta Normal";
 
     if (ttlFig)
       ttlFig.textContent =
-        rar === "mitica"
+        rar === "god"
+          ? "God"
+          : rar === "mitica"
           ? "Mítica"
           : rar === "lendaria"
           ? "Lendária"
@@ -340,19 +355,28 @@
     const modalHolo = $(".card-preview .holo-effect");
     if (modalHolo) modalHolo.className = "holo-effect " + rar;
 
+    // limpa efeito antigo, se houver
+    if (modalZeusHandle) {
+      modalZeusHandle.stop();
+      modalZeusHandle = null;
+    }
+
+    if (rar === "god" && modalPreview) {
+      modalZeusHandle = ZeusStorm(modalPreview); // <<< mesmo FX no modal
+    }
+
     modal.classList.add("open");
     modal.setAttribute("aria-hidden", "false");
 
-    const cardPreview = $(".card-preview");
-    if (cardPreview && modalHolo) {
+    if (modalPreview && modalHolo) {
       const move = (e) => {
-        const rect = cardPreview.getBoundingClientRect();
+        const rect = modalPreview.getBoundingClientRect();
         const x = ((e.clientX - rect.left) / rect.width) * 100;
         const y = ((e.clientY - rect.top) / rect.height) * 100;
         modalHolo.style.setProperty("--mouse-x", `${x}%`);
         modalHolo.style.setProperty("--mouse-y", `${y}%`);
       };
-      cardPreview.onmousemove = move;
+      modalPreview.onmousemove = move;
     }
   }
 
@@ -361,9 +385,13 @@
     modal.classList.remove("open");
     modal.setAttribute("aria-hidden", "true");
     cardImg.src = "";
+    if (modalZeusHandle) {
+      modalZeusHandle.stop();
+      modalZeusHandle = null;
+    }
   }
 
-  // Eventos do modal/teclas
+  // Eventos
   btnCloseModal?.addEventListener("click", closeModal);
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape" && modal?.classList.contains("open")) closeModal();
@@ -380,6 +408,223 @@
     window.location.href = "/abrir-pacote-html";
     // ou, para abrir aqui sem sair da página: openPackHere();
   });
+
+  // ---------- ZEUS FX (procedural canvas) ----------
+  const ZEUS_MAP = new WeakMap();
+
+  function attachZeusFX(host) {
+    if (ZEUS_MAP.has(host)) return;
+    const handle = ZeusStorm(host);
+    ZEUS_MAP.set(host, handle);
+  }
+
+  function ZeusStorm(host) {
+    // hosts múltiplos: criamos três camadas para profundidade
+    const clouds = document.createElement("div");
+    clouds.className = "zeus-clouds";
+    const flash = document.createElement("div");
+    flash.className = "zeus-flash";
+    const cnv = document.createElement("canvas");
+    cnv.className = "zeus-layer";
+    host.appendChild(clouds);
+    host.appendChild(flash);
+    host.appendChild(cnv);
+
+    const ctx = cnv.getContext("2d");
+    const DPR = Math.min(2, window.devicePixelRatio || 1); // segura consumo
+
+    let w = 0,
+      h = 0,
+      running = true,
+      last = performance.now();
+    let bolts = []; // {pts:[{x,y}], life, age, thick}
+    let spawnAt = 0;
+
+    const ro = new ResizeObserver(resize);
+    ro.observe(host);
+    resize();
+
+    function resize() {
+      const r = host.getBoundingClientRect();
+      w = Math.max(1, r.width);
+      h = Math.max(1, r.height);
+      cnv.width = Math.round(w * DPR);
+      cnv.height = Math.round(h * DPR);
+      cnv.style.width = w + "px";
+      cnv.style.height = h + "px";
+      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+      // limpar quando redimensionar
+      ctx.clearRect(0, 0, w, h);
+    }
+
+    function rand(min, max) {
+      return min + Math.random() * (max - min);
+    }
+
+    function makeBolt(x0, y0, x1, y1) {
+      // fractal midpoint displacement
+      let pts = [
+        { x: x0, y: y0 },
+        { x: x1, y: y1 },
+      ];
+      let offset = Math.hypot(x1 - x0, y1 - y0) * 0.18;
+      for (let i = 0; i < 6; i++) {
+        const next = [pts[0]];
+        for (let j = 0; j < pts.length - 1; j++) {
+          const a = pts[j],
+            b = pts[j + 1];
+          const mx = (a.x + b.x) / 2,
+            my = (a.y + b.y) / 2;
+          const dx = b.x - a.x,
+            dy = b.y - a.y;
+          const len = Math.hypot(dx, dy) || 1;
+          const nx = -dy / len,
+            ny = dx / len; // normal
+          const disp = (Math.random() * 2 - 1) * offset;
+          next.push({ x: mx + nx * disp, y: my + ny * disp }, b);
+
+          // pequenos ramos
+          if (Math.random() < 0.35 && offset > 2.2) {
+            const bx = mx + nx * disp * 0.6,
+              by = my + ny * disp * 0.6;
+            const ang =
+              Math.atan2(dy, dx) +
+              (Math.random() < 0.5 ? 1 : -1) * rand(Math.PI / 6, Math.PI / 3);
+            const blen = rand(len * 0.18, len * 0.33);
+            const ex = bx + Math.cos(ang) * blen;
+            const ey = by + Math.sin(ang) * blen;
+            bolts.push({
+              pts: makeBoltSimple(bx, by, ex, ey),
+              life: rand(120, 220),
+              age: 0,
+              thick: rand(0.6, 1.2),
+              branch: true,
+            });
+          }
+        }
+        pts = next;
+        offset *= 0.55;
+      }
+      return pts;
+    }
+
+    function makeBoltSimple(x0, y0, x1, y1) {
+      // 2-3 iterações rápidas para ramos
+      let pts = [
+        { x: x0, y: y0 },
+        { x: x1, y: y1 },
+      ];
+      let offset = Math.hypot(x1 - x0, y1 - y0) * 0.2;
+      for (let i = 0; i < 3; i++) {
+        const next = [pts[0]];
+        for (let j = 0; j < pts.length - 1; j++) {
+          const a = pts[j],
+            b = pts[j + 1];
+          const mx = (a.x + b.x) / 2,
+            my = (a.y + b.y) / 2;
+          const dx = b.x - a.x,
+            dy = b.y - a.y;
+          const len = Math.hypot(dx, dy) || 1;
+          const nx = -dy / len,
+            ny = dx / len;
+          const disp = (Math.random() * 2 - 1) * offset;
+          next.push({ x: mx + nx * disp, y: my + ny * disp }, b);
+        }
+        pts = next;
+        offset *= 0.55;
+      }
+      return pts;
+    }
+
+    function spawn() {
+      const startX = rand(w * 0.15, w * 0.85);
+      const endX = startX + rand(-w * 0.2, w * 0.2);
+      const pts = makeBolt(startX, -w * 0.05, endX, h * rand(0.6, 0.95));
+      bolts.push({
+        pts,
+        life: rand(240, 360),
+        age: 0,
+        thick: rand(1.2, 2.2),
+        branch: false,
+      });
+
+      // lampejo rápido
+      flash.style.opacity = ".38";
+      setTimeout(() => (flash.style.opacity = "0"), 120);
+    }
+
+    function drawBoltPath(pts, baseAlpha, thick) {
+      if (!pts || pts.length < 2) return;
+      ctx.globalCompositeOperation = "lighter";
+
+      // glow externo azul
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      ctx.shadowColor = "rgba(0,160,255,.8)";
+      ctx.shadowBlur = 18;
+      ctx.strokeStyle = `rgba(0,160,255,${0.28 * baseAlpha})`;
+      ctx.lineWidth = thick * 8;
+      ctx.beginPath();
+      ctx.moveTo(pts[0].x, pts[0].y);
+      for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+      ctx.stroke();
+
+      // halo médio ciano
+      ctx.shadowBlur = 10;
+      ctx.strokeStyle = `rgba(120,210,255,${0.55 * baseAlpha})`;
+      ctx.lineWidth = thick * 4.5;
+      ctx.stroke();
+
+      // núcleo branco
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = `rgba(255,255,255,${0.95 * baseAlpha})`;
+      ctx.lineWidth = thick * 1.6;
+      ctx.stroke();
+    }
+
+    function tick(ts) {
+      if (!running) return;
+      const dt = Math.min(60, ts - last);
+      last = ts;
+
+      ctx.clearRect(0, 0, w, h);
+
+      // desenha & envelhece
+      for (let i = bolts.length - 1; i >= 0; i--) {
+        const b = bolts[i];
+        b.age += dt;
+        const t = b.age / b.life;
+        const alpha = Math.max(0, 1 - t); // fade out
+        drawBoltPath(b.pts, alpha, b.thick);
+        if (b.age >= b.life) bolts.splice(i, 1);
+      }
+
+      // spawn controlado
+      if (ts > spawnAt) {
+        spawn();
+        spawnAt = ts + (300 + Math.random() * 900); // entre 0.3s e 1.2s
+      }
+
+      raf = requestAnimationFrame(tick);
+    }
+
+    let raf = requestAnimationFrame(tick);
+
+    return {
+      stop() {
+        running = false;
+        cancelAnimationFrame(raf);
+        ro.disconnect();
+        try {
+          cnv.remove();
+          flash.remove();
+          clouds.remove();
+        } catch {}
+      },
+    };
+  }
+
+  // --------------------------------------------------
 
   // Init
   (async function init() {

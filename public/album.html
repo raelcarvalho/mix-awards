@@ -49,56 +49,56 @@
     }
 
     .nav a.nav-btn::before {
-      top: 4px;
+      top: 4px
     }
 
     .nav a.nav-btn::after {
-      bottom: 4px;
+      bottom: 4px
     }
 
     .nav a.nav-btn:hover::before,
     .nav a.nav-btn:hover::after {
-      width: 70%;
+      width: 70%
     }
 
     .nav a.nav-btn[data-color="#2db2ff"]:hover::before,
     .nav a.nav-btn[data-color="#2db2ff"]:hover::after {
-      border-color: #2db2ff;
+      border-color: #2db2ff
     }
 
     .nav a.nav-btn[data-color="#ff1f71"]:hover::before,
     .nav a.nav-btn[data-color="#ff1f71"]:hover::after {
-      border-color: #ff1f71;
+      border-color: #ff1f71
     }
 
     .nav a.nav-btn[data-color="#1eff45"]:hover::before,
     .nav a.nav-btn[data-color="#1eff45"]:hover::after {
-      border-color: #1eff45;
+      border-color: #1eff45
     }
 
     .nav a.nav-btn[data-color="#a78bfa"]:hover::before,
     .nav a.nav-btn[data-color="#a78bfa"]:hover::after {
-      border-color: #a78bfa;
+      border-color: #a78bfa
     }
 
     .nav a.nav-btn[data-color="#a78bfb"]:hover::before,
     .nav a.nav-btn[data-color="#a78bfb"]:hover::after {
-      border-color: #fc6107;
+      border-color: #fc6107
     }
 
     .nav a.nav-btn[data-color="#56c1ff"]:hover::before,
     .nav a.nav-btn[data-color="#56c1ff"]:hover::after {
-      border-color: #56c1ff;
+      border-color: #56c1ff
     }
 
     .nav a.nav-btn[data-color="#ff9e9e"]:hover::before,
     .nav a.nav-btn[data-color="#ff9e9e"]:hover::after {
-      border-color: #ff9e9e;
+      border-color: #ff9e9e
     }
 
     .nav a.nav-btn[data-color="#6225E6"]:hover::before,
     .nav a.nav-btn[data-color="#6225E6"]:hover::after {
-      border-color: #FBC638;
+      border-color: #FBC638
     }
 
     /* ====== ÁLBUM ====== */
@@ -274,20 +274,43 @@
       border: 2px dashed rgba(255, 255, 255, .7);
     }
 
+    .slot.god {
+      background: linear-gradient(135deg, rgba(0, 50, 100, .85), rgba(0, 100, 200, .85), rgba(100, 200, 255, .85), rgba(0, 50, 100, .85));
+      border: 2px solid rgba(255, 255, 255, .8);
+      box-shadow: 0 0 15px rgba(0, 150, 255, .7), inset 0 0 15px rgba(255, 255, 255, .3);
+    }
+
     .slot.mitica.is-new {
       --pulse-color: rgba(255, 105, 180, .6);
       animation: pulseMythic 1.3s ease-in-out infinite;
+    }
+
+    .slot.god.is-new {
+      --pulse-color: rgba(0, 150, 255, .6);
+      animation: pulseGod 1.3s ease-in-out infinite;
     }
 
     @keyframes pulseMythic {
 
       0%,
       100% {
-        box-shadow: 0 0 0 0 rgba(255, 105, 180, .6), 0 0 0 0 rgba(100, 200, 255, .6);
+        box-shadow: 0 0 0 0 rgba(255, 105, 180, .6), 0 0 0 0 rgba(100, 200, 255, .6)
       }
 
       50% {
-        box-shadow: 0 0 0 8px rgba(255, 105, 180, .3), 0 0 0 16px rgba(100, 200, 255, .2);
+        box-shadow: 0 0 0 8px rgba(255, 105, 180, .3), 0 0 0 16px rgba(100, 200, 255, .2)
+      }
+    }
+
+    @keyframes pulseGod {
+
+      0%,
+      100% {
+        box-shadow: 0 0 0 0 rgba(0, 150, 255, .6), 0 0 0 0 rgba(100, 200, 255, .6)
+      }
+
+      50% {
+        box-shadow: 0 0 0 12px rgba(0, 150, 255, .4), 0 0 0 24px rgba(100, 200, 255, .2)
       }
     }
 
@@ -313,27 +336,39 @@
       text-shadow: 0 1px 2px rgba(0, 0, 0, .3);
     }
 
+    #cardInfo.god {
+      background: linear-gradient(135deg, #0066cc, #00aaff, #0066cc);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, .3);
+    }
+
     .slot.normal.is-new {
-      --pulse-color: rgba(86, 193, 255, .45);
+      --pulse-color: rgba(86, 193, 255, .45)
     }
 
     .slot.epica.is-new {
-      --pulse-color: rgba(192, 132, 252, .50);
+      --pulse-color: rgba(192, 132, 252, .50)
     }
 
     .slot.lendaria.is-new {
-      --pulse-color: rgba(255, 189, 89, .55);
+      --pulse-color: rgba(255, 189, 89, .55)
+    }
+
+    .slot.god.is-new {
+      --pulse-color: rgba(0, 150, 255, .6)
     }
 
     @keyframes pulseVar {
 
       0%,
       100% {
-        box-shadow: 0 0 0 0 var(--pulse-color);
+        box-shadow: 0 0 0 0 var(--pulse-color)
       }
 
       50% {
-        box-shadow: 0 0 0 8px color-mix(in srgb, var(--pulse-color) 22%, transparent);
+        box-shadow: 0 0 0 8px color-mix(in srgb, var(--pulse-color) 22%, transparent)
       }
     }
 
@@ -402,20 +437,44 @@
       animation: holoMythic 4s linear infinite;
     }
 
+    .slot.god .holo-effect::before {
+      background: linear-gradient(125deg, #0066cc, #00aaff, #0066cc);
+      background-size: 400% 400%;
+      opacity: .6;
+      animation: holoGod 3s linear infinite;
+    }
+
     @keyframes holoMythic {
       0% {
         background-position: 0% 0%;
-        filter: hue-rotate(0deg);
+        filter: hue-rotate(0deg)
       }
 
       50% {
         background-position: 100% 100%;
-        filter: hue-rotate(180deg);
+        filter: hue-rotate(180deg)
       }
 
       100% {
         background-position: 0% 0%;
-        filter: hue-rotate(360deg);
+        filter: hue-rotate(360deg)
+      }
+    }
+
+    @keyframes holoGod {
+      0% {
+        background-position: 0% 0%;
+        filter: hue-rotate(0deg)
+      }
+
+      50% {
+        background-position: 100% 100%;
+        filter: hue-rotate(30deg)
+      }
+
+      100% {
+        background-position: 0% 0%;
+        filter: hue-rotate(0deg)
       }
     }
 
@@ -434,11 +493,11 @@
     }
 
     .slot:hover .holo-effect {
-      opacity: .9;
+      opacity: .9
     }
 
     .slot:hover .holo-effect::after {
-      opacity: .8;
+      opacity: .8
     }
 
     .panel .content {
@@ -459,7 +518,7 @@
     }
 
     .modal-backdrop.open {
-      display: flex;
+      display: flex
     }
 
     .modal {
@@ -481,7 +540,7 @@
 
     .modal h4 {
       margin: 0;
-      font-weight: 900;
+      font-weight: 900
     }
 
     .modal .close {
@@ -504,15 +563,20 @@
     }
 
     #cardInfo.normal {
-      color: #aeb8c2;
+      color: #aeb8c2
     }
 
     #cardInfo.epica {
-      color: #c084fc;
+      color: #c084fc
     }
 
     #cardInfo.lendaria {
-      color: #f59e0b;
+      color: #f59e0b
+    }
+
+    #cardInfo.god {
+      color: #00aaff;
+      text-shadow: 0 0 10px rgba(0, 170, 255, .7)
     }
 
     .card-preview {
@@ -532,25 +596,293 @@
     }
 
     .card-preview .holo-effect {
-      opacity: .9;
+      opacity: .9
     }
 
     .card-preview .holo-effect.normal::before {
       background: linear-gradient(125deg, #00bfff, #1e90ff, #87cefa, #00bfff);
       background-size: 400% 400%;
-      opacity: .25;
+      opacity: .25
     }
 
     .card-preview .holo-effect.epica::before {
       background: linear-gradient(125deg, #9370db, #8a2be2, #da70d6, #9370db);
       background-size: 400% 400%;
-      opacity: .35;
+      opacity: .35
     }
 
     .card-preview .holo-effect.lendaria::before {
       background: linear-gradient(125deg, #ffd700, #ff8c00, #ff4500, #ffd700);
       background-size: 400% 400%;
-      opacity: .4;
+      opacity: .4
+    }
+
+    .card-preview .holo-effect.god::before {
+      background: linear-gradient(125deg, #0066cc, #00aaff, #0066cc);
+      background-size: 400% 400%;
+      opacity: .6;
+      animation: holoGod 3s linear infinite
+    }
+
+    /* RAIOS (GOD) */
+    .lightning-effect {
+      position: absolute;
+      inset: 0;
+      border-radius: 12px;
+      z-index: 3;
+      pointer-events: none;
+      overflow: hidden;
+      opacity: .9;
+      mix-blend-mode: screen;
+    }
+
+    .lightning-bolt {
+      position: absolute;
+      width: 6px;
+      height: 180%;
+      background: linear-gradient(to bottom, transparent 0%, rgba(255, 255, 255, .95) 10%, rgba(173, 216, 255, .95) 25%, rgba(255, 255, 255, .95) 40%, rgba(135, 206, 250, .9) 55%, rgba(255, 255, 255, .9) 70%, transparent 100%);
+      transform: translateX(-50%) rotate(var(--rotation, 25deg));
+      filter: blur(.8px);
+      animation: lightningStrike 1.8s infinite;
+      opacity: 0;
+      z-index: 4;
+    }
+
+    .lightning-bolt:nth-child(1) {
+      left: 15%;
+      animation-delay: .3s;
+      --rotation: 20deg
+    }
+
+    .lightning-bolt:nth-child(2) {
+      left: 45%;
+      animation-delay: .9s;
+      width: 8px;
+      height: 200%;
+      --rotation: 30deg
+    }
+
+    .lightning-bolt:nth-child(3) {
+      left: 75%;
+      animation-delay: .5s;
+      width: 5px;
+      height: 160%;
+      --rotation: 15deg
+    }
+
+    .lightning-bolt:nth-child(4) {
+      left: 30%;
+      animation-delay: 1.4s;
+      width: 4px;
+      height: 170%;
+      --rotation: 35deg
+    }
+
+    .lightning-bolt:nth-child(5) {
+      left: 60%;
+      animation-delay: 1.8s;
+      width: 7px;
+      height: 190%;
+      --rotation: 10deg
+    }
+
+    @keyframes lightningStrike {
+      0% {
+        opacity: 0;
+        top: -120%
+      }
+
+      10% {
+        opacity: 1
+      }
+
+      15% {
+        opacity: .9
+      }
+
+      20% {
+        opacity: 1
+      }
+
+      25% {
+        opacity: .4
+      }
+
+      30% {
+        opacity: .95;
+        top: 100%
+      }
+
+      100% {
+        opacity: 0;
+        top: 100%
+      }
+    }
+
+    .lightning-flash {
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at 50% 40%, rgba(255, 255, 255, .5), rgba(0, 170, 255, .2) 40%, transparent 70%);
+      border-radius: 12px;
+      opacity: 0;
+      animation: lightningFlash 1.8s infinite;
+      z-index: 3;
+    }
+
+    @keyframes lightningFlash {
+
+      0%,
+      85%,
+      100% {
+        opacity: 0
+      }
+
+      12%,
+      18% {
+        opacity: .4
+      }
+
+      40%,
+      48% {
+        opacity: .15
+      }
+    }
+
+    /* Partículas GOD */
+    .particles {
+      position: absolute;
+      inset: 0;
+      border-radius: 12px;
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    .particle {
+      position: absolute;
+      width: 4px;
+      height: 4px;
+      background: radial-gradient(circle, rgba(255, 255, 255, .9), rgba(0, 170, 255, .8) 70%);
+      border-radius: 50%;
+      animation: float 6s infinite ease-in-out;
+      filter: blur(.5px);
+    }
+
+    @keyframes float {
+
+      0%,
+      100% {
+        transform: translateY(0) translateX(0);
+        opacity: 0
+      }
+
+      25% {
+        transform: translateY(-25px) translateX(15px);
+        opacity: .8
+      }
+
+      50% {
+        transform: translateY(-45px) translateX(-15px);
+        opacity: 1
+      }
+
+      75% {
+        transform: translateY(-25px) translateX(15px);
+        opacity: .8
+      }
+    }
+
+    /* Brilho GOD */
+    .god-glow {
+      position: absolute;
+      inset: -5px;
+      border-radius: 16px;
+      background: radial-gradient(circle at 50% 50%, rgba(0, 170, 255, .3), transparent 60%);
+      opacity: .7;
+      animation: godPulse 3s infinite alternate;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    @keyframes godPulse {
+      0% {
+        opacity: .5;
+        transform: scale(.98)
+      }
+
+      100% {
+        opacity: .8;
+        transform: scale(1.02)
+      }
+    }
+
+    /* ==== ZEUS FX (canvas) ==================================================== */
+    .zeus-layer,
+    .zeus-clouds,
+    .zeus-flash {
+      position: absolute;
+      inset: 0;
+      border-radius: 12px;
+      pointer-events: none;
+    }
+
+    .zeus-layer {
+      z-index: 5;
+      mix-blend-mode: screen;
+    }
+
+    .zeus-clouds {
+      z-index: 2;
+      opacity: .48;
+      filter: blur(8px) saturate(1.2);
+      background:
+        radial-gradient(140% 70% at 50% -25%, rgba(14, 131, 241, 0.38) 0%, transparent 55%),
+        radial-gradient(90% 45% at 15% -15%, rgba(0,150,255,.25) 0%, transparent 60%),
+        radial-gradient(90% 45% at 85% -15%, rgba(0, 150, 255, .25) 0%, transparent 60%);
+    }
+
+    .zeus-flash {
+      z-index: 4;
+      opacity: 0;
+      transition: opacity .22s ease;
+      background: radial-gradient(65% 45% at 50% 35%,
+          rgba(255, 255, 255, .55) 0%,
+          rgba(0, 180, 255, .20) 35%,
+          transparent 70%);
+    }
+
+    .god .zeus-layer {
+      /* só para garantir topo sobre a holo */
+      z-index: 6;
+    }
+
+    .card-preview .zeus-layer,
+    .card-preview .zeus-clouds,
+    .card-preview .zeus-flash {
+      border-radius: 12px;
+    }
+
+    /* opcional: leve aura contínua */
+    .god::before {
+      content: "";
+      position: absolute;
+      inset: -6px;
+      border-radius: 16px;
+      pointer-events: none;
+      background: radial-gradient(circle at 50% 50%, rgba(0, 170, 255, .25), transparent 60%);
+      z-index: 1;
+      animation: zeusPulse 3s ease-in-out infinite alternate;
+    }
+
+    @keyframes zeusPulse {
+      from {
+        opacity: .45;
+        transform: scale(.985)
+      }
+
+      to {
+        opacity: .75;
+        transform: scale(1.01)
+      }
     }
   </style>
 </head>
@@ -584,9 +916,9 @@
 
           <button id="btnOpenPack" class="btn primary" type="button">Abrir pacote</button>
 
-          <!-- NOVO: progresso de cartas -->
-          <span class="badge" id="chipProgress" title="0/81 (0%)">
-            <strong>Cartas:</strong> <span id="cardsOwned">0</span>/81
+          <!-- Progresso de cartas -->
+          <span class="badge" id="chipProgress" title="0/82 (0%)">
+            <strong>Cartas:</strong> <span id="cardsOwned">0</span>/82
           </span>
 
           <div id="pager" class="pager">
@@ -615,11 +947,15 @@
         <div class="holo-effect">
           <div class="holo-reflect"></div>
         </div>
+        <div class="lightning-effect" id="modalLightning"></div>
+        <div class="particles" id="modalParticles"></div>
+        <div class="god-glow" id="modalGodGlow"></div>
       </div>
       <div id="cardInfo"></div>
     </div>
   </div>
 
+  <!-- Scripts -->
   <script src="/js/auth.js" defer></script>
   <script src="/js/album.js" defer></script>
 </body>
