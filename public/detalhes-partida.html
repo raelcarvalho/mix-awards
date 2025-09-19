@@ -405,12 +405,9 @@
 
     // célula com avatar + nome
     const jogadorCell = (j) => {
-      // Nome vem do pivot (j.nome). Você também sobrescreve jogadores_id com o nome,
-      // então, para maior robustez, caímos no jogadores_id se faltar.
       const nome = j.nome || j.jogadores_id || 'Sem nome';
       const img = (j.jogador_imagem && String(j.jogador_imagem).trim()) ? j.jogador_imagem : FALLBACK_AVATAR;
-      const safeAlt = nome.replace(/"/g, '&quot;');
-
+      const safeAlt = String(nome).replace(/"/g, '&quot;');
       return `
         <td>
           <div class="pl">
@@ -420,6 +417,29 @@
         </td>
       `;
     };
+
+    // ========= Fallback de pontos por PARTIDA (sem bônus de qtd_partidas) =========
+    // Regras: Kill=1; ADR <50=5; 50–100=10; >100=20; FK=1 cada; Vitória=20, Derrota=10.
+    function pontosDaPartida(j, partida) {
+      const num = (v) => {
+        const n = Number(String(v ?? '0').replace(',', '.'));
+        return Number.isFinite(n) ? n : 0;
+      };
+      const adr = num(j.adr);
+      const kills = num(j.kills);
+      const fk = num(j.first_kill);
+
+      let adrPts = 5;
+      if (adr > 100) adrPts = 20;
+      else if (adr >= 50) adrPts = 10;
+
+      const r1 = Number(partida?.resultado_time1 ?? 0);
+      const r2 = Number(partida?.resultado_time2 ?? 0);
+      const vencedor = r1 === r2 ? null : (r1 > r2 ? 'A' : 'B');
+      const winPts = vencedor && j.time === vencedor ? 20 : 10;
+
+      return kills + fk + adrPts + winPts;
+    }
 
     async function carregarDetalhes() {
       try {
@@ -461,6 +481,7 @@
                 <th>Flash Assist</th>
                 <th>First Kill</th>
                 <th>Multi Kill</th>
+                <th>Pontos</th>
               </tr>
             </thead>
             <tbody>
@@ -475,6 +496,7 @@
                   ${tdCenter(j.flash_assist)}
                   ${tdCenter(j.first_kill)}
                   ${tdCenter(j.multi_kill)}
+                  ${tdCenter((j.pontos ?? '') !== '' ? j.pontos : pontosDaPartida(j, partida))}
                 </tr>`).join('')}
             </tbody>
           </table>
@@ -483,6 +505,7 @@
         document.getElementById("estatisticas-time-a").innerHTML = tabela(timeA);
         document.getElementById("estatisticas-time-b").innerHTML = tabela(timeB);
       } catch (e) {
+        console.error(e);
         document.getElementById("info-partida").innerHTML =
           `<h3>Informações da Partida</h3><div class="muted">Não foi possível carregar os dados.</div>`;
       }
