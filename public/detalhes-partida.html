@@ -33,8 +33,7 @@
       box-sizing: border-box;
     }
 
-    html,
-    body {
+    html, body {
       margin: 0;
       padding: 0;
     }
@@ -51,25 +50,14 @@
     }
 
     /* topo colado; demais estilos do nav vêm do base.css */
-    .nav {
-      position: sticky;
-      top: 0;
-      z-index: 50;
-    }
+    .nav { position: sticky; top: 0; z-index: 50; }
 
-    .page-pad {
-      height: 10px;
-    }
+    .page-pad { height: 10px; }
 
     /* layout central */
-    .section {
-      padding: 16px 0 28px;
-    }
+    .section { padding: 16px 0 28px; }
 
-    .container {
-      width: var(--container);
-      margin: 0 auto;
-    }
+    .container { width: var(--container); margin: 0 auto; }
 
     .panel {
       border: 1px solid var(--line);
@@ -112,9 +100,7 @@
       padding: 14px;
     }
 
-    .spacer {
-      height: 12px;
-    }
+    .spacer { height: 12px; }
 
     .card h3 {
       margin: 0 0 8px;
@@ -124,9 +110,7 @@
       color: #e6f2ff;
     }
 
-    .muted {
-      color: var(--muted);
-    }
+    .muted { color: var(--muted); }
 
     .btn {
       appearance: none;
@@ -141,19 +125,12 @@
       box-shadow: 0 2px 0 rgba(0, 0, 0, .25);
     }
 
-    .btn.primary {
-      background: var(--accent);
-      border-color: var(--accent-2);
-    }
+    .btn.primary { background: var(--accent); border-color: var(--accent-2); }
 
-    .btn:hover {
-      transform: translateY(-1px);
-    }
+    .btn:hover { transform: translateY(-1px); }
 
     /* tabelas */
-    .table-wrap {
-      margin-top: 10px;
-    }
+    .table-wrap { margin-top: 10px; }
 
     .table-box {
       background: linear-gradient(180deg, rgba(255, 255, 255, .06), rgba(255, 255, 255, .04)), var(--card);
@@ -164,11 +141,7 @@
       overflow-x: auto;
     }
 
-    table {
-      width: 100%;
-      border-collapse: separate;
-      border-spacing: 0 10px;
-    }
+    table { width: 100%; border-collapse: separate; border-spacing: 0 10px; }
 
     thead th {
       background: #12324a;
@@ -184,10 +157,7 @@
       white-space: nowrap;
     }
 
-    tbody tr {
-      background: var(--panel);
-      border: 1px solid var(--line);
-    }
+    tbody tr { background: var(--panel); border: 1px solid var(--line); }
 
     tbody td {
       padding: 12px;
@@ -209,14 +179,9 @@
       border-bottom-right-radius: 12px;
     }
 
-    .center {
-      text-align: center;
-      font-variant-numeric: tabular-nums;
-    }
+    .center { text-align: center; font-variant-numeric: tabular-nums; }
 
-    .row-actions {
-      margin-top: 14px;
-    }
+    .row-actions { margin-top: 14px; }
 
     /* ====== Botões do menu iguais ao index (.nav-btn) ====== */
     .nav-btn {
@@ -234,14 +199,12 @@
       border: none !important;
     }
 
-    .nav-btn:hover,
-    .nav-btn:active {
+    .nav-btn:hover, .nav-btn:active {
       letter-spacing: 1px;
       background: none !important;
     }
 
-    .nav-btn:after,
-    .nav-btn:before {
+    .nav-btn:after, .nav-btn:before {
       backface-visibility: hidden;
       border: 1px solid rgba(255, 255, 255, 0);
       bottom: 0;
@@ -253,83 +216,37 @@
       width: 0;
     }
 
-    .nav-btn:hover:after,
-    .nav-btn:hover:before {
-      width: 70%;
-    }
-
-    .nav-btn:hover:before {
-      bottom: auto;
-      top: 0;
-    }
+    .nav-btn:hover:after, .nav-btn:hover:before { width: 70%; }
+    .nav-btn:hover:before { bottom: auto; top: 0; }
 
     /* cores no hover via data-color */
     .nav-btn[data-color="#2db2ff"]:hover:after,
-    .nav-btn[data-color="#2db2ff"]:hover:before {
-      border-color: #2db2ff;
-    }
-
+    .nav-btn[data-color="#2db2ff"]:hover:before { border-color: #2db2ff; }
     .nav-btn[data-color="#ff1f71"]:hover:after,
-    .nav-btn[data-color="#ff1f71"]:hover:before {
-      border-color: #ff1f71;
-    }
-
+    .nav-btn[data-color="#ff1f71"]:hover:before { border-color: #ff1f71; }
     .nav-btn[data-color="#1eff45"]:hover:after,
-    .nav-btn[data-color="#1eff45"]:hover:before {
-      border-color: #1eff45;
-    }
-
+    .nav-btn[data-color="#1eff45"]:hover:before { border-color: #1eff45; }
     .nav-btn[data-color="#a78bfa"]:hover:after,
-    .nav-btn[data-color="#a78bfa"]:hover:before {
-      border-color: #a78bfa;
-    }
-
+    .nav-btn[data-color="#a78bfa"]:hover:before { border-color: #a78bfa; }
     .nav a.nav-btn[data-color="#a78bfb"]:hover::before,
-    .nav a.nav-btn[data-color="#a78bfb"]:hover::after {
-      border-color: #ee6120;
-    }
-
+    .nav a.nav-btn[data-color="#a78bfb"]:hover::after { border-color: #ee6120; }
     .nav-btn[data-color="#56c1ff"]:hover:after,
-    .nav-btn[data-color="#56c1ff"]:hover:before {
-      border-color: #56c1ff;
-    }
-
+    .nav-btn[data-color="#56c1ff"]:hover:before { border-color: #56c1ff; }
     .nav-btn[data-color="#ff9e9e"]:hover:after,
-    .nav-btn[data-color="#ff9e9e"]:hover:before {
-      border-color: #ff9e9e;
-    }
-
+    .nav-btn[data-color="#ff9e9e"]:hover:before { border-color: #ff9e9e; }
     .nav-btn[data-color="#6225E6"]:hover:after,
-    .nav-btn[data-color="#6225E6"]:hover:before {
-      border-color: #FBC638;
-    }
+    .nav-btn[data-color="#6225E6"]:hover:before { border-color: #FBC638; }
 
     /* ===== Avatar + nome na tabela ===== */
-    .pl {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      min-width: 220px;
-    }
-
+    .pl { display: flex; align-items: center; gap: 10px; min-width: 220px; }
     .pl .avatar {
-      width: 28px;
-      height: 28px;
-      border-radius: 50%;
-      object-fit: cover;
-      flex: 0 0 28px;
-      background: #0b1a26;
+      width: 28px; height: 28px; border-radius: 50%;
+      object-fit: cover; flex: 0 0 28px; background: #0b1a26;
       border: 1px solid rgba(255, 255, 255, .08);
     }
-
     .pl .nome {
-      font-weight: 800;
-      letter-spacing: .2px;
-      color: #e8f1f8;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      max-width: 320px;
+      font-weight: 800; letter-spacing: .2px; color: #e8f1f8;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 320px;
     }
   </style>
 </head>
@@ -496,7 +413,7 @@
                   ${tdCenter(j.flash_assist)}
                   ${tdCenter(j.first_kill)}
                   ${tdCenter(j.multi_kill)}
-                  ${tdCenter((j.pontos ?? '') !== '' ? j.pontos : pontosDaPartida(j, partida))}
+                  ${tdCenter( (j.pontos ?? '') !== '' ? j.pontos : pontosDaPartida(j, partida) )}
                 </tr>`).join('')}
             </tbody>
           </table>
@@ -517,5 +434,4 @@
   <!-- Auth (renderiza gold 18x18 e controla nav-right) -->
   <script src="/js/auth.js" defer></script>
 </body>
-
 </html>

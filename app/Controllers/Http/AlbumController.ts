@@ -245,14 +245,14 @@ export default class AlbumController {
       const poolMitica = todasAtivas.filter((f) => f.raridade === "mitica");
       const poolGod = todasAtivas.filter((f) => f.raridade === "god");
 
-      // Probabilidades: 60% normal | 30% épica | 9% lendária | 1% mítica | 0,1% god
+      // Probabilidades: 60% normal | 30% épica | 8% lendária | 2% mítica | 0,009% god
       type Raridade = "normal" | "epica" | "lendaria" | "mitica" | "god";
       const PESOS: Record<Raridade, number> = {
         normal: 0.60,
         epica: 0.3,
         lendaria: 0.08,
         mitica: 0.02,
-        god: 0.001,
+        god: 0.004,
       };
 
       function sortearRaridade(): Raridade {

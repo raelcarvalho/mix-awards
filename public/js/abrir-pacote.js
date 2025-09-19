@@ -202,7 +202,7 @@
     }));
   }
 
-  // ---------- estilos injetados ----------
+  // ---------- estilos injetados (GOD cinema) ----------
   function ensureCineStyles() {
     if (document.getElementById("cineStyles")) return;
     const css = `
@@ -248,7 +248,7 @@
       animation: cineGhost 1400ms ease-out forwards;
     }
 
-    /* Brilho/azul pós-revelação + suporte ao ZeusFX */
+    /* Brilho azul pós-revelação GOD */
     .card.god.reveal-done .front{
       border:2px solid #8fd8ff !important;
       box-shadow: 0 0 32px rgba(120,210,255,.65), inset 0 0 0 2px rgba(255,255,255,.08);
@@ -260,10 +260,8 @@
     }
     @keyframes spinBlue { to { transform: rotate(1turn) } }
 
-    /* Zeus canvas camadas */
-    .zeus-layer,.zeus-clouds,.zeus-flash{
-      position:absolute; inset:0; border-radius:12px; pointer-events:none;
-    }
+    /* Zeus canvas camadas (usado no GOD) */
+    .zeus-layer,.zeus-clouds,.zeus-flash{ position:absolute; inset:0; border-radius:12px; pointer-events:none; }
     .zeus-layer{ z-index:6; mix-blend-mode:screen; }
     .zeus-clouds{
       z-index:2; opacity:.48; filter: blur(8px) saturate(1.2);
@@ -275,15 +273,195 @@
     .zeus-flash{
       z-index:5; opacity:0; transition:opacity .22s ease;
       background: radial-gradient(65% 45% at 50% 35%, rgba(255,255,255,.55) 0%, rgba(0,180,255,.20) 35%, transparent 70%);
-    }
-    `;
+    }`;
     const style = document.createElement("style");
     style.id = "cineStyles";
     style.textContent = css;
     document.head.appendChild(style);
   }
 
-  // ---------- ZEUS FX (o mesmo do álbum) ----------
+  // ---------- estilos injetados (MÍTICA – holo) ----------
+  function ensureHoloStyles() {
+    if (document.getElementById("holoStyles-pack")) return;
+    const css = `
+    .card { position: relative; }
+    .card .holo-layer{
+      position:absolute; inset:0; border-radius: 12px;
+      pointer-events:none; z-index: 99;
+      mix-blend-mode: color-dodge; opacity:.85;
+      background-blend-mode: overlay;
+      background-repeat: no-repeat;
+      background-image:
+        url("https://assets.codepen.io/13471/sparkles.gif"),
+        url("https://assets.codepen.io/13471/holo.png"),
+        linear-gradient(125deg,
+          #ff00cc55 15%, #a14dff44 28%, #00f0ff33 42%,
+          #00ff8a28 58%, #00cfff44 70%, #cc4cfa55 85%);
+      background-size: 160%;
+      background-position: var(--spx,50%) var(--spy,50%);
+      filter: brightness(1) contrast(1.1);
+      transition: opacity .2s ease, filter .2s ease;
+    }
+    .card .holo-gradient{
+      position:absolute; inset:0; border-radius:12px;
+      pointer-events:none; z-index: 98; mix-blend-mode: color-dodge;
+      opacity:.6; filter: brightness(.7) contrast(1.05);
+      background: linear-gradient(115deg,
+        transparent 0%,
+        var(--c1,#efb2fb) 25%,
+        transparent 47%,
+        transparent 53%,
+        var(--c2,#acc6f8) 75%,
+        transparent 100%);
+      background-size: 280% 280%;
+      background-position: var(--lp,50%) var(--tp,50%);
+      transition: opacity .2s ease, filter .2s ease;
+    }
+    .card.mitica{
+      box-shadow:
+        -12px -12px 24px -18px #efb2fb,
+         12px 12px 24px -18px #acc6f8,
+         0 0 18px 0 rgba(255,255,255,.08);
+      transition: box-shadow .15s ease;
+    }
+    .card.mitica:hover{
+      box-shadow:
+        -24px -24px 36px -26px #efb2fb,
+         24px 24px 36px -26px #acc6f8,
+         0 0 22px 6px rgba(255,255,255,.22);
+    }
+    /* apoio de invocação */
+    .card.mitica.summoning{
+      z-index:1000 !important;
+      transform: translateY(0) rotateZ(var(--rot,0deg)) scale(1.16) !important;
+      transition: transform .5s cubic-bezier(.2,.8,.2,1.5);
+    }`;
+    const style = document.createElement("style");
+    style.id = "holoStyles-pack";
+    style.textContent = css;
+    document.head.appendChild(style);
+  }
+
+  function ensureFFStyles() {
+    // só garante que o CSS acima foi carregado na página (já está no HTML)
+    return true;
+  }
+
+  function fireMythicToast(text = "MÍTICA", confettiCount = 26, life = 1400) {
+    ensureFFStyles();
+
+    // Banner
+    const toast = document.createElement("div");
+    toast.className = "ff-toast";
+    toast.innerHTML = `<div class="ff-ribbon">${text}</div>`;
+    document.body.appendChild(toast);
+
+    // Confetes
+    const colors = [
+      "#ffffff",
+      "#f0abfc",
+      "#c4b5fd",
+      "#93c5fd",
+      "#f9a8d4",
+      "#fca5a5",
+    ];
+    const vw = Math.max(360, window.innerWidth);
+
+    for (let i = 0; i < confettiCount; i++) {
+      const c = document.createElement("div");
+      c.className = "ff-confetti";
+      c.style.setProperty(
+        "--c",
+        colors[Math.floor(Math.random() * colors.length)]
+      );
+      c.style.setProperty("--x", `${(Math.random() * vw - vw / 2) | 0}px`);
+      c.style.setProperty(
+        "--r",
+        `${(0.6 + Math.random() * 1.2).toFixed(2)}turn`
+      );
+      c.style.setProperty("--d", `${(1000 + Math.random() * 1200) | 0}ms`);
+      c.style.left = "50%";
+      c.style.opacity = ".95";
+      document.body.appendChild(c);
+
+      // limpa cada confete ao final
+      const rm = () => c.remove();
+      c.addEventListener("animationend", rm, { once: true });
+      setTimeout(rm, 2500);
+    }
+
+    // remover banner depois
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        toast.style.transition = "opacity .2s ease, transform .2s ease";
+        toast.style.opacity = "0";
+        toast.style.transform = "translate(-50%, -50%) scale(.92)";
+        setTimeout(() => {
+          try {
+            toast.remove();
+          } catch {}
+          resolve();
+        }, 220);
+      }, life);
+    });
+  }
+
+  function attachHolo(cardEl) {
+    ensureHoloStyles();
+    if (cardEl.querySelector(".holo-layer")) return;
+
+    const gradient = document.createElement("div");
+    gradient.className = "holo-gradient";
+    const layer = document.createElement("div");
+    layer.className = "holo-layer";
+    cardEl.appendChild(gradient);
+    cardEl.appendChild(layer);
+
+    cardEl.style.setProperty("--c1", "#efb2fb");
+    cardEl.style.setProperty("--c2", "#acc6f8");
+
+    const onMove = (e) => {
+      const r = cardEl.getBoundingClientRect();
+      const isTouch = e.touches && e.touches.length;
+      const cx = isTouch ? e.touches[0].clientX : e.clientX;
+      const cy = isTouch ? e.touches[0].clientY : e.clientY;
+
+      const l = Math.max(0, Math.min(1, (cx - r.left) / r.width));
+      const t = Math.max(0, Math.min(1, (cy - r.top) / r.height));
+
+      const px = Math.abs(100 - Math.floor(100 * l));
+      const py = Math.abs(100 - Math.floor(100 * t));
+      const pa = 50 - px + (50 - py);
+
+      const lp = 50 + (px - 50) / 1.5;
+      const tp = 50 + (py - 50) / 1.5;
+      const spx = 50 + (px - 50) / 7;
+      const spy = 50 + (py - 50) / 7;
+      const opc = (20 + Math.abs(pa) * 1.5) / 100;
+
+      cardEl.style.setProperty("--lp", lp + "%");
+      cardEl.style.setProperty("--tp", tp + "%");
+      cardEl.style.setProperty("--spx", spx + "%");
+      cardEl.style.setProperty("--spy", spy + "%");
+
+      layer.style.opacity = String(Math.min(1, Math.max(0.45, opc)));
+    };
+
+    const onLeave = () => {
+      cardEl.style.setProperty("--lp", "50%");
+      cardEl.style.setProperty("--tp", "50%");
+      cardEl.style.setProperty("--spx", "50%");
+      cardEl.style.setProperty("--spy", "50%");
+      layer.style.opacity = ".85";
+    };
+
+    cardEl.addEventListener("mousemove", onMove, { passive: true });
+    cardEl.addEventListener("touchmove", onMove, { passive: true });
+    cardEl.addEventListener("mouseleave", onLeave);
+    cardEl.addEventListener("touchend", onLeave);
+  }
+
+  // ---------- ZEUS FX (o mesmo do álbum – usado no GOD) ----------
   const ZEUS_MAP = new WeakMap();
   function attachZeusFX(host) {
     if (ZEUS_MAP.has(host)) return ZEUS_MAP.get(host);
@@ -299,7 +477,6 @@
     flash.className = "zeus-flash";
     const cnv = document.createElement("canvas");
     cnv.className = "zeus-layer";
-    // preferimos aplicar sobre a FACE DA FRENTE para não vazar no verso
     const face = host.querySelector(".front") || host;
     face.appendChild(clouds);
     face.appendChild(flash);
@@ -486,14 +663,14 @@
   function playGodCinematic(originalCard) {
     ensureCineStyles();
 
-    // constrói a cena
+    // cena
     const scene = document.createElement("div");
     scene.className = "cine-scene";
     const beam = document.createElement("div");
     beam.className = "cine-beam";
     scene.appendChild(beam);
 
-    // estrelas/brilhos
+    // estrelas
     for (let i = 0; i < 60; i++) {
       const s = document.createElement("div");
       s.className = "cine-star";
@@ -509,7 +686,7 @@
         });
       }, Math.random() * 1500);
     }
-    // chuvisco de luz (traços finos)
+    // chuvisco
     for (let i = 0; i < 12; i++) {
       const r = document.createElement("div");
       r.className = "cine-rain";
@@ -525,10 +702,7 @@
             { transform: "translate(-50%,-120px) rotate(10deg)" },
             { transform: "translate(-50%, 110vh) rotate(10deg)" },
           ],
-          {
-            duration: dur,
-            easing: "cubic-bezier(.1,.7,.3,1)",
-          }
+          { duration: dur, easing: "cubic-bezier(.1,.7,.3,1)" }
         );
         setTimeout(() => r.remove(), dur + 400);
       }, delay);
@@ -540,7 +714,6 @@
     const c3d = document.createElement("div");
     c3d.className = "cine-card";
 
-    // clona faces da carta original
     const inner = originalCard.querySelector(".card-inner");
     const back =
       inner?.querySelector(".back")?.cloneNode(true) ||
@@ -562,7 +735,6 @@
     c3d.appendChild(back);
     c3d.appendChild(front);
 
-    // fantasma de aura na trajetória
     const ghost = document.createElement("div");
     ghost.className = "cine-ghost";
     c3d.appendChild(ghost);
@@ -571,16 +743,12 @@
     scene.appendChild(cam);
     document.body.appendChild(scene);
 
-    // aciona cena
-    // dimensiona a carta clone para o mesmo tamanho da real
     const r = originalCard.getBoundingClientRect();
     c3d.style.setProperty("--card-w", r.width + "px");
     c3d.style.setProperty("--card-h", r.height + "px");
 
-    // mostra
     requestAnimationFrame(() => scene.classList.add("on"));
 
-    // animação principal (voo + flip)
     const anim = c3d.animate(
       [
         { transform: "translateZ(-1400px) rotateY(0deg) scale(.6)" },
@@ -593,15 +761,13 @@
 
     return new Promise((resolve) => {
       anim.onfinish = () => {
-        // vira a carta real e aplica pós-efeitos
         const realInner = originalCard.querySelector(".card-inner");
         realInner.classList.add("flip");
         originalCard.classList.add("reveal-done");
-        // luz/raios azuis
         attachZeusFX(originalCard);
-        // fade out da cena
-        const HOLD = 1200; // ← ajuste aqui para segurar mais/menos
-        const FADE = 900; // ← fade-out mais lento
+
+        const HOLD = 1200;
+        const FADE = 900;
         setTimeout(() => {
           scene.style.transition = `opacity ${FADE}ms ease`;
           scene.style.opacity = "0";
@@ -612,6 +778,104 @@
             resolve();
           }, FADE + 50);
         }, HOLD);
+      };
+    });
+  }
+
+  // ---------- MÍTICA – reveal com invocação ----------
+  function playMythicReveal(card) {
+    ensureHoloStyles();
+
+    // overlay
+    const cont = document.createElement("div");
+    cont.className = "summon-container";
+    const ov = document.createElement("div");
+    ov.className = "summon-overlay";
+    const circle = document.createElement("div");
+    circle.className = "summon-circle";
+    const energy = document.createElement("div");
+    energy.className = "summon-energy";
+    const burst = document.createElement("div");
+    burst.className = "summon-burst";
+
+    circle.appendChild(energy);
+    circle.appendChild(burst);
+    cont.appendChild(ov);
+    cont.appendChild(circle);
+    document.body.appendChild(cont);
+
+    // runas
+    for (let i = 0; i < 8; i++) {
+      const r = document.createElement("div");
+      r.className = "summon-rune";
+      r.textContent = i % 2 ? "✦" : "◆";
+      const ang = (i / 8) * 360;
+      r.style.transform = `rotate(${ang}deg) translate(${
+        60 + Math.random() * 20
+      }px)`;
+      circle.appendChild(r);
+      r.animate([{ opacity: 0 }, { opacity: 1 }, { opacity: 0.6 }], {
+        duration: 1200 + Math.random() * 600,
+        easing: "ease-in-out",
+        delay: 150 + i * 60,
+        fill: "forwards",
+      });
+    }
+
+    // dimensionamento do círculo
+    const diam = Math.min(
+      520,
+      Math.floor(Math.min(window.innerWidth, window.innerHeight) * 0.72)
+    );
+    const open = circle.animate(
+      [
+        { width: "0px", height: "0px" },
+        { width: `${diam}px`, height: `${diam}px` },
+      ],
+      { duration: 700, easing: "cubic-bezier(.2,.8,.2,1)", fill: "forwards" }
+    );
+    ov.style.transition = "opacity .8s ease";
+    requestAnimationFrame(() => (ov.style.opacity = "0.85"));
+
+    // dar destaque na carta
+    card.classList.add("summoning");
+    const inner = card.querySelector(".card-inner");
+
+    return new Promise((resolve) => {
+      open.onfinish = () => {
+        // pulso de energia
+        energy.animate([{ opacity: 0 }, { opacity: 1 }, { opacity: 0 }], {
+          duration: 700,
+          easing: "ease-out",
+        });
+
+        // flip real
+        setTimeout(() => {
+          inner.classList.add("flip");
+        }, 450);
+
+        // burst final
+        setTimeout(() => {
+          burst.animate(
+            [
+              { transform: "scale(0)", opacity: 0.8 },
+              { transform: "scale(1.6)", opacity: 0 },
+            ],
+            { duration: 620, easing: "cubic-bezier(.2,.8,.2,1)" }
+          );
+        }, 520);
+
+        // cleanup
+        setTimeout(() => {
+          card.classList.remove("summoning");
+          ov.style.opacity = "0";
+          setTimeout(() => {
+            try {
+              cont.remove();
+            } catch {}
+            resolve();
+          }, 300);
+        }, 1200);
       };
     });
   }
@@ -697,7 +961,7 @@
     inner.appendChild(front);
     card.appendChild(inner);
 
-    // efeitos visuais por raridade (leves enquanto exibindo no leque)
+    // Efeitos por raridade (leque)
     if (rar === "lendaria") {
       const tw = document.createElement("div");
       tw.className = "twinkle";
@@ -711,6 +975,10 @@
       card.appendChild(tw);
     }
 
+    if (rar === "mitica") {
+      attachHolo(card); // <— MÍTICA com holo interativo
+    }
+
     setTimeout(() => card.classList.add("show"), 60 + index * 120);
     wrap.appendChild(card);
 
@@ -718,25 +986,28 @@
       const note = document.createElement("div");
       note.className = "dup-msg";
       note.textContent =
-        "Carta repetida — vendida automaticamente por gold conforme a raridade (normal 2, épica 5, lendária 10 e mítica 20).";
+        "Carta repetida — vendida automaticamente por gold conforme a raridade (normal 2, épica 5, lendária 10, mítica 20, god 50).";
       wrap.appendChild(note);
     }
 
     // clique para revelar
     card.addEventListener("click", async function () {
       const inner = this.querySelector(".card-inner");
-      const isGod = this.classList.contains("god");
+      const rar = this.dataset.raridade;
 
-      // se já está virada, permitir alternar normalmente
+      // toggle se já estiver virada
       if (inner.classList.contains("flip")) {
         inner.classList.remove("flip");
         return;
       }
 
-      if (isGod) {
-        // cinema GOD: voo + flip + raios azuis
+      if (rar === "god") {
         await playGodCinematic(this);
-        this.classList.add("reveal-done"); // azul
+        this.classList.add("reveal-done");
+      } else if (rar === "mitica") {
+        // NOVO: banner “MÍTICA” + virar a carta
+        await fireMythicToast("MÍTICA");
+        inner.classList.add("flip");
       } else {
         inner.classList.add("flip");
       }
@@ -816,16 +1087,19 @@
   }
 
   function revealAll() {
-    // revela em cascata; cartas GOD usam o cinema (promessa) em sequência
     (async () => {
       for (const card of $$(".card", fan)) {
-        if (card.dataset.raridade === "god") {
-          if (!card.querySelector(".card-inner").classList.contains("flip")) {
-            await playGodCinematic(card);
-            card.classList.add("reveal-done");
-          }
+        const rar = card.dataset.raridade;
+        const inner = card.querySelector(".card-inner");
+        if (inner.classList.contains("flip")) continue;
+
+        if (rar === "god") {
+          await playGodCinematic(card);
+          card.classList.add("reveal-done");
+        } else if (rar === "mitica") {
+          await playMythicReveal(card);
         } else {
-          card.querySelector(".card-inner").classList.add("flip");
+          inner.classList.add("flip");
           await new Promise((r) => setTimeout(r, 350));
         }
       }
