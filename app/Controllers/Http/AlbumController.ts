@@ -248,11 +248,11 @@ export default class AlbumController {
       // Probabilidades: 60% normal | 30% épica | 8% lendária | 2% mítica | 0,009% god
       type Raridade = "normal" | "epica" | "lendaria" | "mitica" | "god";
       const PESOS: Record<Raridade, number> = {
-        normal: 0.60,
-        epica: 0.3,
-        lendaria: 0.08,
-        mitica: 0.02,
-        god: 0.004,
+        normal: 0.40,
+        epica: 0.45,
+        lendaria: 0.12,
+        mitica: 0.03,
+        god: 0.009,
       };
 
       function sortearRaridade(): Raridade {
