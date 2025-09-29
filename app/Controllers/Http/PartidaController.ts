@@ -395,9 +395,38 @@ export default class PartidaController {
     }
   }
 
-  public async consultarPartidas({ response }: HttpContextContract) {
-    const partidas = await Partidas.all();
-    return response.json(partidas);
+  public async consultarPartidas({ request, response }: HttpContextContract) {
+    const playerRaw = String(request.input("player", "") || "").trim();
+
+    if (!playerRaw) {
+      const partidas = await Partidas.query().orderBy("data", "desc");
+      return response.json(partidas);
+    }
+
+    const q = this.normName(playerRaw);
+
+    const partidasFiltradas = await Database.from("tb_partidas as p")
+      .innerJoin("tb_partidas_jogadores as pj", "pj.partidas_id", "p.id")
+      .innerJoin("tb_jogadores as j", "j.id", "pj.jogadores_id")
+      .whereRaw("LOWER(j.nome_normalizado) LIKE ? OR LOWER(j.nome) LIKE ?", [
+        `%${q}%`,
+        `%${q}%`,
+      ])
+      .orderBy("p.data", "desc")
+      .select(
+        "p.id",
+        "p.codigo",
+        "p.mapa",
+        "p.nome_time1",
+        "p.nome_time2",
+        "p.resultado_time1",
+        "p.resultado_time2",
+        "p.data",
+        "pj.pontos as pontos_jogador",
+        "j.nome as jogador_nome"
+      );
+
+    return response.json(partidasFiltradas);
   }
 
   public async detalhesPartida({ params, response }: HttpContextContract) {

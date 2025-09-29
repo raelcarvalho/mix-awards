@@ -30,19 +30,18 @@
       --accent: #2d86d6;
       --accent-2: #3a93e2;
       --danger: #e24f4f;
-      --chip: #132b3e;
       --radius: 16px;
       --container: max(320px, min(1200px, 96vw));
     }
 
     * {
-      box-sizing: border-box;
+      box-sizing: border-box
     }
 
     html,
     body {
       margin: 0;
-      padding: 0;
+      padding: 0
     }
 
     body.layout {
@@ -59,20 +58,20 @@
     .nav {
       position: sticky;
       top: 0;
-      z-index: 50;
+      z-index: 50
     }
 
     .page-pad {
-      height: 10px;
+      height: 10px
     }
 
     .section {
-      padding: 16px 0 28px;
+      padding: 16px 0 28px
     }
 
     .container {
       width: var(--container);
-      margin: 0 auto;
+      margin: 0 auto
     }
 
     .panel {
@@ -80,7 +79,7 @@
       border-radius: var(--radius);
       background: linear-gradient(180deg, rgba(255, 255, 255, .03), rgba(255, 255, 255, .02));
       box-shadow: 0 16px 40px rgba(0, 0, 0, .35), inset 0 0 0 1px rgba(255, 255, 255, .03);
-      padding: 16px;
+      padding: 16px
     }
 
     .title {
@@ -93,37 +92,41 @@
       font-weight: 900;
       letter-spacing: .4px;
       text-transform: uppercase;
-      margin-bottom: 12px;
+      margin-bottom: 12px
+    }
+
+    .crumb {
+      color: var(--muted);
+      font-weight: 800;
+      letter-spacing: .25px
     }
 
     .toolbar {
       display: flex;
       align-items: center;
       gap: 10px;
-      margin-bottom: 10px;
+      margin-bottom: 10px
     }
 
-    .crumb {
-      color: var(--muted);
-      font-weight: 800;
-      letter-spacing: .25px;
+    .toolbar-spacer {
+      flex: 1
     }
 
     .content {
       background: rgba(255, 255, 255, .04);
       border-radius: 14px;
       padding: 14px;
-      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .03);
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .03)
     }
 
     .table-wrap {
-      overflow-x: auto;
+      overflow-x: auto
     }
 
     table {
       width: 100%;
       border-collapse: separate;
-      border-spacing: 0 10px;
+      border-spacing: 0 10px
     }
 
     thead th {
@@ -136,43 +139,43 @@
       text-transform: uppercase;
       letter-spacing: .3px;
       border-radius: 10px;
-      box-shadow: 0 4px 0 rgba(0, 0, 0, .15) inset, 0 1px 0 rgba(255, 255, 255, .04);
+      box-shadow: 0 4px 0 rgba(0, 0, 0, .15) inset, 0 1px 0 rgba(255, 255, 255, .04)
     }
 
     tbody tr {
       background: var(--bg2);
-      border: 1px solid var(--line);
+      border: 1px solid var(--line)
     }
 
     tbody td {
       padding: 12px;
       color: #d6e6f4;
       border-top: 1px solid var(--line);
-      border-bottom: 1px solid var(--line);
+      border-bottom: 1px solid var(--line)
     }
 
     tbody tr td:first-child {
       border-left: 1px solid var(--line);
       border-top-left-radius: 12px;
-      border-bottom-left-radius: 12px;
+      border-bottom-left-radius: 12px
     }
 
     tbody tr td:last-child {
       border-right: 1px solid var(--line);
       border-top-right-radius: 12px;
-      border-bottom-right-radius: 12px;
+      border-bottom-right-radius: 12px
     }
 
     .muted {
       color: var(--muted);
-      font-size: .92rem;
+      font-size: .92rem
     }
 
     .row-actions {
       display: flex;
       flex-wrap: wrap;
       gap: 8px;
-      margin-top: 8px;
+      margin-top: 8px
     }
 
     .btn {
@@ -185,27 +188,27 @@
       text-decoration: none;
       background: #14344c;
       color: #e8f1f8;
-      box-shadow: 0 2px 0 rgba(0, 0, 0, .25);
+      box-shadow: 0 2px 0 rgba(0, 0, 0, .25)
     }
 
     .btn.primary {
       background: var(--accent);
-      border-color: var(--accent-2);
+      border-color: var(--accent-2)
     }
 
     .btn.danger {
       background: var(--danger);
       border-color: #b73d3d;
-      color: #fff;
+      color: #fff
     }
 
     .btn[disabled] {
       opacity: .6;
-      cursor: not-allowed;
+      cursor: not-allowed
     }
 
     .btn:hover {
-      transform: translateY(-1px);
+      transform: translateY(-1px)
     }
 
     .empty,
@@ -213,17 +216,7 @@
       text-align: center;
       padding: 18px;
       color: var(--muted);
-      font-weight: 800;
-    }
-
-    @media (max-width:900px) {
-
-      thead th:nth-child(3),
-      thead th:nth-child(4),
-      tbody td:nth-child(3),
-      tbody td:nth-child(4) {
-        white-space: nowrap;
-      }
+      font-weight: 800
     }
 
     .nav-btn {
@@ -238,7 +231,7 @@
       text-transform: uppercase;
       transition: all .3s ease;
       background: none !important;
-      border: none !important;
+      border: none !important
     }
 
     .nav-btn:hover,
@@ -257,7 +250,7 @@
       margin: 0 auto;
       position: relative;
       transition: all .3s ease-in-out;
-      width: 0;
+      width: 0
     }
 
     .nav-btn:hover:after,
@@ -300,29 +293,47 @@
       border-color: #56c1ff
     }
 
-    .nav-btn[data-color="#ff9e9e"]:hover:after,
-    .nav-btn[data-color="#ff9e9e"]:hover:before {
-      border-color: #ff9e9e
-    }
-
     .nav-btn[data-color="#6225E6"]:hover:after,
     .nav-btn[data-color="#6225E6"]:hover:before {
       border-color: #FBC638
     }
 
     .admin-only {
-      display: none;
+      display: none
     }
 
-    .toolbar {
+    /* Busca */
+    .search {
       display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 10px;
+      gap: 8px;
+      align-items: center
     }
 
-    .toolbar-spacer {
-      flex: 1;
+    .search-input {
+      width: 260px;
+      max-width: 50vw;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid var(--line2);
+      background: #0f2a40;
+      color: #e8f1f8;
+      font-weight: 700;
+      outline: none;
+    }
+
+    .search-input::placeholder {
+      color: #7ea0be;
+      font-weight: 600
+    }
+
+    .filter-chip {
+      margin-left: 10px;
+      padding: 6px 10px;
+      border: 1px solid var(--line2);
+      background: #0f2a40;
+      border-radius: 10px;
+      font-weight: 800;
+      color: #b9d2e9;
     }
 
     .stat-chip {
@@ -333,7 +344,7 @@
       border: 1px solid var(--line2);
       border-radius: 10px;
       background: #0f2a40;
-      box-shadow: 0 2px 0 rgba(0, 0, 0, .25), inset 0 0 0 1px rgba(255, 255, 255, .03);
+      box-shadow: 0 2px 0 rgba(0, 0, 0, .25), inset 0 0 0 1px rgba(255, 255, 255, .03)
     }
 
     .stat-label {
@@ -341,12 +352,28 @@
       color: var(--muted);
       letter-spacing: .3px;
       text-transform: uppercase;
-      font-size: .78rem;
+      font-size: .78rem
     }
 
     .stat-value {
       font-weight: 900;
-      color: #e8f1f8;
+      color: #e8f1f8
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 8px;
+      border: 1px solid var(--line2);
+      background: #113049;
+      font-size: .78rem;
+      font-weight: 800;
+      margin-left: 8px
+    }
+
+    #total-partidas {
+      white-space: nowrap;
+      display: inline-block;
     }
   </style>
 </head>
@@ -378,7 +405,15 @@
           <div class="crumb">MIX AWARDS</div>
 
           <div class="toolbar-spacer"></div>
-          <div class="stat-chip" id="stat-total">
+
+          <!-- BUSCA POR JOGADOR -->
+          <div class="search">
+            <input id="player-input" class="search-input" type="text" placeholder="Buscar por jogador..." />
+            <button id="player-search" class="btn primary" type="button">Buscar</button>
+            <button id="player-clear" class="btn" type="button" style="display:none">Limpar</button>
+          </div>
+
+          <div class="stat-chip" id="stat-total" style="margin-left:10px">
             <span class="stat-label">Total</span>
             <span class="stat-value" id="total-partidas">—</span>
           </div>
@@ -394,7 +429,7 @@
                 <th style="min-width:120px">Mapa</th>
                 <th style="min-width:160px">Time A</th>
                 <th style="min-width:160px">Time B</th>
-                <th style="min-width:120px">Resultado</th>
+                <th style="min-width:180px">Resultado</th>
                 <th style="min-width:220px">Data / Ações</th>
               </tr>
             </thead>
@@ -407,84 +442,99 @@
         </div>
       </div>
     </div>
-    <!-- /panel -->
-    </div>
   </main>
 
   <script>
-    // ===== Funções auxiliares =====
+    /* ========================= helpers ========================= */
     function getToken() {
       const rawToken = localStorage.getItem('auth_token') || '';
       if (rawToken.startsWith('{') || rawToken.startsWith('[')) {
-        try {
-          const obj = JSON.parse(rawToken);
-          return obj?.token?.token || obj?.token || rawToken;
-        } catch { return rawToken; }
+        try { const obj = JSON.parse(rawToken); return obj?.token?.token || obj?.token || rawToken; }
+        catch { return rawToken; }
       }
       return rawToken;
     }
-    function getUser() {
-      try { return JSON.parse(localStorage.getItem('auth_user') || 'null'); }
-      catch { return null; }
-    }
-    function isAdmin() {
-      const user = getUser();
-      return !!user?.usuario_admin;
-    }
+    function getUser() { try { return JSON.parse(localStorage.getItem('auth_user') || 'null'); } catch { return null; } }
+    function isAdmin() { const u = getUser(); return !!u?.usuario_admin; }
     function formatDate(iso) {
       try {
         const d = new Date(iso);
         return d.toLocaleString('pt-BR', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
-      } catch { return iso; }
+      }
+      catch { return iso; }
     }
-    function labelPartidas(n) {
-      return `${n} partida${n === 1 ? '' : 's'}`;
-    }
+    function labelPartidas(n) { return `${n} partida${n === 1 ? '' : 's'}`; }
 
-    // ===== Carregar partidas =====
-    async function carregarPartidas() {
+    /* =================== carregar (com filtro) =================== */
+    async function carregarPartidas(player = '') {
       const tbody = document.getElementById('tabela-partidas');
       const totalEl = document.getElementById('total-partidas');
 
-      // enquanto carrega, mostra travessão
       if (totalEl) totalEl.textContent = '—';
+      tbody.innerHTML = `<tr id="row-loading"><td colspan="6" class="loading">Carregando partidas...</td></tr>`;
+
+      const qs = new URLSearchParams({ t: String(Date.now()) });
+      if (player) qs.set('player', player);
 
       try {
-        const resposta = await fetch(`/api/partida/listar?t=${Date.now()}`, {
-          cache: 'no-store',
-          headers: { 'Accept': 'application/json' }
+        const resp = await fetch(`/api/partida/listar?${qs.toString()}`, {
+          cache: 'no-store', headers: { 'Accept': 'application/json' }
         });
-        const partidas = await resposta.json();
+        const partidas = await resp.json();
 
-        // ✅ atualiza o contador
         const total = Array.isArray(partidas) ? partidas.length : 0;
         if (totalEl) totalEl.textContent = labelPartidas(total);
 
         tbody.innerHTML = '';
-
         if (!partidas?.length) {
-          tbody.innerHTML = `<tr><td colspan="6" class="empty">Nenhuma partida cadastrada ainda.</td></tr>`;
+          tbody.innerHTML = `<tr><td colspan="6" class="empty">Nenhuma partida encontrada.</td></tr>`;
           return;
         }
 
         const admin = isAdmin();
+        const filtrando = !!player;
+        const playerNorm = player.trim();
+
+        // chip "filtrando por"
+        const statTotal = document.getElementById('stat-total');
+        if (statTotal) {
+          const existing = statTotal.querySelector('.filter-chip');
+          if (existing) existing.remove();
+          if (filtrando) {
+            const chip = document.createElement('span');
+            chip.className = 'filter-chip';
+            chip.textContent = `Filtrando por: "${playerNorm}"`;
+            statTotal.appendChild(chip);
+          }
+        }
 
         for (const p of partidas) {
+          const pontosDoJogador = p.pontos_jogador; // só vem quando filtrado
+          const nomeJogador = p.jogador_nome;
+
           const tr = document.createElement('tr');
           tr.innerHTML = `
-          <td><strong>${p.codigo}</strong></td>
-          <td>${p.mapa}</td>
-          <td>${p.nome_time1}</td>
-          <td>${p.nome_time2}</td>
-          <td><strong>${p.resultado_time1} x ${p.resultado_time2}</strong></td>
-          <td>
-            <div class="muted">${formatDate(p.data)}</div>
-            <div class="row-actions">
-              <a class="btn primary" href="/detalhes-partida-html?codigo=${encodeURIComponent(p.codigo)}">Ver detalhes</a>
-              ${admin ? `<button class="btn danger" data-del="${p.id}" onclick="excluirPartida(${p.id}, '${p.codigo}')">Excluir</button>` : ''}
-            </div>
-          </td>
-        `;
+            <td><strong>${p.codigo}</strong></td>
+            <td>${p.mapa}</td>
+            <td>${p.nome_time1}</td>
+            <td>${p.nome_time2}</td>
+            <td>
+              <strong>${p.resultado_time1} x ${p.resultado_time2}</strong>
+              ${filtrando && (pontosDoJogador !== undefined && pontosDoJogador !== null)
+              ? `<span class="badge" title="Pontos de ${nomeJogador || playerNorm} nesta partida">
+                     ${Math.round(Number(pontosDoJogador))} pts
+                   </span>`
+              : ''
+            }
+            </td>
+            <td>
+              <div class="muted">${formatDate(p.data)}</div>
+              <div class="row-actions">
+                <a class="btn primary" href="/detalhes-partida-html?codigo=${encodeURIComponent(p.codigo)}">Ver detalhes</a>
+                ${admin ? `<button class="btn danger" data-del="${p.id}" onclick="excluirPartida(${p.id}, '${p.codigo}')">Excluir</button>` : ''}
+              </div>
+            </td>
+          `;
           tbody.appendChild(tr);
         }
       } catch (err) {
@@ -494,7 +544,7 @@
       }
     }
 
-    // ===== Excluir partida =====
+    /* ======================= excluir (admin) ====================== */
     async function excluirPartida(id, codigo) {
       if (!isAdmin()) { alert('Apenas administradores podem excluir partidas.'); return; }
       if (!confirm(`Tem certeza que deseja excluir a partida #${codigo}?`)) return;
@@ -511,13 +561,8 @@
 
       try {
         const response = await fetch(`/api/partida/deletar/${id}?t=${Date.now()}`, {
-          method: 'DELETE',
-          cache: 'no-store',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Accept': 'application/json',
-            'Content-Type': 'application/json'
-          }
+          method: 'DELETE', cache: 'no-store',
+          headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json', 'Content-Type': 'application/json' }
         });
 
         let data = {};
@@ -525,46 +570,73 @@
 
         if (response.status === 401) {
           alert('Sessão expirada. Faça login novamente.');
-          localStorage.removeItem('auth_token');
-          localStorage.removeItem('auth_user');
+          localStorage.removeItem('auth_token'); localStorage.removeItem('auth_user');
           window.location.href = '/login-html';
           return;
         }
         if (response.status === 403) { alert(data.message || 'Apenas administradores podem excluir partidas!'); return; }
         if (!response.ok) { alert(data.message || 'Erro ao excluir partida.'); return; }
 
-        // Recarrega a lista (garante estado coerente)
-        await carregarPartidas();
+        // recarrega mantendo filtro atual (se houver)
+        const currentFilter = document.getElementById('player-input')?.value || '';
+        await carregarPartidas(currentFilter);
 
-        // 🔔 Invalida o ranking para todas as abas abertas
+        // invalida ranking em outras abas
         localStorage.setItem('ranking_invalidate', String(Date.now()));
 
         alert(data.message || 'Partida deletada com sucesso!');
-      } catch (error) {
-        console.error('Erro ao excluir partida:', error);
+      } catch (e) {
+        console.error('Erro ao excluir partida:', e);
         alert('Erro de conexão ao tentar excluir partida.');
       } finally {
         if (btn) btn.disabled = false;
       }
     }
 
-    // ===== Mostrar/ocultar links de admin =====
+    /* ======================= busca: eventos ======================= */
+    function wireSearch() {
+      const input = document.getElementById('player-input');
+      const btnGo = document.getElementById('player-search');
+      const btnClr = document.getElementById('player-clear');
+
+      const applySearch = () => {
+        const v = (input.value || '').trim();
+        if (v) { btnClr.style.display = ''; carregarPartidas(v); }
+        else { btnClr.style.display = 'none'; carregarPartidas(''); }
+      };
+
+      input.addEventListener('keydown', (e) => { if (e.key === 'Enter') applySearch(); });
+      btnGo.addEventListener('click', applySearch);
+      btnClr.addEventListener('click', () => {
+        input.value = ''; btnClr.style.display = 'none'; carregarPartidas('');
+      });
+
+      // Se abrir com ?player= na URL, aplica automático
+      const url = new URL(window.location.href);
+      const initial = url.searchParams.get('player');
+      if (initial) {
+        input.value = initial; btnClr.style.display = '';
+        carregarPartidas(initial);
+        return;
+      }
+
+      carregarPartidas('');
+    }
+
+    /* ========================= init ========================= */
+    window.excluirPartida = excluirPartida;
+    document.addEventListener('DOMContentLoaded', () => {
+      toggleAdminLinks();
+      wireSearch();
+    });
     function toggleAdminLinks() {
       const adminLinks = document.querySelectorAll('.admin-only');
       const isAdminUser = isAdmin();
-      adminLinks.forEach(link => { link.style.display = isAdminUser ? '' : 'none'; });
+      adminLinks.forEach(el => { el.style.display = isAdminUser ? '' : 'none'; });
     }
-
-    // ===== Inicialização =====
-    window.excluirPartida = excluirPartida;
-
-    document.addEventListener('DOMContentLoaded', () => {
-      carregarPartidas();
-      toggleAdminLinks();
-    });
   </script>
 
-  <!-- Auth (renderiza gold 18x18 e esconde Importar se não for admin) -->
+  <!-- Auth (renderiza gold, controla login/registro, etc.) -->
   <script src="/js/auth.js" defer></script>
 </body>
 

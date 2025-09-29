@@ -745,6 +745,14 @@
 
   <!-- Script para efeitos visuais de compra -->
   <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const btnIrAlbum = document.getElementById('btnIrAlbum');
+      if (btnIrAlbum) {
+        btnIrAlbum.addEventListener('click', () => {
+          window.location.href = '/album-html';
+        });
+      }
+    });
     document.addEventListener('DOMContentLoaded', function () {
       const packHolder = document.getElementById('packHolder');
       const capsHolder = document.getElementById('capsHolder');
