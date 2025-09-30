@@ -4,10 +4,12 @@ import { DateTime } from "luxon";
 import CustomResponse from "App/Utils/CustomResponse";
 import Jogadores from "App/Models/Jogadores";
 import Stickers from "App/Models/Stickers";
-import Capsulas from "App/Models/Capsulas";
-import CapsulasItens from "App/Models/CapsulasItens";
 import AlbumAssinaturas from "App/Models/AlbumAssinaturas";
 import AlbumStickers from "App/Models/AlbumStickers";
+import Database from "@ioc:Adonis/Lucid/Database";
+
+const TOTAL_STICKERS = 24;
+const REVEAL_PRICE_GOLD = 30;
 
 export default class AlbumStickersController {
   protected customResponse: CustomResponse;
@@ -103,6 +105,133 @@ export default class AlbumStickersController {
     }
   }
 
+  private async getRevealedSlots(
+    albumAssinaturasId: number
+  ): Promise<number[]> {
+    try {
+      const rows = await Database.from("tb_album_revelacoes")
+        .where("album_assinaturas_id", albumAssinaturasId)
+        .select("slot");
+      return rows.map((r) => Number(r.slot));
+    } catch (e: any) {
+      const msg = String(e?.message || "");
+      if (msg.includes("relation") || e?.code === "42P01") return [];
+      return [];
+    }
+  }
+
+  public async revelados({ auth, response }: HttpContextContract) {
+    try {
+      const usuario = await auth.authenticate();
+      const jogador = await Jogadores.query()
+        .where("usuario_adm_id", usuario.id)
+        .firstOrFail();
+
+      const albumAssinaturasId = await this.ensureAlbumStickers(jogador.id);
+      const slots = await this.getRevealedSlots(albumAssinaturasId);
+
+      return this.customResponse.sucesso(response, "Slots revelados.", {
+        slots,
+      });
+    } catch (error) {
+      return this.customResponse.erro(
+        response,
+        "Erro ao carregar slots revelados.",
+        error,
+        500
+      );
+    }
+  }
+
+  public async revelar({ auth, request, response }: HttpContextContract) {
+    try {
+      const usuario = await auth.authenticate();
+      const { slot } = request.only(["slot"]);
+
+      const nSlot = Number(slot);
+      if (!Number.isFinite(nSlot) || nSlot < 1 || nSlot > TOTAL_STICKERS) {
+        return this.customResponse.erro(response, "Slot inválido.", {}, 400);
+      }
+
+      // jogador + álbum de stickers (assinaturas)
+      const jogador = await Jogadores.query()
+        .where("usuario_adm_id", usuario.id)
+        .firstOrFail();
+
+      const albumAssinaturasId = await this.ensureAlbumStickers(jogador.id);
+
+      // já revelado? não cobra de novo
+      const jaTem = await Database.from("tb_album_revelacoes")
+        .where({ album_assinaturas_id: albumAssinaturasId, slot: nSlot })
+        .first();
+
+      if (jaTem) {
+        return this.customResponse.sucesso(response, "Slot já revelado.", {
+          slot: nSlot,
+          saldoGoldAtual: jogador.gold,
+        });
+      }
+
+      let saldoApos: number | null = null;
+
+      await Database.transaction(async (trx) => {
+        // 1) Debita gold de forma atômica
+        const now = DateTime.now().toSQL();
+        const deb = await trx.rawQuery(
+          `
+        UPDATE tb_jogadores
+           SET gold = gold - ?, updated_at = ?
+         WHERE id = ? AND gold >= ?
+      RETURNING gold
+      `,
+          [REVEAL_PRICE_GOLD, now, jogador.id, REVEAL_PRICE_GOLD]
+        );
+
+        if (!deb.rows?.length) {
+          throw new Error("SALDO_INSUFICIENTE");
+        }
+
+        saldoApos = Number(deb.rows[0].gold);
+
+        // 2) Registra a revelação (idempotente) com album_assinaturas_id
+        await trx.rawQuery(
+          `
+        INSERT INTO tb_album_revelacoes (album_assinaturas_id, slot)
+             VALUES (?, ?)
+        ON CONFLICT (album_assinaturas_id, slot) DO NOTHING
+      `,
+          [albumAssinaturasId, nSlot]
+        );
+      });
+
+      return this.customResponse.sucesso(
+        response,
+        "Sticker do slot revelado com sucesso.",
+        {
+          slot: nSlot,
+          precoGold: REVEAL_PRICE_GOLD,
+          saldoGoldAtual: saldoApos,
+        }
+      );
+    } catch (error: any) {
+      if (error?.message === "SALDO_INSUFICIENTE") {
+        return this.customResponse.erro(
+          response,
+          "Gold insuficiente para revelar.",
+          {},
+          400
+        );
+      }
+      console.error("[AlbumStickersController.revelar] erro:", error);
+      return this.customResponse.erro(
+        response,
+        "Erro ao revelar sticker.",
+        error,
+        500
+      );
+    }
+  }
+
   public async meuAlbum({ auth, response }: HttpContextContract) {
     const usuario = await auth.authenticate();
 
@@ -148,148 +277,6 @@ export default class AlbumStickersController {
       return this.customResponse.erro(
         response,
         "Erro ao carregar álbum de stickers.",
-        error,
-        500
-      );
-    }
-  }
-
-  public async abrirCapsulas({ auth, response }: HttpContextContract) {
-    const usuario = await auth.authenticate();
-
-    try {
-      const jogador = await Jogadores.query()
-        .where("usuario_adm_id", usuario.id)
-        .firstOrFail();
-
-      const capsula = await Capsulas.query()
-        .where("jogador_id", jogador.id)
-        .andWhere("status", "fechado")
-        .orderBy("id", "asc")
-        .first();
-
-      if (!capsula) {
-        return this.customResponse.erro(
-          response,
-          "Você não possui cápsulas fechadas para abrir.",
-          {},
-          400
-        );
-      }
-
-      const albumAssinaturasId = await this.ensureAlbumStickers(jogador.id);
-      const qtdItens = 1; // A roleta sempre sorteia 1 item
-
-      const ativos = await Stickers.query()
-        .where("ativo", true)
-        .select("id", "nome", "imagem", "slot", "ordem");
-
-      if (ativos.length < qtdItens) {
-        return this.customResponse.erro(
-          response,
-          "Stickers insuficientes para abrir a cápsula.",
-          {},
-          400
-        );
-      }
-
-      const sorteados = this.pickNUnique(ativos, qtdItens);
-
-      const novas: Stickers[] = [];
-      const duplicadas: Stickers[] = [];
-
-      // =====================================================================
-      // CORREÇÃO: Lógica de venda de duplicatas
-      // =====================================================================
-      const VALOR_VENDA_STICKER = 5;
-      let goldVendidoTotal = 0;
-      // =====================================================================
-
-      for (const s of sorteados) {
-        const colouAgora = await this.addIfMissingStickers(
-          albumAssinaturasId,
-          s.id
-        );
-
-        await CapsulasItens.create({
-          capsulas_id: capsula.id,
-          sticker_id: s.id,
-          duplicada: !colouAgora,
-        });
-
-        if (colouAgora) {
-          novas.push(s);
-        } else {
-          duplicadas.push(s);
-          // =====================================================================
-          // CORREÇÃO: Adiciona o valor do sticker duplicado ao total
-          // =====================================================================
-          goldVendidoTotal += VALOR_VENDA_STICKER;
-          // =====================================================================
-        }
-      }
-
-      // =====================================================================
-      // CORREÇÃO: Atualiza o saldo de gold do jogador se houver venda
-      // =====================================================================
-      if (goldVendidoTotal > 0) {
-        await Jogadores.query()
-          .where("id", jogador.id)
-          .increment("gold", goldVendidoTotal);
-      }
-      // =====================================================================
-
-      capsula.status = "aberto";
-      capsula.abertoEm = DateTime.now();
-      await capsula.save();
-
-      const [totalAtivos, coladasCount] = await Promise.all([
-        Stickers.query().where("ativo", true).count("* as c"),
-        AlbumStickers.query()
-          .where("album_assinaturas_id", albumAssinaturasId)
-          .count("* as c"),
-      ]);
-      const progresso = {
-        obtidas: Number(coladasCount[0].$extras.c || 0),
-        total: Number(totalAtivos[0].$extras.c || 0),
-      };
-
-      // =====================================================================
-      // CORREÇÃO: Busca o jogador atualizado para retornar o novo saldo de gold
-      // =====================================================================
-      const jogadorAtualizado = await Jogadores.find(jogador.id);
-      // =====================================================================
-
-      const payload = {
-        capsulaId: capsula.id,
-        novas,
-        duplicadas,
-        progresso,
-        // =====================================================================
-        // CORREÇÃO: Adiciona as informações de venda ao payload da resposta
-        // =====================================================================
-        goldVendidoTotal,
-        saldoGoldAtual: jogadorAtualizado?.gold,
-        mensagens: {
-          novas: novas.length
-            ? "Sticker novo adicionado ao seu álbum!"
-            : "Nenhum sticker novo desta vez.",
-          repetidas: duplicadas.length
-            ? `Você já possuía este sticker e ele foi vendido por ${goldVendidoTotal} gold.`
-            : "Nenhum sticker repetido.",
-        },
-        // =====================================================================
-      };
-
-      return this.customResponse.sucesso(
-        response,
-        "Cápsula aberta com sucesso.",
-        payload
-      );
-    } catch (error) {
-      return this.customResponse.erro(
-        response,
-        "Erro ao abrir cápsula.",
         error,
         500
       );

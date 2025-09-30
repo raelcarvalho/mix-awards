@@ -1,4 +1,4 @@
-// public/js/shop.js — versão com resumo e saldo corrigido
+// public/js/shop.js — versão com resumo e saldo corrigido + BÔNUS +10
 (function () {
   if (window.__SHOP_JS_INIT__) return;
   window.__SHOP_JS_INIT__ = true;
@@ -9,6 +9,7 @@
   const LIST_CAPS_URL = "/shop/listar-capsulas-fechadas";
   const BUY_PACOTE_URL = "/shop/comprar";
   const BUY_CAPS_URL = "/shop/comprar-capsulas";
+  const BUY_BONUS_URL = "/shop/comprar-bonus-pontos"; // <— NOVO
   const GOLD_URLS = ["/api/jogadores/gold", "/api/jogador/gold"];
 
   // ===== DOM =====
@@ -21,6 +22,10 @@
   const btnComprarCap1 = document.getElementById("btnComprarCap1");
   const btnComprarCap5 = document.getElementById("btnComprarCap5");
   const btnComprarCap10 = document.getElementById("btnComprarCap10");
+
+  // Bônus +10 pontos
+  const btnComprarBonus10 = document.getElementById("btnComprarBonus10"); // <— NOVO
+  const bonusHolder = document.getElementById("bonusHolder"); // <— NOVO (use este id no thumb do bônus)
 
   const comprarModal = document.getElementById("comprarModal");
   const btnFecharModal = document.getElementById("btnFecharModal");
@@ -67,7 +72,7 @@
   function toIntGold(v) {
     if (typeof v === "number" && Number.isFinite(v)) return Math.floor(v);
     if (v == null) return NaN;
-    const s = String(v).replace(/[^\d]/g, ""); // "1.032" -> "1032"
+    const s = String(v).replace(/[^\d]/g, "");
     return s ? parseInt(s, 10) : NaN;
   }
   function numberBR(v) {
@@ -126,7 +131,6 @@
   }
 
   async function refreshGoldBadge() {
-    // 1) tenta API
     for (const url of GOLD_URLS) {
       try {
         const r = await fetch(url, {
@@ -144,7 +148,6 @@
         }
       } catch {}
     }
-    // 2) fallback: badge do topo
     const domVal = toIntGold(goldQty?.textContent);
     if (Number.isFinite(domVal)) setGoldNow(domVal);
   }
@@ -192,7 +195,7 @@
     }
   }
 
-  // ===== FX Canvas light (mesmo do seu arquivo anterior) =====
+  // ===== FX Canvas light =====
   const fxCanvas = document.getElementById("fxCanvas");
   let fxCtx,
     fxW = 0,
@@ -417,6 +420,25 @@
       if (typeof boomConfetti === "function") boomConfetti();
     } catch {}
   }
+  // Compra do BÔNUS +10
+  async function comprarBonus10() {
+    // <— NOVO
+    const j = await api("POST", BUY_BONUS_URL, {});
+    const saldo =
+      j?.resultados?.saldoAtual ??
+      j?.resultados?.saldo_atual ??
+      j?.saldoAtual ??
+      j?.saldo_atual;
+    setGoldNow(saldo);
+    showToast(
+      j?.mensagem || "Bônus aplicado! +10 pontos na última partida.",
+      "ok"
+    );
+    try {
+      playPurchaseFX("gold", bonusHolder || packHolder, "+10 pontos");
+      if (typeof boomConfetti === "function") boomConfetti();
+    } catch {}
+  }
 
   // ===== Modal =====
   function openModal(mode, initial = 1) {
@@ -426,7 +448,6 @@
         mode === "capsula" ? "Comprar cápsulas" : "Comprar pacotes";
     if (qtd) qtd.value = String(initial);
 
-    // garante saldo (fallback + tentativa de API)
     if (!currentGold || currentGold <= 0) {
       const domVal = toIntGold(goldQty?.textContent);
       if (Number.isFinite(domVal)) currentGold = domVal;
@@ -543,6 +564,13 @@
     );
     btnAbrirComprarCaps?.addEventListener("click", () =>
       isLogged() ? openModal("capsula", 1) : (location.href = LOGIN_URL)
+    );
+
+    // Botão Bônus +10 (novo)
+    btnComprarBonus10?.addEventListener("click", () =>
+      isLogged()
+        ? comprarBonus10().catch((e) => showToast(e.message, "err"))
+        : (location.href = LOGIN_URL)
     );
 
     // Modal

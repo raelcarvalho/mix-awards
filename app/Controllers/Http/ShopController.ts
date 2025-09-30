@@ -6,13 +6,13 @@ import CustomResponse from "App/Utils/CustomResponse";
 import Jogadores from "App/Models/Jogadores";
 import Pacotes from "App/Models/Pacotes";
 import Capsulas from "App/Models/Capsulas";
+import PartidasJogadores from "App/Models/PartidasJogadores";
 
 const PRECO_PACOTE = 20;
-const PRECO_CAPSULA = 10;
 const ITENS_POR_PACOTE = 4;
-const ITENS_POR_CAPSULA = 1;
 const MAX_COMPRA_POR_VEZ = 50;
-const MAX_COMPRA_CAPSULAS = 50;
+const PRECO_BONUS_PONTOS = 100;
+const BONUS_PONTOS = 10;
 
 export default class ShopController {
   protected customResponse = new CustomResponse();
@@ -77,31 +77,6 @@ export default class ShopController {
             jogador_id: jogadorId,
             preco: PRECO_PACOTE,
             itens: ITENS_POR_PACOTE,
-            status: "fechado",
-          })
-          .returning("id");
-        return row?.id ?? row;
-      }
-      throw e;
-    }
-  }
-
-  private async criarCapsulaSemTrx(jogadorId: number): Promise<number> {
-    try {
-      const c = await Capsulas.create({
-        jogador_id: jogadorId,
-        preco_gold: PRECO_CAPSULA,
-        qtd_itens: ITENS_POR_CAPSULA,
-        status: "fechado" as any,
-      });
-      return c.id;
-    } catch (e: any) {
-      if (e?.code === "42703") {
-        const [row] = await Database.table("tb_capsulas")
-          .insert({
-            jogador_id: jogadorId,
-            preco: PRECO_CAPSULA,
-            itens: ITENS_POR_CAPSULA,
             status: "fechado",
           })
           .returning("id");
@@ -195,6 +170,75 @@ export default class ShopController {
     }
   }
 
+  // COMPRAR BONUS POR PARTIDA
+  public async comprarBonusPontos({ auth, response }: HttpContextContract) {
+    const user = await auth.authenticate();
+
+    try {
+      const jogador = await Jogadores.query()
+        .where("usuario_adm_id", user.id)
+        .firstOrFail();
+
+      if ((jogador.gold || 0) < PRECO_BONUS_PONTOS) {
+        return this.customResponse.erro(
+          response,
+          "Gold insuficiente.",
+          {},
+          400
+        );
+      }
+
+      // Última partida do jogador na pivot tb_partidas_jogadores
+      const ultimaPartidaJogador = await PartidasJogadores.query()
+        .where("jogadores_id", jogador.id)
+        .orderBy("id", "desc")
+        .first();
+
+      if (!ultimaPartidaJogador) {
+        return this.customResponse.erro(
+          response,
+          "Nenhuma partida encontrada para adicionar pontos.",
+          {},
+          400
+        );
+      }
+
+      // 'pontos' é string na pivot -> converter com segurança
+      const pontosAtuais =
+        parseInt(ultimaPartidaJogador.pontos ?? "0", 10) || 0;
+      const novosPontos = pontosAtuais + BONUS_PONTOS;
+
+      // Atualiza os pontos na própria pivot
+      await PartidasJogadores.query()
+        .where("id", ultimaPartidaJogador.id)
+        .update({
+          pontos: String(novosPontos),
+          updated_at: DateTime.now().toSQL(),
+        });
+
+      // Debita o gold do jogador
+      jogador.gold = (jogador.gold || 0) - PRECO_BONUS_PONTOS;
+      await jogador.save();
+
+      return this.customResponse.sucesso(
+        response,
+        `Bônus de pontos comprado com sucesso. ${BONUS_PONTOS} pontos adicionados na última partida.`,
+        {
+          saldo_atual: jogador.gold,
+          pontos_adicionados: BONUS_PONTOS,
+          preco: PRECO_BONUS_PONTOS,
+        }
+      );
+    } catch (error) {
+      return this.customResponse.erro(
+        response,
+        "Erro ao comprar bônus de pontos.",
+        error,
+        500
+      );
+    }
+  }
+
   // ===== LISTAR PACOTES FECHADOS =====
   public async listarPacotesFechados({ auth, response }: HttpContextContract) {
     const user = await auth.authenticate();
@@ -216,117 +260,6 @@ export default class ShopController {
       return this.customResponse.erro(
         response,
         "Erro ao listar pacotes fechados.",
-        error,
-        500
-      );
-    }
-  }
-
-  // ===== COMPRAR CÁPSULAS =====
-  public async comprarCapsulas({
-    auth,
-    request,
-    response,
-  }: HttpContextContract) {
-    const user = await auth.authenticate();
-    const quantidade = Number(request.input("quantidade", 1));
-
-    if (!Number.isInteger(quantidade) || quantidade <= 0) {
-      return this.customResponse.erro(
-        response,
-        "Quantidade inválida.",
-        {},
-        400
-      );
-    }
-    if (quantidade > MAX_COMPRA_CAPSULAS) {
-      return this.customResponse.erro(
-        response,
-        `Quantidade máxima por compra é ${MAX_COMPRA_CAPSULAS}.`,
-        {},
-        400
-      );
-    }
-
-    try {
-      const jogador = await Jogadores.query()
-        .where("usuario_adm_id", user.id)
-        .firstOrFail();
-
-      // 🔒 Guard: impede compra se álbum completo
-      const { completo, obtidas, total } = await this.getAlbumStatus(
-        jogador.id
-      );
-      if (completo) {
-        return this.customResponse.erro(
-          response,
-          `Álbum completo (${obtidas}/${total}). Você já possui todas as figurinhas.`,
-          { albumCompleto: true, progresso: { obtidas, total } },
-          409
-        );
-      }
-
-      const custoTotal = quantidade * PRECO_CAPSULA;
-      if ((jogador.gold || 0) < custoTotal) {
-        return this.customResponse.erro(
-          response,
-          "Gold insuficiente.",
-          {},
-          400
-        );
-      }
-
-      const capsulaIds: number[] = [];
-      for (let i = 0; i < quantidade; i++) {
-        const id = await this.criarCapsulaSemTrx(jogador.id);
-        capsulaIds.push(Number(id));
-      }
-
-      jogador.gold = (jogador.gold || 0) - custoTotal;
-      await jogador.save();
-
-      return this.customResponse.sucesso(
-        response,
-        "Capsulas compradas com sucesso.",
-        {
-          capsulaIds,
-          gold_debitado: custoTotal,
-          saldo_atual: jogador.gold,
-          preco_capsula: PRECO_CAPSULA,
-          itens_por_capsula: ITENS_POR_CAPSULA,
-        }
-      );
-    } catch (error) {
-      return this.customResponse.erro(
-        response,
-        "Erro ao comprar capsulas.",
-        error,
-        500
-      );
-    }
-  }
-
-  // ===== LISTAR CÁPSULAS FECHADAS =====
-  public async listarCapsulasFechadas({ auth, response }: HttpContextContract) {
-    const user = await auth.authenticate();
-    try {
-      const jogador = await Jogadores.query()
-        .where("usuario_adm_id", user.id)
-        .firstOrFail();
-      const capsulas = await Capsulas.query()
-        .where("jogador_id", jogador.id)
-        .andWhere("status", "fechado")
-        .orderBy("id", "desc");
-
-      return this.customResponse.sucesso(
-        response,
-        "Capsulas fechadas listadas.",
-        { capsulas }
-      );
-    } catch (error) {
-      return this.customResponse.erro(
-        response,
-        "Erro ao listar capsulas fechadas.",
         error,
         500
       );

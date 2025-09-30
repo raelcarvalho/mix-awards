@@ -135,6 +135,15 @@ Route.get("/uploads/figurinhas/:file", ({ params, response }) => {
   return response.download(abs);
 });
 
+Route.get("/uploads/shop/:file", ({ params, response }) => {
+  const abs = Application.publicPath(`uploads/shop/${params.file}`);
+  if (!fs.existsSync(abs)) {
+    return response.status(404).send("Arquivo não encontrado");
+  }
+  response.type("image/png");
+  return response.download(abs);
+});
+
 Route.get("/uploads/stickers/:file", ({ params, response }) => {
   const abs = Application.publicPath(`uploads/stickers/${params.file}`);
   if (!fs.existsSync(abs)) {
@@ -184,10 +193,16 @@ Route.group(() => {
   Route.post("/album/figurinhas", "AlbumController.cadastrarFigurinha");
 }).middleware("auth");
 
+Route.group(() => {
+  Route.get("/album/stickers", "AlbumStickersController.meuAlbum");
+  Route.get("/album/stickers/revelados", "AlbumStickersController.revelados");
+  Route.post("/album/stickers/revelar", "AlbumStickersController.revelar");
+}).middleware("auth");
+
 // ALBUM STICKERS
 Route.group(() => {
   Route.post("/album/stickers", "AlbumStickersController.criarAlbumSticker");
-  Route.get("/album/stickers", "AlbumStickersController.meuAlbum");
+  // Route.get("/album/stickers", "AlbumStickersController.meuAlbum");
   Route.post(
     "/album/stickers/capsulas",
     "AlbumStickersController.abrirCapsulas"
@@ -231,6 +246,7 @@ Route.group(() => {
     "/shop/listar-capsulas-fechadas",
     "ShopController.listarCapsulasFechadas"
   );
+  Route.post("/shop/comprar-bonus-pontos", "ShopController.comprarBonusPontos");
 }).middleware("auth");
 
 // LOGIN E CADASTRO

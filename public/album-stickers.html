@@ -499,6 +499,94 @@
     .nav-btn[data-color="#6225E6"]:hover:before {
       border-color: #FBC638;
     }
+
+    /* wrapper de cada slot + barra */
+    .slot-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    /* imagem escurecida quando não revelado */
+    .slot .sticker-img-container.dimmed img {
+      filter: brightness(0.06) contrast(1.1) saturate(.8);
+    }
+
+    /* barra de revelar fica FORA do slot, abaixo */
+    .reveal-bar {
+      background: #0f2435;
+      border: 1px solid #1f3b54;
+      color: #e8f1f8;
+      padding: 6px 8px;
+      border-radius: 8px;
+      font-size: .85rem;
+      line-height: 1.25;
+      text-align: left;
+    }
+
+    /* modal de confirmação (mesma linguagem visual da loja) */
+    .confirm-backdrop {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 0, 0, .85);
+      z-index: 9999;
+      padding: 18px;
+    }
+
+    .confirm-backdrop.open {
+      display: flex;
+    }
+
+    .confirm-modal {
+      width: min(680px, calc(100vw - 24px));
+      background: #0f2435;
+      color: #e8f1f8;
+      border: 1px solid #1f3b54;
+      border-radius: 14px;
+      padding: 16px;
+    }
+
+    .confirm-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+
+    .confirm-head h4 {
+      margin: 0;
+      font-weight: 900;
+    }
+
+    .confirm-close {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      border: 1px solid #7a1f1f;
+      background: #c83b3b;
+      color: #fff;
+      font-weight: 900;
+      cursor: pointer;
+      display: grid;
+      place-items: center;
+    }
+
+    .confirm-body .row {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, .06);
+    }
+
+    .confirm-actions {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+      margin-top: 14px;
+    }
   </style>
 </head>
 
@@ -524,18 +612,6 @@
       <div class="panel">
         <div class="album-title">MEU ÁLBUM (STICKERS)</div>
 
-        <div class="album-toolbar">
-          <span class="badge" id="chipCaps">
-            <img src="/uploads/stickers/sticker_capsula.png" alt="">
-            Cápsulas: <strong id="qtdCapsulas">—</strong>
-          </span>
-
-          <!-- Botão no mesmo modelo do Álbum -->
-          <button id="btnOpenCaps" class="btn primary" type="button">Abrir cápsula</button>
-
-          <div id="pager" class="pager"></div>
-        </div>
-
         <div class="content">
           <div id="stickersGrid" class="stickers-grid" aria-live="polite"></div>
         </div>
@@ -559,8 +635,9 @@
 
   <!-- JS CORRIGIDO para paginação e gestão de stickers -->
   <script>
-    (function () {
+    document.addEventListener('DOMContentLoaded', () => {
       const $ = (s, c = document) => c.querySelector(s);
+
       const grid = $("#stickersGrid");
       const pager = $("#pager");
       const capsEl = $("#qtdCapsulas");
@@ -569,195 +646,227 @@
       const token = localStorage.getItem("auth_token");
       const auth = token ? { Authorization: `Bearer ${token}` } : {};
 
-      const TOTAL_STICKERS = 24;
-      const PER_PAGE = 10;
-      const PAGES = Math.ceil(TOTAL_STICKERS / PER_PAGE);
+      const TOTAL = 24, PER_PAGE = 10, PAGES = Math.ceil(TOTAL / PER_PAGE);
       let page = 1;
-      let owned = new Set();
 
-      // Modal
-      const stickerModal = $("#stickerModal");
-      const inner3d = $("#sticker3dInner");
-      const stickerImg = $("#stickerImg");
-      const titleEl = $("#ttlSticker");
-      const closeModalBtn = $("#btnCloseStickerModal");
-      const cardInfo = $("#cardInfo");
+      // estado
+      const ownedBySlot = new Map(); // slot -> sticker que o usuário possui
+      const revealedSlots = new Set(); // slots já revelados via gold
 
-      function openStickerModal(src, name, rarity) {
-        stickerImg.src = src;
-        titleEl.textContent = name || "Sticker";
-        cardInfo.textContent = rarity || "Normal";
-        stickerModal.classList.add("open");
+      // helpers
+      const safeJson = async (res) => { try { return await res.json(); } catch { return null; } };
+      const unwrap = (d) => d?.resultados ?? d ?? {};
+      const slotImgPath = (slot) => `/uploads/stickers/sticker${slot}.png`;
+
+      // elementos do modal de confirmação (selecionados após DOM pronto)
+      const confirmEl = $("#confirmReveal");
+      const confirmClose = $("#confirmClose");
+      const confirmCancel = $("#confirmCancel");
+      const confirmGo = $("#confirmGo");
+      const cfPrice = $("#cfPrice"), cfHave = $("#cfHave"), cfTotal = $("#cfTotal"), cfLeft = $("#cfLeft");
+      let slotToReveal = null;
+
+      function setTxt(el, v) { if (el) el.textContent = v; }
+
+      function openConfirm(currentGold) {
+        const price = 30;
+        setTxt(cfPrice, `${price} gold`);
+        setTxt(cfHave, (typeof currentGold === 'number') ? `${currentGold} gold` : '— gold');
+        setTxt(cfTotal, `${price} gold`);
+        setTxt(cfLeft, (typeof currentGold === 'number') ? `${Math.max(0, currentGold - price)} gold` : '— gold');
+        confirmEl?.classList.add('open');
+        confirmEl?.setAttribute('aria-hidden', 'false');
       }
-
-      function closeStickerModal() {
-        stickerModal.classList.remove("open");
+      function closeConfirm() {
+        confirmEl?.classList.remove('open');
+        confirmEl?.setAttribute('aria-hidden', 'true');
+        slotToReveal = null;
       }
+      confirmClose?.addEventListener('click', closeConfirm);
+      confirmCancel?.addEventListener('click', closeConfirm);
+      confirmEl?.addEventListener('click', (e) => { if (e.target === confirmEl) closeConfirm(); });
+      window.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeConfirm(); });
 
-      // CORREÇÃO: Botão de fechar funcionando corretamente
-      if (closeModalBtn) {
-        closeModalBtn.addEventListener("click", closeStickerModal);
-      }
-
-      if (stickerModal) {
-        stickerModal.addEventListener("click", e => {
-          if (e.target === stickerModal) closeStickerModal();
-        });
-      }
-
-      window.addEventListener("keydown", e => {
-        if (e.key === "Escape") closeStickerModal();
-      });
-
-      // Tilt para o modal
-      (function () {
-        const inner = inner3d;
-        if (!inner) return;
-        let rx = 0, ry = 0, tx = 0, ty = 0;
-
-        function loop() {
-          rx += (tx - rx) * 0.12;
-          ry += (ty - ry) * 0.12;
-          inner.style.transform = `rotateX(${rx}deg) rotateY(${ry}deg) scale3d(1.05, 1.05, 1.05)`;
-          requestAnimationFrame(loop);
-        }
-
-        if (inner) {
-          inner.addEventListener("mousemove", e => {
-            const r = inner.getBoundingClientRect();
-            const nx = (e.clientX - (r.left + r.width / 2)) / (r.width / 2);
-            const ny = (e.clientY - (r.top + r.height / 2)) / (r.height / 2);
-            ty = -ny * 15;
-            tx = nx * 18;
-          });
-
-          inner.addEventListener("mouseleave", () => {
-            tx = 0;
-            ty = 0;
-          });
-
-          requestAnimationFrame(loop);
-        }
-      })();
-
-      if (grid) {
-        grid.addEventListener("click", e => {
-          const slot = e.target.closest(".slot");
-          if (!slot) return;
-
-          const img = slot.querySelector("img");
-          if (!img) return;
-
-          const rarity = slot.querySelector(".label")?.textContent || "Normal";
-          openStickerModal(img.src, "", rarity);
-        });
-      }
-
-      async function fetchOwned() {
-        owned = new Set();
-        if (!token) return;
+      async function fetchAlbum() {
+        ownedBySlot.clear();
         try {
           const r = await fetch('/album/stickers', { headers: auth });
-          const j = (await r.json())?.resultados || {};
-          const arr = j.stickers || [];
-          for (const it of arr) if (it.possui) owned.add(it.id);
+          const j = unwrap(await safeJson(r));
+          const list = j.stickers || j.figurinhas || [];
+          for (const s of list) {
+            const slot = Number(s.slot ?? s.ordem ?? s.id);
+            if (s.possui) ownedBySlot.set(slot, s);
+            if (s.revelado) revealedSlots.add(slot);
+          }
         } catch { }
+      }
+
+      async function fetchRevealedOnly() {
+        try {
+          const r = await fetch('/album/stickers/revelados', { headers: auth });
+          const j = unwrap(await safeJson(r));
+          (j.slots || []).forEach(n => revealedSlots.add(Number(n)));
+        } catch {
+          // tolerante a 500 — segue a vida
+        }
       }
 
       function renderPager() {
         if (!pager) return;
-
-        pager.innerHTML = "";
-        const mk = (label, target, extra = "") => {
-          const b = document.createElement("button");
+        pager.innerHTML = '';
+        const mk = (t, tgt, extra = '') => {
+          const b = document.createElement('button');
           b.className = `pbtn ${extra}`;
-          b.textContent = label;
-          b.onclick = () => {
-            page = target;
-            renderGrid();
-            renderPager();
-          };
+          b.textContent = t;
+          b.onclick = () => { page = tgt; renderGrid(); renderPager(); };
           return b;
         };
-
-        // Botão anterior
-        if (page > 1) {
-          pager.appendChild(mk("«", page - 1));
-        }
-
-        // Páginas
-        for (let i = 1; i <= PAGES; i++) {
-          pager.appendChild(mk(String(i), i, i === page ? "active" : ""));
-        }
-
-        // Próxima página
-        if (page < PAGES) {
-          pager.appendChild(mk("»", page + 1));
-        }
+        if (page > 1) pager.appendChild(mk('«', page - 1));
+        for (let i = 1; i <= PAGES; i++) pager.appendChild(mk(String(i), i, i === page ? 'active' : ''));
+        if (page < PAGES) pager.appendChild(mk('»', page + 1));
       }
 
       function renderGrid() {
         if (!grid) return;
+        grid.innerHTML = '';
 
-        grid.innerHTML = "";
         const start = (page - 1) * PER_PAGE + 1;
-        const end = Math.min(page * PER_PAGE, TOTAL_STICKERS);
+        const end = Math.min(page * PER_PAGE, TOTAL);
 
-        for (let n = start; n <= end; n++) {
-          const slot = document.createElement("div");
-          slot.className = "slot";
+        for (let slot = start; slot <= end; slot++) {
+          const wrap = document.createElement('div');
+          wrap.className = 'slot-wrap';
+
+          const el = document.createElement('div');
+          el.className = 'slot';
+          el.dataset.slot = String(slot);
 
           const label = `<span class="label">Normal</span>`;
-          const num = `<span class="num">${n}</span>`;
+          const num = `<span class="num">${slot}</span>`;
 
-          // Verifica se o usuário possui este sticker
-          if (owned.has(n)) {
-            // REMOVIDO: texto "Sticker #X" do alt
-            const img = `<div class="sticker-img-container"><img src="/uploads/stickers/sticker${n}.png" alt=""></div>`;
-            slot.innerHTML = `${label}${img}${num}`;
-          } else {
-            // Slot vazio - sem imagem
-            slot.innerHTML = `${label}${num}`;
+          const possuido = ownedBySlot.has(slot);
+          const revelado = revealedSlots.has(slot);
+
+          // sticker sempre dentro do slot correto; escurecido se não possuído e não revelado
+          const imgHTML = `
+      <div class="sticker-img-container${(!possuido && !revelado) ? ' dimmed' : ''}">
+        <img src="${slotImgPath(slot)}" alt="">
+      </div>`;
+
+          el.innerHTML = `${label}${imgHTML}${num}`;
+          wrap.appendChild(el);
+
+          // barra de "revelar" FORA do slot, abaixo
+          if (!possuido && !revelado) {
+            const bar = document.createElement('div');
+            bar.className = 'reveal-bar';
+            bar.innerHTML = `Deseja revelar sticker por <strong>30 gold</strong>?`;
+            bar.style.cursor = 'pointer';
+            bar.addEventListener('click', () => onRevealAsk(slot));
+            wrap.appendChild(bar);
           }
 
-          grid.appendChild(slot);
+          grid.appendChild(wrap);
         }
       }
 
-      if (btnOpenCaps) {
-        btnOpenCaps.addEventListener("click", () => {
-          window.location.href = '/abrir-capsula-html';
-        });
+      function readCurrentGold() {
+        try {
+          if (typeof window.getCurrentGold === 'function') {
+            const v = Number(window.getCurrentGold());
+            if (Number.isFinite(v)) return v;
+          }
+          const badge = document.querySelector('.nav-right');
+          if (badge) {
+            const m = (badge.textContent || '').replace(/\./g, '').match(/(\d+)/);
+            if (m) return Number(m[1]);
+          }
+        } catch { }
+        return null;
       }
+
+      async function onRevealAsk(slot) {
+        if (!token) { alert('Faça login para revelar.'); return; }
+        if (ownedBySlot.has(slot) || revealedSlots.has(slot)) return;
+
+        slotToReveal = slot;
+        openConfirm(readCurrentGold());
+      }
+
+      confirmGo?.addEventListener('click', async () => {
+        if (!slotToReveal) return;
+        try {
+          const r = await fetch('/album/stickers/revelar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...auth },
+            body: JSON.stringify({ slot: slotToReveal })
+          });
+          const j = unwrap(await r.json());
+
+          if (!r.ok) {
+            alert(j?.mensagem || 'Não foi possível revelar.');
+            return;
+          }
+
+          revealedSlots.add(slotToReveal);
+
+          if (typeof j.saldoGoldAtual === 'number' && typeof window.updateGoldBadge === 'function') {
+            window.updateGoldBadge(j.saldoGoldAtual);
+          }
+
+          renderGrid();
+          closeConfirm();
+        } catch {
+          alert('Erro ao revelar. Tente novamente.');
+        }
+      });
 
       async function refreshCaps() {
         try {
           const r = await fetch('/shop/listar-capsulas-fechadas', { headers: auth });
-          const j = (await r.json())?.resultados || {};
-          const qtd = Number(j.quantidade ?? (Array.isArray(j.capsulas) ? j.capsulas.length : 0) ?? 0);
+          const j = unwrap(await safeJson(r));
+          const qtd = Number(j?.quantidade ?? (Array.isArray(j.capsulas) ? j.capsulas.length : 0) ?? 0);
           if (capsEl) capsEl.textContent = String(qtd);
           if (btnOpenCaps) btnOpenCaps.disabled = !token || qtd <= 0;
         } catch {
-          if (capsEl) capsEl.textContent = "0";
+          if (capsEl) capsEl.textContent = '0';
           if (btnOpenCaps) btnOpenCaps.disabled = !token;
         }
       }
 
-      window.__onStickerDrop = async function () {
-        await fetchOwned();
-        renderGrid();
-        await refreshCaps();
-      };
+      btnOpenCaps?.addEventListener('click', () => window.location.href = '/abrir-capsula-html');
 
-      // Inicialização
-      (async function init() {
-        await fetchOwned();
+      (async () => {
+        await fetchAlbum();
+        await fetchRevealedOnly();
         renderGrid();
         renderPager();
         await refreshCaps();
       })();
-    })();
+    });
   </script>
+
+
+
+  <section id="confirmReveal" class="confirm-backdrop" aria-hidden="true">
+    <div class="confirm-modal">
+      <div class="confirm-head">
+        <h4>Revelar sticker</h4>
+        <button class="confirm-close" id="confirmClose" aria-label="Fechar">×</button>
+      </div>
+      <div class="confirm-body">
+        <div class="row"><span>Preço unitário:</span><strong id="cfPrice">— gold</strong></div>
+        <div class="row"><span>Você tem:</span><strong id="cfHave">— gold</strong></div>
+        <div class="row"><span>Total:</span><strong id="cfTotal">— gold</strong></div>
+        <div class="row"><span>Vai sobrar:</span><strong id="cfLeft">— gold</strong></div>
+      </div>
+      <div class="confirm-actions">
+        <button class="btn" id="confirmCancel"
+          style="background:#1f3b54;border:1px solid #2a4a69;color:#e8f1f8">Cancelar</button>
+        <button class="btn primary" id="confirmGo">Revelar agora</button>
+      </div>
+    </div>
+  </section>
 
   <!-- Auth (aplica gold badge 18×18 e esconde Importar se não for admin) -->
   <script src="/js/auth.js" defer></script>

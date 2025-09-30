@@ -183,9 +183,12 @@
   };
 
   (async function init() {
-    await fetchOwnedStickers();
+    await fetchAlbum();
+    try {
+      await fetchRevealedOnly();
+    } catch {}
     renderGrid();
     renderPager();
-    await fetchCapsulesCount();
+    await refreshCaps();
   })();
 })();
