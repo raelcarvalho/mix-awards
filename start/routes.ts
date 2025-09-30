@@ -107,6 +107,12 @@ Route.get("/album-stickers-html", ({ response }) => {
   );
 });
 
+Route.get("/tirar-mix-html", ({ response }) => {
+  response.stream(
+    fs.createReadStream(Application.publicPath("tirar-mix.html"))
+  );
+});
+
 Route.get("/abrir-pacote-html", ({ response }) => {
   response.stream(
     fs.createReadStream(Application.publicPath("abrir-pacote.html"))
@@ -238,6 +244,8 @@ Route.post("/alterar-senha", "LoginController.alterarSenha").middleware(
   "auth:api"
 );
 
+Route.get("/shop/album-status", "AlbumController.status").middleware("auth");
+
 Route.group(() => {
   Route.post("/logout", async ({ auth, response }) => {
     try {
@@ -256,6 +264,48 @@ Route.group(() => {
 })
   .prefix("api/partida")
   .middleware("auth:api");
+
+// TIRAR MIX
+Route.group(() => {
+  // sessão
+  Route.get("tirar-mix/sessao/atual", "TirarMixController.sessaoAtual");
+  Route.post("tirar-mix/sessao/nova", "TirarMixController.sessaoNova");
+
+  // jogadores + stats
+  Route.get(
+    "tirar-mix/jogadores-disponiveis",
+    "TirarMixController.jogadoresDisponiveis"
+  );
+  Route.get("tirar-mix/stats", "TirarMixController.stats");
+
+  // convites de capitão
+  Route.post(
+    "tirar-mix/convites/capitaes",
+    "TirarMixController.convidarCapitaes"
+  );
+  Route.get(
+    "tirar-mix/convites/minha-situacao",
+    "TirarMixController.conviteMinhaSituacao"
+  );
+  Route.post(
+    "tirar-mix/convites/:token/aceitar",
+    "TirarMixController.aceitarCapitao"
+  );
+  Route.post(
+    "tirar-mix/convites/:token/recusar",
+    "TirarMixController.recusarCapitao"
+  );
+
+  // draft
+  Route.post("tirar-mix/draft/iniciar", "TirarMixController.iniciarDraftPost");
+  Route.post("tirar-mix/draft/desfazer", "TirarMixController.undoPost");
+
+  // picks (se usar a tela de draft)
+  Route.post("tirar-mix/pick/:id?", "TirarMixController.pick");
+
+  // opcional (legacy)
+  Route.get("tirar-mix/snapshot/:id", "TirarMixController.snapshot");
+}).prefix("api");
 
 // PARTIDA CONTROLLER
 Route.group(() => {

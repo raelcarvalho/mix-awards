@@ -31,7 +31,6 @@ export default class AlbumController {
       })
       .returning("id");
 
-    // em alguns drivers inserted pode ser number[]; normaliza:
     const albumId = Array.isArray(inserted)
       ? Number(inserted[0]?.id ?? inserted[0])
       : Number(inserted);
@@ -65,6 +64,45 @@ export default class AlbumController {
       [a[i], a[j]] = [a[j], a[i]];
     }
     return a.slice(0, n);
+  }
+
+  // ===== NOVO: endpoint de status para a loja =====
+  public async status({ auth, response }: HttpContextContract) {
+    const usuario = await auth.authenticate();
+
+    try {
+      const jogador = await Jogadores.query()
+        .where("usuario_adm_id", usuario.id)
+        .firstOrFail();
+
+      const albumId = await this.ensureAlbum(jogador.id);
+
+      const totalRow = await Database.from("tb_figurinhas")
+        .where("ativo", true)
+        .count("* as c")
+        .first();
+
+      const obtidasRow = await Database.from("tb_album_figurinhas")
+        .where("album_id", albumId)
+        .count("* as c")
+        .first();
+
+      const total = Number(totalRow?.c || 0);
+      const obtidas = Number(obtidasRow?.c || 0);
+      const completo = total > 0 && obtidas >= total;
+
+      return this.customResponse.sucesso(response, "Status do álbum.", {
+        completo,
+        progresso: { obtidas, total },
+      });
+    } catch (error) {
+      return this.customResponse.erro(
+        response,
+        "Erro ao consultar status do álbum.",
+        error,
+        500
+      );
+    }
   }
 
   public async criarAlbum({ auth, response }: HttpContextContract) {
@@ -167,7 +205,7 @@ export default class AlbumController {
         Figurinhas.query()
           .where("ativo", true)
           .select("id", "nome", "imagem", "raridade", "slot")
-          .orderBy("slot", "asc"), // << ordenar pelo slot
+          .orderBy("slot", "asc"),
         Database.from("tb_album_figurinhas")
           .where("album_id", albumId)
           .select("figurinha_id"),
@@ -181,7 +219,7 @@ export default class AlbumController {
         progresso: { obtidas: setObtidas.size, total: todas.length },
         figurinhas: todas.map((f) => ({
           id: f.id,
-          slot: f.slot ?? f.id, // << mande o slot
+          slot: f.slot ?? f.id,
           nome: f.nome,
           imagem: f.imagem,
           raridade: f.raridade,
@@ -245,7 +283,6 @@ export default class AlbumController {
       const poolMitica = todasAtivas.filter((f) => f.raridade === "mitica");
       const poolGod = todasAtivas.filter((f) => f.raridade === "god");
 
-      // Probabilidades: 40% normal | 45% épica | 12% lendária | 3% mítica | 0,009% god
       type Raridade = "normal" | "epica" | "lendaria" | "mitica" | "god";
       const PESOS = {
         normal: 39,

@@ -1,6 +1,7 @@
 // app/Controllers/Http/ShopController.ts
 import { HttpContextContract } from "@ioc:Adonis/Core/HttpContext";
 import Database from "@ioc:Adonis/Lucid/Database";
+import { DateTime } from "luxon";
 import CustomResponse from "App/Utils/CustomResponse";
 import Jogadores from "App/Models/Jogadores";
 import Pacotes from "App/Models/Pacotes";
@@ -16,6 +17,50 @@ const MAX_COMPRA_CAPSULAS = 50;
 export default class ShopController {
   protected customResponse = new CustomResponse();
 
+  // ===== Helpers adicionais para bloquear compra se álbum completo =====
+  private async ensureAlbumId(jogadorId: number): Promise<number> {
+    const existente = await Database.from("tb_album")
+      .where("jogador_id", jogadorId)
+      .first();
+
+    if (existente?.id) return Number(existente.id);
+
+    const inserted = await Database.table("tb_album")
+      .insert({
+        jogador_id: jogadorId,
+        created_at: DateTime.now().toSQL(),
+        updated_at: DateTime.now().toSQL(),
+      })
+      .returning("id");
+
+    const albumId = Array.isArray(inserted)
+      ? Number((inserted[0] as any)?.id ?? inserted[0])
+      : Number(inserted);
+
+    return albumId;
+  }
+
+  private async getAlbumStatus(
+    jogadorId: number
+  ): Promise<{ completo: boolean; obtidas: number; total: number }> {
+    const albumId = await this.ensureAlbumId(jogadorId);
+
+    const totalRow = await Database.from("tb_figurinhas")
+      .where("ativo", true)
+      .count("* as c")
+      .first();
+
+    const obtidasRow = await Database.from("tb_album_figurinhas")
+      .where("album_id", albumId)
+      .count("* as c")
+      .first();
+
+    const total = Number(totalRow?.c || 0);
+    const obtidas = Number(obtidasRow?.c || 0);
+    return { completo: total > 0 && obtidas >= total, obtidas, total };
+  }
+
+  // ===== Criação sem trx (já existente) =====
   private async criarPacoteSemTrx(jogadorId: number): Promise<number> {
     try {
       const p = await Pacotes.create({
@@ -66,6 +111,7 @@ export default class ShopController {
     }
   }
 
+  // ===== COMPRAR PACOTES =====
   public async comprarPacotes({
     auth,
     request,
@@ -95,6 +141,19 @@ export default class ShopController {
       const jogador = await Jogadores.query()
         .where("usuario_adm_id", user.id)
         .firstOrFail();
+
+      // 🔒 Guard: impede compra se álbum completo
+      const { completo, obtidas, total } = await this.getAlbumStatus(
+        jogador.id
+      );
+      if (completo) {
+        return this.customResponse.erro(
+          response,
+          `Álbum completo (${obtidas}/${total}). Você já possui todas as figurinhas.`,
+          { albumCompleto: true, progresso: { obtidas, total } },
+          409
+        );
+      }
 
       const custoTotal = quantidade * PRECO_PACOTE;
       if ((jogador.gold || 0) < custoTotal) {
@@ -136,6 +195,7 @@ export default class ShopController {
     }
   }
 
+  // ===== LISTAR PACOTES FECHADOS =====
   public async listarPacotesFechados({ auth, response }: HttpContextContract) {
     const user = await auth.authenticate();
     try {
@@ -162,6 +222,7 @@ export default class ShopController {
     }
   }
 
+  // ===== COMPRAR CÁPSULAS =====
   public async comprarCapsulas({
     auth,
     request,
@@ -191,6 +252,19 @@ export default class ShopController {
       const jogador = await Jogadores.query()
         .where("usuario_adm_id", user.id)
         .firstOrFail();
+
+      // 🔒 Guard: impede compra se álbum completo
+      const { completo, obtidas, total } = await this.getAlbumStatus(
+        jogador.id
+      );
+      if (completo) {
+        return this.customResponse.erro(
+          response,
+          `Álbum completo (${obtidas}/${total}). Você já possui todas as figurinhas.`,
+          { albumCompleto: true, progresso: { obtidas, total } },
+          409
+        );
+      }
 
       const custoTotal = quantidade * PRECO_CAPSULA;
       if ((jogador.gold || 0) < custoTotal) {
@@ -232,6 +306,7 @@ export default class ShopController {
     }
   }
 
+  // ===== LISTAR CÁPSULAS FECHADAS =====
   public async listarCapsulasFechadas({ auth, response }: HttpContextContract) {
     const user = await auth.authenticate();
     try {
