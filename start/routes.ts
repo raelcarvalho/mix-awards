@@ -242,10 +242,6 @@ Route.group(() => {
     "/shop/listar-pacote-fechado",
     "ShopController.listarPacotesFechados"
   );
-  Route.get(
-    "/shop/listar-capsulas-fechadas",
-    "ShopController.listarCapsulasFechadas"
-  );
   Route.post("/shop/comprar-bonus-pontos", "ShopController.comprarBonusPontos");
 }).middleware("auth");
 

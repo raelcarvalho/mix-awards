@@ -633,32 +633,57 @@
     </div>
   </div>
 
-  <!-- JS CORRIGIDO para paginação e gestão de stickers -->
   <script>
     document.addEventListener('DOMContentLoaded', () => {
       const $ = (s, c = document) => c.querySelector(s);
+      const safeJson = async (res) => { try { return await res.json(); } catch { return null; } };
+      const unwrap = (d) => d?.resultados ?? d ?? {};
+
+      const VERSIONED_SRC = {
+        8: '/uploads/stickers/sticker8.png?v=20250902',
+        10: '/uploads/stickers/sticker10.png?v=20250902',
+        14: '/uploads/stickers/sticker14.png?v=20250902',
+        20: '/uploads/stickers/sticker20.png?v=20250902',
+      };
+      const slotImgPath = (slot) => VERSIONED_SRC[slot] || `/uploads/stickers/sticker${slot}.png`;
 
       const grid = $("#stickersGrid");
-      const pager = $("#pager");
+      let pager = document.querySelector('#pager');
       const capsEl = $("#qtdCapsulas");
       const btnOpenCaps = $("#btnOpenCaps");
+
+      function getPager() {
+        if (pager) return pager;
+        const tb = document.querySelector('.album-toolbar');
+        if (!tb) return null;
+        pager = document.createElement('div');
+        pager.id = 'pager';
+        pager.className = 'pager';
+        tb.appendChild(pager);
+        return pager;
+      }
 
       const token = localStorage.getItem("auth_token");
       const auth = token ? { Authorization: `Bearer ${token}` } : {};
 
-      const TOTAL = 24, PER_PAGE = 10, PAGES = Math.ceil(TOTAL / PER_PAGE);
-      let page = 1;
+      const PAGES_TARGET = 3;
+      let TOTAL = 24, PER_PAGE = 8, PAGES = 3, page = 1;
 
-      // estado
-      const ownedBySlot = new Map(); // slot -> sticker que o usuário possui
-      const revealedSlots = new Set(); // slots já revelados via gold
+      function recomputePaging(total) {
+        TOTAL = Math.max(1, Number(total) || 24);
+        PER_PAGE = Math.ceil(TOTAL / PAGES_TARGET);
+        PAGES = Math.max(1, Math.ceil(TOTAL / PER_PAGE));
 
-      // helpers
-      const safeJson = async (res) => { try { return await res.json(); } catch { return null; } };
-      const unwrap = (d) => d?.resultados ?? d ?? {};
-      const slotImgPath = (slot) => `/uploads/stickers/sticker${slot}.png`;
+        if (!getPager()) {
+          PER_PAGE = TOTAL;
+          PAGES = 1;
+        }
+        page = Math.min(page, PAGES);
+      }
 
-      // elementos do modal de confirmação (selecionados após DOM pronto)
+      const ownedBySlot = new Map();
+      const revealedSlots = new Set();
+
       const confirmEl = $("#confirmReveal");
       const confirmClose = $("#confirmClose");
       const confirmCancel = $("#confirmCancel");
@@ -687,18 +712,22 @@
       confirmEl?.addEventListener('click', (e) => { if (e.target === confirmEl) closeConfirm(); });
       window.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeConfirm(); });
 
+      // ===== API =====
       async function fetchAlbum() {
         ownedBySlot.clear();
         try {
           const r = await fetch('/album/stickers', { headers: auth });
           const j = unwrap(await safeJson(r));
           const list = j.stickers || j.figurinhas || [];
+          recomputePaging(list.length || 24);
           for (const s of list) {
             const slot = Number(s.slot ?? s.ordem ?? s.id);
             if (s.possui) ownedBySlot.set(slot, s);
             if (s.revelado) revealedSlots.add(slot);
           }
-        } catch { }
+        } catch {
+          recomputePaging(24);
+        }
       }
 
       async function fetchRevealedOnly() {
@@ -707,13 +736,13 @@
           const j = unwrap(await safeJson(r));
           (j.slots || []).forEach(n => revealedSlots.add(Number(n)));
         } catch {
-          // tolerante a 500 — segue a vida
         }
       }
 
       function renderPager() {
-        if (!pager) return;
-        pager.innerHTML = '';
+        const el = getPager();
+        if (!el) return;
+        el.innerHTML = '';
         const mk = (t, tgt, extra = '') => {
           const b = document.createElement('button');
           b.className = `pbtn ${extra}`;
@@ -721,9 +750,9 @@
           b.onclick = () => { page = tgt; renderGrid(); renderPager(); };
           return b;
         };
-        if (page > 1) pager.appendChild(mk('«', page - 1));
-        for (let i = 1; i <= PAGES; i++) pager.appendChild(mk(String(i), i, i === page ? 'active' : ''));
-        if (page < PAGES) pager.appendChild(mk('»', page + 1));
+        if (page > 1) el.appendChild(mk('«', page - 1));
+        for (let i = 1; i <= PAGES; i++) el.appendChild(mk(String(i), i, i === page ? 'active' : ''));
+        if (page < PAGES) el.appendChild(mk('»', page + 1));
       }
 
       function renderGrid() {
@@ -747,16 +776,14 @@
           const possuido = ownedBySlot.has(slot);
           const revelado = revealedSlots.has(slot);
 
-          // sticker sempre dentro do slot correto; escurecido se não possuído e não revelado
           const imgHTML = `
-      <div class="sticker-img-container${(!possuido && !revelado) ? ' dimmed' : ''}">
-        <img src="${slotImgPath(slot)}" alt="">
-      </div>`;
+        <div class="sticker-img-container${(!possuido && !revelado) ? ' dimmed' : ''}">
+          <img src="${slotImgPath(slot)}" alt="">
+        </div>`;
 
           el.innerHTML = `${label}${imgHTML}${num}`;
           wrap.appendChild(el);
 
-          // barra de "revelar" FORA do slot, abaixo
           if (!possuido && !revelado) {
             const bar = document.createElement('div');
             bar.className = 'reveal-bar';
@@ -788,7 +815,6 @@
       async function onRevealAsk(slot) {
         if (!token) { alert('Faça login para revelar.'); return; }
         if (ownedBySlot.has(slot) || revealedSlots.has(slot)) return;
-
         slotToReveal = slot;
         openConfirm(readCurrentGold());
       }
