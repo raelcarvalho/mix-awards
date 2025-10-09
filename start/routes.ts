@@ -82,11 +82,19 @@ Route.get("/detalhes-partida-html", ({ response }) => {
     fs.createReadStream(Application.publicPath("detalhes-partida.html"))
   );
 });
+
 Route.get("/ranking-jogadores-html", ({ response }) => {
   response.stream(
     fs.createReadStream(Application.publicPath("ranking-jogadores.html"))
   );
 });
+
+Route.get('/v2/ranking-jogadores-html', ({ response }) => {
+  return response.stream(
+    fs.createReadStream(Application.publicPath('ranking-v2.html'))
+  )
+})
+
 Route.get("/importar-partida-html", ({ response }) => {
   response.stream(
     fs.createReadStream(Application.publicPath("importar-partida.html"))

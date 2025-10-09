@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Ranking dos Jogadores — MIX AWARDS (Teaser)</title>
+
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+
+    <link rel="stylesheet" href="/css/base.css">
+    <link rel="stylesheet" href="/css/layout.css">
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg0: #0a1622;
+            --bg1: #091a27;
+            --panel: #0f2435;
+            --ink: #dbe9f6;
+            --muted: #88a4bc;
+            --line: #1f3b54;
+            --accent: #2d86d6;
+            --radius: 16px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
+        }
+
+        body.layout {
+            color: var(--ink);
+            background:
+                radial-gradient(1200px 800px at 20% -10%, rgba(55, 115, 170, .18), transparent 60%),
+                radial-gradient(1000px 700px at 85% -10%, rgba(38, 89, 140, .18), transparent 60%),
+                linear-gradient(180deg, var(--bg1), var(--bg0));
+            min-height: 100vh;
+            font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .nav {
+            position: sticky;
+            top: 0;
+            z-index: 50
+        }
+
+        .page-pad {
+            height: 10px
+        }
+
+        .hero {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 24px;
+            gap: 28px;
+        }
+
+        .logo-neo {
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: .12em;
+            text-shadow: 0 0 6px rgba(255, 255, 255, .25), 0 0 18px rgba(45, 134, 214, .35), 0 0 36px rgba(45, 134, 214, .25);
+            background: conic-gradient(from 120deg, #eaf6ff, #bfe0ff, #7cc2ff, #3ea0ff, #2d86d6, #7cc2ff, #eaf6ff);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            filter: drop-shadow(0 6px 22px rgba(45, 134, 214, .25));
+        }
+
+        .logo-neo .top {
+            font-size: clamp(22px, 3.4vw, 30px);
+            opacity: .9;
+            letter-spacing: .32em
+        }
+
+        .logo-neo .main {
+            font-size: clamp(54px, 10vw, 120px)
+        }
+
+        .logo-neo .sub {
+            font-size: clamp(12px, 2.2vw, 16px);
+            letter-spacing: .45em;
+            opacity: .8
+        }
+
+        .panel {
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            background: linear-gradient(180deg, rgba(255, 255, 255, .05), rgba(255, 255, 255, .03)), var(--panel);
+            box-shadow: 0 16px 40px rgba(0, 0, 0, .35), inset 0 0 0 1px rgba(255, 255, 255, .03);
+            padding: 18px 16px;
+            max-width: 800px;
+            width: 100%;
+        }
+
+        .msg {
+            font-size: clamp(14px, 2.4vw, 18px);
+            color: var(--muted)
+        }
+
+        .msg strong {
+            color: #e8f1f8
+        }
+
+        #clock {
+            font-family: 'Share Tech Mono', monospace;
+            color: #daf6ff;
+            text-shadow: 0 0 20px rgba(10, 175, 230, 1), 0 0 20px rgba(10, 175, 230, 0);
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        #clock .date {
+            font-size: clamp(16px, 3.2vw, 24px);
+            letter-spacing: .1em;
+            text-transform: uppercase;
+        }
+
+        #clock .time {
+            font-size: clamp(40px, 9vw, 80px);
+            letter-spacing: .05em;
+            padding: 5px 0;
+        }
+    </style>
+</head>
+
+<body class="layout">
+    <div class="nav">
+        <a class="navbar-brand" href="/index">MIX AWARDS</a>
+        <a href="/importar-partida-html" class="nav-btn" data-color="#2db2ff">Importar Partida</a>
+        <a href="/consultar-partidas-html" class="nav-btn" data-color="#ff1f71">Consultar Partida</a>
+        <a href="/ranking-jogadores-html" class="nav-btn" data-color="#1eff45">Ranking Jogadores</a>
+        <a href="/shop-html" class="nav-btn" data-color="#6225E6">Loja</a>
+        <a href="/album-html" class="nav-btn" data-color="#a78bfa">Álbum</a>
+        <a href="/album-stickers-html" class="nav-btn" data-color="#ff9e9e">Álbum Stickers</a>
+        <div class="nav-right">
+            <a id="btnOpenRegister" class="nav-btn" data-color="#a78bfa" href="javascript:void(0)">Cadastrar</a>
+            <a id="btnOpenLogin" class="nav-btn" data-color="#56c1ff" href="javascript:void(0)">Logar</a>
+        </div>
+    </div>
+
+    <div class="page-pad"></div>
+
+    <main class="hero">
+        <div class="logo-neo">
+            <div class="top">Apresentação de Encerramento</div>
+            <div class="main">MIX AWARDS</div>
+            <div class="sub">RANKING OCULTADO</div>
+        </div>
+
+        <div class="panel">
+            <p class="msg">
+                <strong>Está curioso né?</strong> O Ranking ficará oculto até o dia da apresentação de encerramento do
+                MIX AWARDS.
+                Acompanhe a contagem regressiva abaixo.
+            </p>
+        </div>
+
+        <div id="clock" role="timer" aria-live="polite">
+            <p class="date">{{ date }}</p>
+            <p class="time">{{ time }}</p>
+        </div>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.7.16/dist/vue.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.7.16/dist/vue.min.js"></script>
+    <script>
+        const clock = new Vue({
+            el: '#clock',
+            data: { date: '', time: '' }
+        });
+
+        const TARGET_MS = new Date('2025-10-23T20:00:00-03:00').getTime();
+        const TITLE_BASE = 'MIX AWARDS — Ranking';
+        const titleEl = document.querySelector('title');
+
+        function two(n) { return String(n).padStart(2, '0'); }
+
+        function tick() {
+            const now = Date.now();
+            let diff = TARGET_MS - now;
+
+            if (diff <= 0) {
+                clock.date = 'Chegou o grande momento!';
+                clock.time = '00:00:00';
+                document.title = TITLE_BASE;
+                titleEl.setAttribute('title', TITLE_BASE);
+                window.location.replace('/v2/ranking-jogadores-html');
+                return;
+            }
+
+            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+            const minutes = Math.floor((diff / (1000 * 60)) % 60);
+            const seconds = Math.floor((diff / 1000) % 60);
+
+            clock.date = `Faltam ${two(days)} dias —`;
+            clock.time = `${two(hours)}:${two(minutes)}:${two(seconds)}`;
+
+            // Mostra a contagem na aba mas mantém tooltip fixo
+            document.title = `(${two(days)}d ${two(hours)}:${two(minutes)}:${two(seconds)}) ${TITLE_BASE}`;
+            titleEl.setAttribute('title', TITLE_BASE);
+        }
+
+        tick();
+        setInterval(tick, 1000);
+    </script>
+
+
+    <script src="/js/auth.js" defer></script>
+</body>
+
+</html>
