@@ -2,7 +2,6 @@
 import { HttpContextContract } from "@ioc:Adonis/Core/HttpContext";
 import CustomResponse from "App/Utils/CustomResponse";
 import Stickers from "App/Models/Stickers";
-import AlbumAssinaturas from "App/Models/AlbumAssinaturas";
 import Application from "@ioc:Adonis/Core/Application";
 
 export default class StickersController {
@@ -10,13 +9,6 @@ export default class StickersController {
 
   constructor() {
     this.customResponse = new CustomResponse();
-  }
-
-  private async ensureAlbumAssinatura(jogadorId: number) {
-    const assinatura =
-      (await AlbumAssinaturas.query().where("jogador_id", jogadorId).first()) ||
-      (await AlbumAssinaturas.create({ jogador_id: jogadorId }));
-    return assinatura;
   }
 
   public async listar({ auth, request, response }: HttpContextContract) {

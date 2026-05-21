@@ -287,9 +287,19 @@ Route.group(() => {
 
 // TIRAR MIX
 Route.group(() => {
+  Route.post("tirar-mix/heartbeat", "TirarMixController.heartbeat");
+  Route.get("tirar-mix/online", "TirarMixController.online");
+
   // sessão
   Route.get("tirar-mix/sessao/atual", "TirarMixController.sessaoAtual");
   Route.post("tirar-mix/sessao/nova", "TirarMixController.sessaoNova");
+  Route.post("tirar-mix/entrar", "TirarMixController.entrar");
+  Route.post("tirar-mix/sair", "TirarMixController.sair");
+  Route.post("tirar-mix/mock/capitao-oponente", "TirarMixController.mockCapitaoOponente");
+  Route.post("tirar-mix/mock/iniciar-oponente", "TirarMixController.mockIniciarOponente");
+  Route.post("tirar-mix/mock/dados-oponente", "TirarMixController.mockRolarDadosOponente");
+  Route.post("tirar-mix/mock/8-jogadores", "TirarMixController.mockOitoJogadores");
+  Route.post("tirar-mix/mock/pick-aleatorio", "TirarMixController.mockPickAleatorio");
 
   // jogadores + stats
   Route.get(
@@ -318,14 +328,29 @@ Route.group(() => {
 
   // draft
   Route.post("tirar-mix/draft/iniciar", "TirarMixController.iniciarDraftPost");
+  Route.post("tirar-mix/dados/rolar", "TirarMixController.rolarDados");
+  Route.post("tirar-mix/draft/rolar-dados", "TirarMixController.rolarDados");
   Route.post("tirar-mix/draft/desfazer", "TirarMixController.undoPost");
 
   // picks (se usar a tela de draft)
   Route.post("tirar-mix/pick/:id?", "TirarMixController.pick");
+  Route.post("tirar-mix/mapas/ban/:mapa?", "TirarMixController.banirMapa");
 
   // opcional (legacy)
   Route.get("tirar-mix/snapshot/:id", "TirarMixController.snapshot");
-}).prefix("api");
+  Route.get("tirar-mix/snapshot", "TirarMixController.snapshot");
+})
+  .prefix("api")
+  .middleware("auth:api");
+
+// LEVELS (REST)
+Route.group(() => {
+  Route.get("/", "LevelController.lista");
+  Route.get("/players/:id", "LevelController.jogador");
+  Route.post("/simulations", "LevelController.simular");
+})
+  .prefix("api/levels")
+  .middleware("auth:api");
 
 // PARTIDA CONTROLLER
 Route.group(() => {
@@ -333,3 +358,25 @@ Route.group(() => {
   Route.get("/detalhes/:codigo", "PartidaController.detalhesPartida");
   Route.get("/ranking", "JogadoresController.listar");
 }).prefix("api/partida");
+
+// PLAYERS (REST)
+Route.group(() => {
+  Route.get("/", "JogadoresController.listar");
+  Route.get("/me", "JogadoresController.meuGold");
+  Route.post("/:id/link", "JogadoresController.vincularUsuarioJogador");
+})
+  .prefix("api/players")
+  .middleware("auth:api");
+
+// MATCHES (REST)
+Route.group(() => {
+  Route.get("/", "PartidaController.consultarPartidas");
+  Route.get("/:codigo", "PartidaController.detalhesPartida");
+}).prefix("api/matches");
+
+Route.group(() => {
+  Route.post("/", "PartidaController.importarJson");
+  Route.delete("/:id", "PartidaController.excluirPartida");
+})
+  .prefix("api/matches")
+  .middleware("auth:api");

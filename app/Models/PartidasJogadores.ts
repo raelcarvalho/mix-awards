@@ -59,6 +59,15 @@ export default class PartidasJogadores extends BaseModel {
   @column()
   public partida_ganha: boolean;
 
+  @column()
+  public level_antes: number | null;
+
+  @column()
+  public level_depois: number | null;
+
+  @column()
+  public level_delta: number | null;
+
   @column.dateTime({ autoCreate: true })
   public createdAt: DateTime;
 

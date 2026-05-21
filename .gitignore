@@ -19,3 +19,4 @@ logs
 .yarn/install-state.gz
 .pnp.*
 .yarn-integrity
+web/backup web/

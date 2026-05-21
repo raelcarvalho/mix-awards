@@ -54,6 +54,9 @@ export default class Partidas extends BaseModel {
       "adr",
       "qtd_partidas",
       "pontos",
+      "level_antes",
+      "level_depois",
+      "level_delta",
       "partida_ganha",
     ],
   })

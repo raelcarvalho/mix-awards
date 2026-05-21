@@ -5,8 +5,8 @@ import CustomResponse from "App/Utils/CustomResponse";
 import PartidasJogadores from "App/Models/PartidasJogadores";
 import UsuarioAdm from "App/Models/UsuarioAdm";
 import Database from "@ioc:Adonis/Lucid/Database";
-import PartidasRecompensas from "App/Models/PartidasRecompensas";
 import { DateTime } from "luxon";
+import { LevelService } from "App/Systems/Level/LevelService";
 
 export default class PartidaController {
   private customResponse = new CustomResponse();
@@ -166,25 +166,92 @@ export default class PartidaController {
         })),
       ];
 
-      const jogadoresCriados: { id: number; _time: "A" | "B"; origem: any }[] =
-        [];
+      const jogadoresCriados: {
+        id: number;
+        _time: "A" | "B";
+        origem: any;
+        levelDelta: number;
+        levelAntes: number;
+        levelDepois: number;
+      }[] = [];
 
-      for (const jogador of jogadoresInput) {
-        const { _time, nome, imagem, ...estatisticas } = jogador;
-        const vitoria = _time === timeVencedor;
-        const nomeNorm = this.normName(nome);
+      const nomesNormUnicos = Array.from(
+        new Set(jogadoresInput.map((j) => this.normName(j.nome)))
+      );
+      const nomesRawUnicos = Array.from(
+        new Set(
+          jogadoresInput
+            .map((j) => String(j.nome || "").trim())
+            .filter((n) => n.length > 0)
+        )
+      );
 
-        // jogador existente (case-insensitive por nome_normalizado) ou pelo nome "cru"
-        let jogadorModel =
-          (await Jogadores.query({ client: trx })
-            .whereRaw("LOWER(nome_normalizado) = ?", [nomeNorm])
-            .orWhere("nome", nome)
-            .first()) || null;
+      const jogadoresExistentesQuery = Jogadores.query({ client: trx });
+      jogadoresExistentesQuery.where((q) => {
+        if (nomesNormUnicos.length > 0) {
+          q.whereIn("nome_normalizado", nomesNormUnicos);
+        }
+        if (nomesRawUnicos.length > 0) {
+          if (nomesNormUnicos.length > 0) q.orWhereIn("nome", nomesRawUnicos);
+          else q.whereIn("nome", nomesRawUnicos);
+        }
+      });
+      const jogadoresExistentes = await jogadoresExistentesQuery;
 
-        // possível usuário-adm com o mesmo nome_normalizado
-        const usuarioPossivel = await UsuarioAdm.query({ client: trx })
-          .whereRaw("LOWER(nome_normalizado) = ?", [nomeNorm])
-          .first();
+      const usuariosPossiveis =
+        nomesNormUnicos.length > 0
+          ? await UsuarioAdm.query({ client: trx }).whereIn(
+              "nome_normalizado",
+              nomesNormUnicos
+            )
+          : [];
+
+      const jogadorPorNomeNorm = new Map<string, Jogadores>();
+      const jogadorPorNomeRaw = new Map<string, Jogadores>();
+      for (const j of jogadoresExistentes) {
+        const nn = this.normName(j.nome_normalizado || "");
+        if (nn) jogadorPorNomeNorm.set(nn, j);
+        const nr = this.normName(j.nome || "");
+        if (nr) jogadorPorNomeRaw.set(nr, j);
+      }
+      const usuarioPorNomeNorm = new Map<string, UsuarioAdm>();
+      for (const u of usuariosPossiveis) {
+        const key = this.normName((u as any).nome_normalizado || (u as any).nome || "");
+        if (key) usuarioPorNomeNorm.set(key, u);
+      }
+
+      const participantes = jogadoresInput.map((jogador) => {
+        const nomeNorm = this.normName(jogador.nome);
+        const jogadorExistente =
+          jogadorPorNomeNorm.get(nomeNorm) || jogadorPorNomeRaw.get(nomeNorm) || null;
+        const levelPontosAtual = Number(jogadorExistente?.level_pontos || 0);
+        const levelAtual = Number(
+          jogadorExistente?.level ||
+            LevelService.getLevelPorPontos(levelPontosAtual).level
+        );
+        return {
+          ...jogador,
+          nomeNorm,
+          vitoria: jogador._time === timeVencedor,
+          jogadorExistente,
+          usuarioPossivel: usuarioPorNomeNorm.get(nomeNorm) || null,
+          levelPontosAtual,
+          levelAtual,
+        };
+      });
+
+      const levelsA = participantes
+        .filter((p) => p._time === "A")
+        .map((p) => Number(p.levelAtual || 0));
+      const levelsB = participantes
+        .filter((p) => p._time === "B")
+        .map((p) => Number(p.levelAtual || 0));
+      const nivelMedioA = LevelService.calcularNivelMedioTime(levelsA);
+      const nivelMedioB = LevelService.calcularNivelMedioTime(levelsB);
+
+      for (const p of participantes) {
+        const { _time, nome, imagem, nomeNorm, vitoria, ...estatisticas } = p as any;
+        let jogadorModel: Jogadores | null = p.jogadorExistente || null;
 
         let novaQtdPartidas = 1;
         let pontosPartida = 0;
@@ -200,11 +267,27 @@ export default class PartidaController {
             : 20;
         pontosPartida += vitoria ? 20 : 10;
 
+        const nivelMedioAdv = _time === "A" ? nivelMedioB : nivelMedioA;
+        const levelResult = LevelService.calcularPontos(
+          {
+            kills: Number(estatisticas.kills || 0),
+            deaths: Number(estatisticas.mortes || 0),
+            assists: Number(estatisticas.assistencias || 0),
+            adr: Number(estatisticas.adr || 0),
+            partida_ganha: !!vitoria,
+          },
+          {
+            meu_level: Number(p.levelAtual || 0),
+            nivel_medio_adversarios: Number(nivelMedioAdv || 0),
+          },
+          Number(p.levelPontosAtual || 0)
+        );
+
         if (jogadorModel) {
           if (!jogadorModel.nome_normalizado)
             jogadorModel.nome_normalizado = nomeNorm;
-          if (!jogadorModel.usuario_adm_id && usuarioPossivel) {
-            jogadorModel.usuario_adm_id = usuarioPossivel.id;
+          if (!jogadorModel.usuario_adm_id && p.usuarioPossivel) {
+            jogadorModel.usuario_adm_id = p.usuarioPossivel.id;
           }
           if (
             (!jogadorModel.imagem || jogadorModel.imagem.trim() === "") &&
@@ -249,14 +332,12 @@ export default class PartidaController {
           jogadorModel.multi_kill = (
             Number(jogadorModel.multi_kill || 0) + estatisticas.multi_kill
           ).toString();
-
           jogadorModel.adr = (
             ((Number(jogadorModel.adr || 0) || 0) * (novaQtdPartidas - 1) +
               estatisticas.adr) /
             novaQtdPartidas
           ).toFixed(2);
 
-          // bônus por marcos
           let bonus = 0;
           if (novaQtdPartidas === 15) bonus = 20;
           else if (novaQtdPartidas === 20) bonus = 30;
@@ -270,15 +351,16 @@ export default class PartidaController {
 
           jogadorModel.qtd_partidas = novaQtdPartidas.toString();
           jogadorModel.pontos = mediaComBonus.toFixed(0);
+          jogadorModel.level_pontos = levelResult.pontos_depois;
+          jogadorModel.level = levelResult.level_depois.level;
 
           await jogadorModel.useTransaction(trx).save();
         } else {
-          // cria normalizado e com vínculo ao usuário_adm (se houver)
           jogadorModel = await Jogadores.create(
             {
               nome,
               nome_normalizado: nomeNorm,
-              usuario_adm_id: usuarioPossivel?.id,
+              usuario_adm_id: p.usuarioPossivel?.id,
               imagem: imagem || "",
               adr: String(estatisticas.adr ?? 0),
               kills: String(estatisticas.kills ?? 0),
@@ -295,6 +377,8 @@ export default class PartidaController {
               qtd_partidas: "1",
               pontos: String(pontosPartida),
               vitorias: vitoria ? "1" : "0",
+              level: levelResult.level_depois.level,
+              level_pontos: levelResult.pontos_depois,
             },
             { client: trx }
           );
@@ -303,6 +387,9 @@ export default class PartidaController {
         jogadoresCriados.push({
           id: jogadorModel.id,
           _time,
+          levelDelta: levelResult.pontos_ganhos,
+          levelAntes: levelResult.level_antes.level,
+          levelDepois: levelResult.level_depois.level,
           origem: {
             ...estatisticas,
             nome,
@@ -342,39 +429,48 @@ export default class PartidaController {
           partida_ganha: j.origem.partida_ganha ? 1 : 0,
           vitorias: j.origem.partida_ganha ? 1 : 0,
           pontos: j.origem.pontos + bonus,
+          level_delta: j.levelDelta,
+          level_antes: j.levelAntes,
+          level_depois: j.levelDepois,
         };
         return acc;
       }, {} as Record<number, any>);
 
       await partida.useTransaction(trx).related("jogadores").attach(pivotData);
 
-      // crédito de gold (sem duplicar)
+      // crédito de gold (bulk, evitando N+1)
+      const goldPorJogador = new Map<number, number>();
       for (const j of jogadoresCriados) {
-        const ganhou = !!j.origem.partida_ganha;
-        const gold = ganhou ? 25 : 18;
+        const credito = j.origem.partida_ganha ? 25 : 18;
+        goldPorJogador.set(j.id, Number(goldPorJogador.get(j.id) || 0) + credito);
+      }
 
-        const existe = await PartidasRecompensas.query({ client: trx })
-          .where("partida_id", partida.id)
-          .where("jogador_id", j.id)
-          .first();
+      const nowSql = DateTime.now().toSQL();
+      const recompensasRows = Array.from(goldPorJogador.entries()).map(
+        ([jogadorId, goldCreditado]) => ({
+          partida_id: partida.id,
+          jogador_id: jogadorId,
+          gold_creditado: goldCreditado,
+          created_at: nowSql,
+          updated_at: nowSql,
+        })
+      );
 
-        if (!existe) {
-          await PartidasRecompensas.create(
-            {
-              partida_id: partida.id,
-              jogador_id: j.id,
-              gold_creditado: gold,
-              createdAt: DateTime.now(),
-            },
-            { client: trx }
-          );
+      if (recompensasRows.length > 0) {
+        await trx.table("tb_partidas_recompensas").insert(recompensasRows);
+      }
 
-          const jogadorDb = await Jogadores.query({ client: trx })
-            .where("id", j.id)
-            .firstOrFail();
-          jogadorDb.gold = (jogadorDb.gold || 0) + gold;
-          await jogadorDb.useTransaction(trx).save();
-        }
+      const idsGold = Array.from(goldPorJogador.keys());
+      if (idsGold.length > 0) {
+        const caseExpr = idsGold
+          .map((id) => `WHEN ${id} THEN ${Number(goldPorJogador.get(id) || 0)}`)
+          .join(" ");
+
+        await trx.rawQuery(`
+          UPDATE tb_jogadores
+          SET gold = COALESCE(gold, 0) + (CASE id ${caseExpr} ELSE 0 END)
+          WHERE id IN (${idsGold.join(",")})
+        `);
       }
 
       await trx.commit();
@@ -422,7 +518,17 @@ export default class PartidaController {
         "p.resultado_time1",
         "p.resultado_time2",
         "p.data",
+        "p.created_at",
         "pj.pontos as pontos_jogador",
+        "pj.partida_ganha as partida_ganha",
+        "pj.kills as kills_jogador",
+        "pj.assistencias as assistencias_jogador",
+        "pj.mortes as mortes_jogador",
+        "pj.adr as adr_jogador",
+        "pj.kast as kast_jogador",
+        "pj.first_kill as first_kill_jogador",
+        "pj.multi_kill as multi_kill_jogador",
+        "pj.kda_player as kda_jogador",
         "j.nome as jogador_nome"
       );
 
@@ -434,12 +540,13 @@ export default class PartidaController {
 
     const jogadores = await PartidasJogadores.query()
       .where("partidas_id", partida.id)
-      .preload("jogador", (q) => q.select(["id", "nome", "imagem"]));
+      .preload("jogador", (q) => q.select(["id", "nome", "imagem", "level"]));
 
     const jogadoresComNome = jogadores.map((j) => {
       const row = j.toJSON();
       row.jogadores_id = j.jogador?.nome || "Sem nome";
       row.jogador_imagem = j.jogador?.imagem || "";
+      row.jogador_level = Number(j.jogador?.level || 0);
       return row;
     });
 
@@ -474,101 +581,133 @@ export default class PartidaController {
           .where("partidas_id", partida.id)
           .select("jogadores_id");
 
-        const jogadorIdsParaAtualizar = jogadoresIdsNaPartida.map((r) =>
-          Number(r.jogadores_id)
+        const jogadorIdsParaAtualizar = Array.from(
+          new Set(
+            jogadoresIdsNaPartida.map((r) => Number(r.jogadores_id)).filter((id) => id > 0)
+          )
         );
 
-        // 1. Excluir registros da pivot
+        const recompensas = await trx
+          .from("tb_partidas_recompensas")
+          .where("partida_id", partida.id)
+          .select("jogador_id", "gold_creditado");
+
+        if (recompensas.length > 0) {
+          const goldDebitoPorJogador = new Map<number, number>();
+          for (const r of recompensas) {
+            const jogadorId = Number(r.jogador_id);
+            const valor = Number(r.gold_creditado || 0);
+            goldDebitoPorJogador.set(
+              jogadorId,
+              Number(goldDebitoPorJogador.get(jogadorId) || 0) + valor
+            );
+          }
+
+          const idsGold = Array.from(goldDebitoPorJogador.keys());
+          if (idsGold.length > 0) {
+            const caseExpr = idsGold
+              .map(
+                (id) =>
+                  `WHEN ${id} THEN ${Number(goldDebitoPorJogador.get(id) || 0)}`
+              )
+              .join(" ");
+
+            await trx.rawQuery(`
+              UPDATE tb_jogadores
+              SET gold = GREATEST(0, COALESCE(gold, 0) - (CASE id ${caseExpr} ELSE 0 END))
+              WHERE id IN (${idsGold.join(",")})
+            `);
+          }
+        }
+
+        await trx
+          .from("tb_partidas_recompensas")
+          .where("partida_id", partida.id)
+          .delete();
+
         await trx
           .from("tb_partidas_jogadores")
           .where("partidas_id", partida.id)
           .delete();
 
-        // 2. Excluir a partida
         await trx.from("tb_partidas").where("id", partida.id).delete();
 
-        // 3. Recalcular estatísticas para os jogadores afetados
-        if (jogadorIdsParaAtualizar.length > 0) {
-          for (const jogadorId of jogadorIdsParaAtualizar) {
-            const est = await trx
-              .from("tb_partidas_jogadores")
-              .where("jogadores_id", jogadorId)
-              .select(
-                trx.raw(`
-                COUNT(*)::int                                   as jogos,
-                SUM(CAST(kills AS NUMERIC))                     as sum_kills,
-                SUM(CAST(assistencias AS NUMERIC))              as sum_assists,
-                SUM(CAST(mortes AS NUMERIC))                    as sum_mortes,
-                AVG(CAST(kast AS NUMERIC))                      as avg_kast,
-                AVG(CAST(adr AS NUMERIC))                       as avg_adr,
-                SUM(CAST(flash_assist AS NUMERIC))              as sum_flash,
-                SUM(CAST(first_kill AS NUMERIC))                as sum_fk,
-                SUM(CAST(multi_kill AS NUMERIC))                as sum_mk,
-                SUM(CAST(partida_ganha AS INTEGER))             as sum_wins,
-                AVG(CAST(pontos AS NUMERIC))                    as avg_points
-              `)
-              )
-              .first();
+        if (jogadorIdsParaAtualizar.length === 0) {
+          return;
+        }
 
-            const jogador = await Jogadores.query({ client: trx })
-              .where("id", jogadorId)
-              .first();
-
-            if (jogador) {
-              const jogos = Number(est?.jogos || 0);
-              const kills = Number(est?.sum_kills || 0);
-              const mortes = Number(est?.sum_mortes || 0);
-              const assists = Number(est?.sum_assists || 0);
-
-              jogador.kills = String(kills);
-              jogador.assistencias = String(assists);
-              jogador.mortes = String(mortes);
-
-              // KDR
-              jogador.kda_player =
-                mortes > 0 ? (kills / mortes).toFixed(2) : kills.toFixed(2);
-
-              // médias (não somas!)
-              jogador.kast = Math.round(Number(est?.avg_kast || 0));
-              jogador.adr = Number(est?.avg_adr || 0).toFixed(2);
-
-              // demais estatísticas
-              jogador.flash_assist = String(Number(est?.sum_flash || 0));
-              jogador.first_kill = String(Number(est?.sum_fk || 0));
-              jogador.multi_kill = String(Number(est?.sum_mk || 0));
-
-              jogador.vitorias = String(Number(est?.sum_wins || 0));
-              jogador.qtd_partidas = String(jogos);
-
-              // pontos → média por partida
-              jogador.pontos = Math.round(
-                Number(est?.avg_points || 0)
-              ).toString();
-
-              await jogador.useTransaction(trx).save();
-            }
-          }
-
-          // 4. Excluir jogadores sem nenhuma partida
-          const aindaComPartidas = await trx
-            .from("tb_partidas_jogadores")
-            .whereIn("jogadores_id", jogadorIdsParaAtualizar)
-            .groupBy("jogadores_id")
-            .count("* as c")
-            .select("jogadores_id");
-
-          const vivos = new Set(
-            aindaComPartidas.map((r) => Number(r.jogadores_id))
-          );
-          const semPartidas = jogadorIdsParaAtualizar.filter(
-            (id) => !vivos.has(id)
+        const estRows = await trx
+          .from("tb_partidas_jogadores")
+          .whereIn("jogadores_id", jogadorIdsParaAtualizar)
+          .groupBy("jogadores_id")
+          .select("jogadores_id")
+          .select(
+            trx.raw(`
+              COUNT(*)::int                                   as jogos,
+              SUM(CAST(kills AS NUMERIC))                     as sum_kills,
+              SUM(CAST(assistencias AS NUMERIC))              as sum_assists,
+              SUM(CAST(mortes AS NUMERIC))                    as sum_mortes,
+              AVG(CAST(kast AS NUMERIC))                      as avg_kast,
+              AVG(CAST(adr AS NUMERIC))                       as avg_adr,
+              SUM(CAST(flash_assist AS NUMERIC))              as sum_flash,
+              SUM(CAST(first_kill AS NUMERIC))                as sum_fk,
+              SUM(CAST(multi_kill AS NUMERIC))                as sum_mk,
+              SUM(CAST(partida_ganha AS INTEGER))             as sum_wins,
+              AVG(CAST(pontos AS NUMERIC))                    as avg_points,
+              SUM(COALESCE(CAST(level_delta AS NUMERIC), 0))  as sum_level_delta
+            `)
           );
 
-          if (semPartidas.length > 0) {
-            await Jogadores.query({ client: trx })
-              .whereIn("id", semPartidas)
-              .delete();
+        const estMap = new Map<number, any>();
+        for (const row of estRows) {
+          estMap.set(Number(row.jogadores_id), row);
+        }
+
+        const jogadores = await Jogadores.query({ client: trx }).whereIn(
+          "id",
+          jogadorIdsParaAtualizar
+        );
+
+        const semPartidas: number[] = [];
+        for (const jogador of jogadores) {
+          const est = estMap.get(Number(jogador.id));
+          const jogos = Number(est?.jogos || 0);
+
+          if (jogos <= 0) {
+            semPartidas.push(Number(jogador.id));
+            continue;
           }
+
+          const kills = Number(est?.sum_kills || 0);
+          const mortes = Number(est?.sum_mortes || 0);
+          const assists = Number(est?.sum_assists || 0);
+          const levelPontos = Math.max(
+            0,
+            Math.round(Number(est?.sum_level_delta || 0))
+          );
+          const levelInfo = LevelService.getLevelPorPontos(levelPontos);
+
+          jogador.kills = String(kills);
+          jogador.assistencias = String(assists);
+          jogador.mortes = String(mortes);
+          jogador.kda_player =
+            mortes > 0 ? (kills / mortes).toFixed(2) : kills.toFixed(2);
+          jogador.kast = Math.round(Number(est?.avg_kast || 0));
+          jogador.adr = Number(est?.avg_adr || 0).toFixed(2);
+          jogador.flash_assist = String(Number(est?.sum_flash || 0));
+          jogador.first_kill = String(Number(est?.sum_fk || 0));
+          jogador.multi_kill = String(Number(est?.sum_mk || 0));
+          jogador.vitorias = String(Number(est?.sum_wins || 0));
+          jogador.qtd_partidas = String(jogos);
+          jogador.pontos = Math.round(Number(est?.avg_points || 0)).toString();
+          jogador.level_pontos = levelPontos;
+          jogador.level = levelInfo.level;
+
+          await jogador.useTransaction(trx).save();
+        }
+
+        if (semPartidas.length > 0) {
+          await Jogadores.query({ client: trx }).whereIn("id", semPartidas).delete();
         }
       });
 

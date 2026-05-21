@@ -5,7 +5,6 @@ import { DateTime } from "luxon";
 import CustomResponse from "App/Utils/CustomResponse";
 import Jogadores from "App/Models/Jogadores";
 import Pacotes from "App/Models/Pacotes";
-import Capsulas from "App/Models/Capsulas";
 import PartidasJogadores from "App/Models/PartidasJogadores";
 
 const PRECO_PACOTE = 20;

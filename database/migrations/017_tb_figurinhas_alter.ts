@@ -1,6 +1,5 @@
 // database/migrations/017_tb_figurinhas_alter.ts
 import BaseSchema from '@ioc:Adonis/Lucid/Schema'
-import Database from '@ioc:Adonis/Lucid/Database'
 
 export default class AlterFigurinhas extends BaseSchema {
   protected tableName = 'tb_figurinhas'

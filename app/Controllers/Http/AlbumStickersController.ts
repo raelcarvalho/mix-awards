@@ -28,33 +28,6 @@ export default class AlbumStickersController {
     return criado.id;
   }
 
-  private async addIfMissingStickers(
-    albumAssinaturasId: number,
-    stickerId: number
-  ): Promise<boolean> {
-    const existe = await AlbumStickers.query()
-      .where("album_assinaturas_id", albumAssinaturasId)
-      .andWhere("sticker_id", stickerId)
-      .first();
-
-    if (existe) return false; // Retorna false se o sticker já existe (é uma duplicata)
-
-    await AlbumStickers.create({
-      album_assinaturas_id: albumAssinaturasId,
-      sticker_id: stickerId,
-      obtida_via: "capsulas",
-    });
-    return true; // Retorna true se o sticker era novo e foi adicionado
-  }
-
-  private pickNUnique<T>(arr: T[], n: number): T[] {
-    const a = arr.slice();
-    for (let i = a.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [a[i], a[j]] = [a[j], a[i]];
-    }
-    return a.slice(0, n);
-  }
 
   // ... (seus outros métodos como criarAlbumSticker e meuAlbum permanecem iguais) ...
   public async criarAlbumSticker({ auth, response }: HttpContextContract) {

@@ -74,6 +74,12 @@ export default class Jogadores extends BaseModel {
   @column()
   public pontos: string;
 
+  @column()
+  public level: number;
+
+  @column()
+  public level_pontos: number;
+
   @belongsTo(() => UsuarioAdm, { foreignKey: "usuario_adm_id" })
   public usuarioAdm: BelongsTo<typeof UsuarioAdm>;
 
@@ -104,6 +110,9 @@ export default class Jogadores extends BaseModel {
       "qtd_partidas",
       "pontos",
       "partida_ganha",
+      "level_antes",
+      "level_depois",
+      "level_delta",
     ],
   })
   public partidas: ManyToMany<typeof Partidas>;

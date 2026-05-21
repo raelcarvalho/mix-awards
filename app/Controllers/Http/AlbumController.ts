@@ -57,15 +57,6 @@ export default class AlbumController {
     return true;
   }
 
-  private pickNUnique<T>(arr: T[], n: number): T[] {
-    const a = arr.slice();
-    for (let i = a.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [a[i], a[j]] = [a[j], a[i]];
-    }
-    return a.slice(0, n);
-  }
-
   // ===== NOVO: endpoint de status para a loja =====
   public async status({ auth, response }: HttpContextContract) {
     const usuario = await auth.authenticate();
@@ -285,8 +276,8 @@ export default class AlbumController {
 
       type Raridade = "normal" | "epica" | "lendaria" | "mitica" | "god";
       const PESOS = {
-        normal: 39,
-        epica: 45,
+        normal: 60,
+        epica: 24,
         lendaria: 12,
         mitica: 3,
         god: 1,

@@ -1,8 +1,5 @@
 import UsuarioAdmToken from 'App/Models/UsuarioAdmToken'
-import Usuario from 'App/Models/UsuarioAdm'
 import UsuarioAdm from 'App/Models/UsuarioAdm'
-
-const axios = require('axios').default
 
 class AutenticacaoUsuario {
   public async removerTokens(id_usuario: number) {
@@ -29,13 +26,13 @@ class AutenticacaoUsuario {
   }
 
   public async normalizeName(input: string) {
-  return input
-    .normalize('NFD')                // separa acentos
-    .replace(/[\u0300-\u036f]/g, '') // remove acentos
-    .replace(/\s+/g, ' ')            // colapsa espaços
-    .trim()
-    .toUpperCase();
-}
+    return input
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .toUpperCase()
+  }
 }
 
 const logout = new AutenticacaoUsuario()

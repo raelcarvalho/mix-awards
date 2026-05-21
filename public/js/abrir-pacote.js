@@ -292,7 +292,7 @@
       background-blend-mode: overlay;
       background-repeat: no-repeat;
       background-image:
-        url("https://assets.codepen.io/13471/sparkles.gif"),
+        url("https://assets.codepen.io/13471/Coitadoles.gif"),
         url("https://assets.codepen.io/13471/holo.png"),
         linear-gradient(125deg,
           #ff00cc55 15%, #a14dff44 28%, #00f0ff33 42%,

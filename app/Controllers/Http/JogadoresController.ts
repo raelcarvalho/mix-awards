@@ -2,6 +2,7 @@ import { HttpContextContract } from "@ioc:Adonis/Core/HttpContext";
 import Jogadores from "App/Models/Jogadores";
 import UsuarioAdm from "App/Models/UsuarioAdm";
 import CustomResponse from "App/Utils/CustomResponse";
+import { LevelService } from "App/Systems/Level/LevelService";
 
 function normalizeName(raw: string): string {
   return (raw || "")
@@ -20,8 +21,23 @@ export default class JogadoresController {
   }
 
   public async listar({ response }: HttpContextContract) {
-    const jogadores = await Jogadores.query().orderBy("kills", "desc");
-    return response.json(jogadores);
+    const jogadores = await Jogadores.query().orderBy("level_pontos", "desc").orderBy("pontos", "desc");
+
+    const payload = jogadores.map((j) => {
+      const pontosLevel = Number(j.level_pontos || 0);
+      const levelInfo = LevelService.getLevelPorPontos(pontosLevel);
+      const progresso = LevelService.getProgressoLevel(pontosLevel);
+      return {
+        ...j.toJSON(),
+        level: Number(j.level || levelInfo.level),
+        level_pontos: pontosLevel,
+        level_nome: levelInfo.nome,
+        level_tier: levelInfo.tier,
+        level_progresso: progresso,
+      };
+    });
+
+    return response.json(payload);
   }
 
   public async vincularUsuarioJogador({
@@ -132,9 +148,19 @@ export default class JogadoresController {
       });
     }
 
+    const pontosLevel = Number(jogador.level_pontos || 0);
+    const levelInfo = LevelService.getLevelPorPontos(pontosLevel);
+    const levelProgresso = LevelService.getProgressoLevel(pontosLevel);
+
     return response.ok({
       gold: Number(jogador.gold || 0),
       jogador_id: jogador.id,
+      imagem: jogador.imagem || "",
+      level: Number(jogador.level || levelInfo.level),
+      level_pontos: pontosLevel,
+      level_nome: levelInfo.nome,
+      level_tier: levelInfo.tier,
+      level_progresso: levelProgresso,
     });
   }
 }
