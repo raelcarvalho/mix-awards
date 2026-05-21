@@ -267,6 +267,7 @@ export interface MixPlayer {
   is_capitao: boolean
   time: MixTeam | null
   ordem_pick: number | null
+  pool_slot: number | null
   nome: string
   imagem: string | null
   kda_player: string | null
@@ -375,12 +376,20 @@ export const mixSessaoNova = async () =>
     })
   )
 
-export const mixEntrar = async (role: 'capitao' | 'jogador') =>
+export const mixEntrar = async (
+  role: 'capitao' | 'jogador',
+  poolSlot?: number | null,
+  captainTeam?: MixTeam | null
+) =>
   unwrapResult<TirarMixSnapshot>(
     await apiFetch<any>('/api/tirar-mix/entrar', {
       method: 'POST',
       headers: mixHeaders(),
-      body: JSON.stringify({ role }),
+      body: JSON.stringify({
+        role,
+        ...(Number.isFinite(Number(poolSlot)) ? { pool_slot: Number(poolSlot) } : {}),
+        ...((captainTeam === 'A' || captainTeam === 'B') ? { team: captainTeam } : {}),
+      }),
     })
   )
 

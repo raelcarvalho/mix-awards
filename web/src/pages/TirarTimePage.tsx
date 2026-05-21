@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Btn, Card } from '@/components/ui/Card'
 import { LEVEL_COLOR_BY_ID } from '@/components/profile/PlayerProfilePreview'
 import { useAuth } from '@/hooks/useAuth'
@@ -7,6 +7,8 @@ import type { MixMapCard, MixMapPlayerStats, MixPlayer, TirarMixSnapshot } from 
 
 type Team = 'A' | 'B'
 type MixPhase = TirarMixSnapshot['fase']
+const CAPTAIN_SLOT_BTN_CLASS =
+  '!text-sm sm:!text-[15px] min-h-[42px] sm:min-h-[46px] !px-4 sm:!px-5'
 
 const TEAM_META: Record<Team, { color: string; soft: string; border: string }> = {
   A: {
@@ -182,11 +184,13 @@ function PlayerChip({
   team,
   captain = false,
   compact = false,
+  action,
 }: {
   player: MixPlayer
   team: Team
   captain?: boolean
   compact?: boolean
+  action?: ReactNode
 }) {
   const meta = TEAM_META[team]
   const avatar = avatarSrc(player)
@@ -225,7 +229,7 @@ function PlayerChip({
           {initials(player.nome)}
         </div>
       )}
-      <div style={{ minWidth: 0 }}>
+      <div style={{ minWidth: 0, flex: 1 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0, marginBottom: 5 }}>
           <div
             style={{
@@ -281,11 +285,25 @@ function PlayerChip({
           </span>
         </div>
       </div>
+      {action ? (
+        <div
+          style={{
+            marginLeft: 'auto',
+            marginRight: 4,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'flex-end',
+            flexShrink: 0,
+          }}
+        >
+          {action}
+        </div>
+      ) : null}
     </div>
   )
 }
 
-function EmptySlot({ team, label }: { team: Team; label: string }) {
+function EmptySlot({ team, label, action }: { team: Team; label: string; action?: ReactNode }) {
   return (
     <div
       className='tmx-chip'
@@ -306,6 +324,19 @@ function EmptySlot({ team, label }: { team: Team; label: string }) {
       >
         {label}
       </div>
+      {action ? (
+        <div
+          style={{
+            marginLeft: 'auto',
+            marginRight: 4,
+            display: 'flex',
+            alignItems: 'flex-start',
+            justifyContent: 'flex-end',
+          }}
+        >
+          {action}
+        </div>
+      ) : null}
     </div>
   )
 }
@@ -563,7 +594,7 @@ function MapStatsProjection({
 }
 
 export default function TirarTimePage() {
-  const { isLogged } = useAuth()
+  const { isLogged, isAdmin } = useAuth()
 
   const [snapshot, setSnapshot] = useState<TirarMixSnapshot | null>(null)
   const [loading, setLoading] = useState(true)
@@ -820,16 +851,18 @@ export default function TirarTimePage() {
   const mapStage = snapshot?.mapDraft?.stage || 'idle'
   const isMapFlow = !!snapshot && mapStage !== 'idle'
 
-  const canEnterCaptain =
-    !!snapshot &&
-    snapshot.fase !== 'draft' &&
-    snapshot.fase !== 'finalizado' &&
-    (!snapshot.teams.A.captain || !snapshot.teams.B.captain || isCaptain)
+  const canManageCaptainSlots =
+    !!snapshot && snapshot.fase !== 'draft' && snapshot.fase !== 'finalizado'
+  const canShowCaptainEnter = (team: Team) =>
+    canManageCaptainSlots && snapshot?.me.role !== 'capitao' && !snapshot?.teams[team].captain
+  const canShowCaptainLeave = (team: Team) =>
+    canManageCaptainSlots && isCaptain && myTeam === team && !!snapshot?.teams[team].captain
 
   const canEnterPlayer =
     !!snapshot && snapshot.fase !== 'draft' && snapshot.fase !== 'finalizado'
 
   const canLeave = !!snapshot && snapshot.me.role !== 'fora'
+  const canCreateSession = isAdmin && !!snapshot
 
   const canStart =
     !!snapshot &&
@@ -854,6 +887,31 @@ export default function TirarTimePage() {
     snapshot.mapDraft?.stage === 'veto' &&
     snapshot.mapDraft.veto.turn === myTeam &&
     !busy
+
+  const poolSlots = useMemo(() => {
+    const slotMap = new Map<number, MixPlayer>()
+    const overflow: MixPlayer[] = []
+
+    for (const player of snapshot?.pool || []) {
+      const slot = Number((player as any)?.pool_slot)
+      if (Number.isInteger(slot) && slot >= 1 && slot <= 8 && !slotMap.has(slot)) {
+        slotMap.set(slot, player)
+      } else {
+        overflow.push(player)
+      }
+    }
+
+    for (let slot = 1; slot <= 8; slot += 1) {
+      if (!slotMap.has(slot) && overflow.length) {
+        slotMap.set(slot, overflow.shift() as MixPlayer)
+      }
+    }
+
+    return Array.from({ length: 8 }, (_, idx) => ({
+      slot: idx + 1,
+      player: slotMap.get(idx + 1) || null,
+    }))
+  }, [snapshot?.pool])
 
   const poolCount = snapshot?.pool.length ?? 0
   const readyLabel = snapshot ? `${snapshot.start.readyCount}/2` : '0/2'
@@ -911,7 +969,7 @@ export default function TirarTimePage() {
       : snapshot?.fase === 'aguardando_inicio'
       ? 'Aguardando os capitães confirmarem o início da rodada.'
       : snapshot?.fase === 'aguardando_capitaes'
-      ? 'Aguardando entrada de dois capitães para iniciar o processo.'
+      ? 'É necessário 8 jogadores e 2 capitães para iniciar o processo de definição dos times.'
       : snapshot?.fase === 'finalizado'
       ? 'Escolhas concluídas.'
       : 'Acompanhe a definição dos times.'
@@ -1358,6 +1416,76 @@ export default function TirarTimePage() {
           display: grid;
           grid-template-columns: repeat(4, minmax(0, 1fr));
           gap: 12px;
+        }
+        .tmx-slot-grid {
+          display: grid;
+          grid-template-columns: repeat(4, minmax(0, 1fr));
+          gap: 10px;
+        }
+        .tmx-slot-card {
+          border-radius: 12px;
+          border: 1px solid rgba(255,255,255,0.12);
+          background: linear-gradient(145deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01));
+          padding: 10px;
+          min-height: 152px;
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+        .tmx-slot-empty {
+          border: 1px dashed rgba(255,255,255,0.2);
+          background: rgba(255,255,255,0.015);
+        }
+        .tmx-slot-head {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 6px;
+        }
+        .tmx-slot-index {
+          color: rgba(255,255,255,0.8);
+          font-family: 'Orbitron', monospace;
+          font-size: 11px;
+          letter-spacing: .8px;
+          font-weight: 700;
+        }
+        .tmx-slot-status {
+          color: rgba(255,255,255,0.55);
+          font-family: 'Rajdhani', sans-serif;
+          font-size: 11px;
+          letter-spacing: .6px;
+          font-weight: 700;
+        }
+        .tmx-slot-meta {
+          margin-top: auto;
+          color: rgba(255,255,255,0.7);
+          font-family: 'Rajdhani', sans-serif;
+          font-size: 12px;
+          font-weight: 700;
+          line-height: 1.25;
+        }
+        .tmx-slot-join-btn {
+          margin-top: auto;
+          border: 1px solid rgba(34,211,238,0.45);
+          background: rgba(34,211,238,0.12);
+          color: #8be9ff;
+          border-radius: 8px;
+          height: 34px;
+          font-family: 'Rajdhani', sans-serif;
+          font-size: 13px;
+          letter-spacing: .4px;
+          font-weight: 800;
+          cursor: pointer;
+          transition: all .2s ease;
+        }
+        .tmx-slot-join-btn:hover:not(:disabled) {
+          border-color: rgba(34,211,238,0.8);
+          background: rgba(34,211,238,0.2);
+          color: #d8fbff;
+        }
+        .tmx-slot-join-btn:disabled {
+          opacity: .45;
+          cursor: not-allowed;
         }
         .tmx-pool-card {
           border-radius: 12px;
@@ -1937,12 +2065,18 @@ export default function TirarTimePage() {
           .tmx-pool {
             grid-template-columns: repeat(3, minmax(0, 1fr));
           }
+          .tmx-slot-grid {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+          }
         }
         @media (max-width: 980px) {
           .tmx-dice-captains-grid {
             grid-template-columns: 1fr;
           }
           .tmx-pool {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+          }
+          .tmx-slot-grid {
             grid-template-columns: repeat(2, minmax(0, 1fr));
           }
           .tmx-proj-grid {
@@ -1974,6 +2108,9 @@ export default function TirarTimePage() {
         }
         @media (max-width: 520px) {
           .tmx-pool {
+            grid-template-columns: 1fr;
+          }
+          .tmx-slot-grid {
             grid-template-columns: 1fr;
           }
         }
@@ -2050,30 +2187,24 @@ export default function TirarTimePage() {
           </div>
 
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-            <Btn
-              color='#f87171'
-              variant='outline'
-              size='lg'
-              className='tmx-action-btn'
-              disabled={!canEnterCaptain || loading || !!busy}
-              onClick={() =>
-                runAction('join-cap', () => api.mixEntrar('capitao'), 'Você entrou como capitão.')
-              }
-            >
-              {busy === 'join-cap' ? 'ENTRANDO...' : 'Entrar como capitão'}
-            </Btn>
-            <Btn
-              color='#22d3ee'
-              variant='outline'
-              size='lg'
-              className='tmx-action-btn'
-              disabled={!canEnterPlayer || loading || !!busy}
-              onClick={() =>
-                runAction('join-player', () => api.mixEntrar('jogador'), 'Você entrou como jogador.')
-              }
-            >
-              {busy === 'join-player' ? 'ENTRANDO...' : 'Entrar como jogador'}
-            </Btn>
+            {isAdmin && (
+              <Btn
+                color='#c084fc'
+                variant='outline'
+                size='lg'
+                className='tmx-action-btn'
+                disabled={!canCreateSession || loading || !!busy}
+                onClick={() =>
+                  runAction(
+                    'new-session',
+                    () => api.mixSessaoNova(),
+                    'Nova sessão criada. Estado da sessão resetado.'
+                  )
+                }
+              >
+                {busy === 'new-session' ? 'RESETANDO...' : 'Nova sessão'}
+              </Btn>
+            )}
             <Btn
               color='#f5c842'
               variant='outline'
@@ -2245,9 +2376,52 @@ export default function TirarTimePage() {
               <TeamHeader team='A' captainName={snapshot?.teams.A.captain?.nome} />
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 10 }}>
                 {snapshot?.teams.A.captain ? (
-                  <PlayerChip player={snapshot.teams.A.captain} team='A' captain />
+                  <PlayerChip
+                    player={snapshot.teams.A.captain}
+                    team='A'
+                    captain
+                    action={
+                      canShowCaptainLeave('A') ? (
+                        <Btn
+                          color='#f59e0b'
+                          variant='outline'
+                          size='lg'
+                          className={CAPTAIN_SLOT_BTN_CLASS}
+                          disabled={!!busy}
+                          onClick={() =>
+                            runAction('leave-cap-A', () => api.mixSair(), 'Você saiu da sessão.')
+                          }
+                        >
+                          {busy === 'leave-cap-A' ? 'SAINDO...' : 'Sair'}
+                        </Btn>
+                      ) : null
+                    }
+                  />
                 ) : (
-                  <EmptySlot team='A' label='Aguardando capitão' />
+                  <EmptySlot
+                    team='A'
+                    label='Aguardando capitão'
+                    action={
+                      canShowCaptainEnter('A') ? (
+                        <Btn
+                          color={TEAM_META.A.color}
+                          variant='outline'
+                          size='lg'
+                          className={CAPTAIN_SLOT_BTN_CLASS}
+                          disabled={loading || !!busy}
+                          onClick={() =>
+                            runAction(
+                              'join-cap-A',
+                              () => api.mixEntrar('capitao', null, 'A'),
+                              'Você entrou como capitão do Time A.'
+                            )
+                          }
+                        >
+                          {busy === 'join-cap-A' ? 'ENTRANDO...' : 'Entrar'}
+                        </Btn>
+                      ) : null
+                    }
+                  />
                 )}
                 {Array.from({ length: 4 }, (_, idx) => snapshot?.teams.A.picks[idx] || null).map(
                   (p, idx) =>
@@ -2752,105 +2926,151 @@ export default function TirarTimePage() {
                     )}
                   </div>
 
-                  <div className='tmx-pool'>
-                    {(snapshot?.pool || []).map((p) => {
-                      const isPicking = busy === `pick-${p.jogador_id}`
-                      const locked = !canPick || isPicking
-                      const isAnim = pickAnimId === p.jogador_id
-                      const level = normalizeLevel((p as any)?.level)
+                  <div className='tmx-slot-grid'>
+                    {poolSlots.map(({ slot, player }) => {
+                      const level = normalizeLevel((player as any)?.level)
                       const levelColor = levelAccentColor(level)
+                      const isPicking = !!player && busy === `pick-${player.jogador_id}`
+                      const pickLocked = !player || !canPick || isPicking
+                      const isAnim = !!player && pickAnimId === player.jogador_id
+                      const canJoinThisSlot = canEnterPlayer && !player
+
                       return (
-                        <button
-                          key={p.jogador_id}
-                          disabled={locked}
-                          className={`tmx-pool-card ${locked ? 'is-locked' : ''} ${
+                        <div
+                          key={`pool-slot-${slot}`}
+                          className={`tmx-slot-card ${player ? '' : 'tmx-slot-empty'} ${
                             isAnim ? 'is-picked' : ''
                           }`}
-                          onClick={() =>
-                            runAction(
-                              `pick-${p.jogador_id}`,
-                              () => api.mixPick(p.jogador_id, snapshot?.id),
-                              `${p.nome} foi selecionado.`
-                            )
-                          }
                         >
-                          {avatarSrc(p) ? (
-                            <img
-                              src={avatarSrc(p)}
-                              alt={p.nome}
-                              className='tmx-avatar'
-                              style={{ width: 68, height: 68 }}
-                              onError={(e) => {
-                                ;(e.target as HTMLImageElement).style.display = 'none'
-                              }}
-                            />
+                          <div className='tmx-slot-head'>
+                            <span className='tmx-slot-status'>{player ? 'OCUPADO' : 'LIVRE'}</span>
+                          </div>
+
+                          {player ? (
+                            <button
+                              disabled={pickLocked}
+                              className={`tmx-pool-card ${pickLocked ? 'is-locked' : ''} ${
+                                isAnim ? 'is-picked' : ''
+                              }`}
+                              style={{ minHeight: 0, height: '100%', padding: '10px 8px' }}
+                              onClick={() =>
+                                runAction(
+                                  `pick-${player.jogador_id}`,
+                                  () => api.mixPick(player.jogador_id, snapshot?.id),
+                                  `${player.nome} foi selecionado.`
+                                )
+                              }
+                            >
+                              {avatarSrc(player) ? (
+                                <img
+                                  src={avatarSrc(player)}
+                                  alt={player.nome}
+                                  className='tmx-avatar'
+                                  style={{ width: 56, height: 56 }}
+                                  onError={(e) => {
+                                    ;(e.target as HTMLImageElement).style.display = 'none'
+                                  }}
+                                />
+                              ) : (
+                                <div
+                                  className='tmx-avatar'
+                                  style={{
+                                    width: 56,
+                                    height: 56,
+                                    background: 'linear-gradient(135deg,#818cf8,#c084fc)',
+                                  }}
+                                >
+                                  {initials(player.nome)}
+                                </div>
+                              )}
+                              <div
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: 6,
+                                  maxWidth: '100%',
+                                  minWidth: 0,
+                                }}
+                              >
+                                <span
+                                  style={{
+                                    fontSize: 14,
+                                    fontWeight: 800,
+                                    fontFamily: "'Rajdhani',sans-serif",
+                                    color: '#fff',
+                                    maxWidth: '100%',
+                                    whiteSpace: 'nowrap',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    minWidth: 0,
+                                  }}
+                                >
+                                  {player.nome}
+                                </span>
+                                <span
+                                  style={{
+                                    color: levelColor,
+                                    border: `1px solid ${levelColor}88`,
+                                    background: `${levelColor}1a`,
+                                    boxShadow: `0 0 10px ${levelColor}22 inset`,
+                                    borderRadius: 6,
+                                    fontSize: 10,
+                                    fontWeight: 800,
+                                    fontFamily: "'Orbitron',monospace",
+                                    letterSpacing: 0.5,
+                                    padding: '1px 6px',
+                                    flexShrink: 0,
+                                    lineHeight: 1.25,
+                                  }}
+                                >
+                                  LV {level}
+                                </span>
+                              </div>
+                              <div
+                                style={{
+                                  fontSize: 11,
+                                  color: '#fff',
+                                  fontFamily: "'Rajdhani',sans-serif",
+                                  letterSpacing: 0.4,
+                                  fontWeight: 700,
+                                }}
+                              >
+                                K/D/A {formatKda(player.kda_player)} · ADR {toNumber(player.adr).toFixed(1)}
+                              </div>
+                            </button>
                           ) : (
-                            <div
-                              className='tmx-avatar'
-                              style={{
-                                width: 68,
-                                height: 68,
-                                background: 'linear-gradient(135deg,#818cf8,#c084fc)',
-                              }}
-                            >
-                              {initials(p.nome)}
-                            </div>
+                            <>
+                              <div
+                                className='tmx-avatar'
+                                style={{
+                                  width: 56,
+                                  height: 56,
+                                  margin: '2px auto 0',
+                                  borderStyle: 'dashed',
+                                  borderColor: 'rgba(255,255,255,0.28)',
+                                  background: 'transparent',
+                                  color: 'rgba(255,255,255,0.4)',
+                                }}
+                              >
+                                +
+                              </div>
+                              <div className='tmx-slot-meta'>Aguardando jogador neste slot.</div>
+                              <button
+                                type='button'
+                                className='tmx-slot-join-btn'
+                                disabled={!canJoinThisSlot || !!busy}
+                                onClick={() =>
+                                  runAction(
+                                    `join-player-${slot}`,
+                                    () => api.mixEntrar('jogador', slot),
+                                  )
+                                }
+                              >
+                                {busy === `join-player-${slot}` ? 'ENTRANDO...' : 'Entrar como jogador'}
+                              </button>
+                            </>
                           )}
-                          <div
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: 7,
-                              maxWidth: '100%',
-                              minWidth: 0,
-                            }}
-                          >
-                            <span
-                              style={{
-                                fontSize: 15,
-                                fontWeight: 800,
-                                fontFamily: "'Rajdhani',sans-serif",
-                                color: '#fff',
-                                maxWidth: '100%',
-                                whiteSpace: 'nowrap',
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                                minWidth: 0,
-                              }}
-                            >
-                              {p.nome}
-                            </span>
-                            <span
-                              style={{
-                                color: levelColor,
-                                border: `1px solid ${levelColor}88`,
-                                background: `${levelColor}1a`,
-                                boxShadow: `0 0 10px ${levelColor}22 inset`,
-                                borderRadius: 6,
-                                fontSize: 10,
-                                fontWeight: 800,
-                                fontFamily: "'Orbitron',monospace",
-                                letterSpacing: 0.5,
-                                padding: '1px 6px',
-                                flexShrink: 0,
-                                lineHeight: 1.25,
-                              }}
-                            >
-                              LV {level}
-                            </span>
-                          </div>
-                          <div
-                            style={{
-                              fontSize: 12,
-                              color: '#fff',
-                              fontFamily: "'Rajdhani',sans-serif",
-                              letterSpacing: 0.5,
-                              fontWeight: 700,
-                            }}
-                          >
-                            K/D/A {formatKda(p.kda_player)} · ADR {toNumber(p.adr).toFixed(1)}
-                          </div>
-                        </button>
+                        </div>
                       )
                     })}
                   </div>
@@ -2888,9 +3108,52 @@ export default function TirarTimePage() {
               <TeamHeader team='B' captainName={snapshot?.teams.B.captain?.nome} />
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 10 }}>
                 {snapshot?.teams.B.captain ? (
-                  <PlayerChip player={snapshot.teams.B.captain} team='B' captain />
+                  <PlayerChip
+                    player={snapshot.teams.B.captain}
+                    team='B'
+                    captain
+                    action={
+                      canShowCaptainLeave('B') ? (
+                        <Btn
+                          color='#f59e0b'
+                          variant='outline'
+                          size='lg'
+                          className={CAPTAIN_SLOT_BTN_CLASS}
+                          disabled={!!busy}
+                          onClick={() =>
+                            runAction('leave-cap-B', () => api.mixSair(), 'Você saiu da sessão.')
+                          }
+                        >
+                          {busy === 'leave-cap-B' ? 'SAINDO...' : 'Sair'}
+                        </Btn>
+                      ) : null
+                    }
+                  />
                 ) : (
-                  <EmptySlot team='B' label='Aguardando capitão' />
+                  <EmptySlot
+                    team='B'
+                    label='Aguardando capitão'
+                    action={
+                      canShowCaptainEnter('B') ? (
+                        <Btn
+                          color={TEAM_META.B.color}
+                          variant='outline'
+                          size='lg'
+                          className={CAPTAIN_SLOT_BTN_CLASS}
+                          disabled={loading || !!busy}
+                          onClick={() =>
+                            runAction(
+                              'join-cap-B',
+                              () => api.mixEntrar('capitao', null, 'B'),
+                              'Você entrou como capitão do Time B.'
+                            )
+                          }
+                        >
+                          {busy === 'join-cap-B' ? 'ENTRANDO...' : 'Entrar'}
+                        </Btn>
+                      ) : null
+                    }
+                  />
                 )}
                 {Array.from({ length: 4 }, (_, idx) => snapshot?.teams.B.picks[idx] || null).map(
                   (p, idx) =>

@@ -62,6 +62,7 @@ type SessaoPlayerRow = {
   is_capitao: boolean;
   time: Team | null;
   ordem_pick: number | null;
+  pool_slot: number | null;
   nome: string;
   imagem: string | null;
   kda_player: string | null;
@@ -86,6 +87,7 @@ type SessaoMapaRow = {
 export default class TirarMixController {
   protected customResponse = new CustomResponse();
   private ONLINE_SECONDS = 90;
+  private MAX_POOL_SLOTS = 8;
   private MAP_POOL = [
     "de_ancient",
     "de_anubis",
@@ -106,6 +108,35 @@ export default class TirarMixController {
 
   private nowSql() {
     return DateTime.now().toSQL();
+  }
+
+  private normalizePoolSlot(value: unknown): number | null {
+    const n = Number(value);
+    if (!Number.isFinite(n)) return null;
+    const slot = Math.trunc(n);
+    if (slot < 1 || slot > this.MAX_POOL_SLOTS) return null;
+    return slot;
+  }
+
+  private async firstFreePoolSlot(sessaoId: number, trx?: any) {
+    const rows = await (trx || Database)
+      .from("tb_tirar_mix_players")
+      .where("sessao_id", sessaoId)
+      .where("is_capitao", false)
+      .where("is_selecionado", false)
+      .whereNotNull("pool_slot")
+      .select("pool_slot");
+
+    const used = new Set<number>();
+    for (const row of rows) {
+      const slot = this.normalizePoolSlot((row as any)?.pool_slot);
+      if (slot !== null) used.add(slot);
+    }
+
+    for (let slot = 1; slot <= this.MAX_POOL_SLOTS; slot += 1) {
+      if (!used.has(slot)) return slot;
+    }
+    return null;
   }
 
   private calcDiceTotal(
@@ -273,6 +304,7 @@ export default class TirarMixController {
         "sp.is_capitao",
         "sp.time",
         "sp.ordem_pick",
+        "sp.pool_slot",
         "j.nome",
         "j.imagem",
         "j.kda_player",
@@ -542,6 +574,7 @@ export default class TirarMixController {
         is_selecionado: true,
         time: team,
         ordem_pick: ordem,
+        pool_slot: null,
         updated_at: this.nowSql(),
       });
 
@@ -574,6 +607,7 @@ export default class TirarMixController {
             is_selecionado: true,
             time: targetTeam,
             ordem_pick: ordemAuto,
+            pool_slot: null,
             updated_at: this.nowSql(),
           });
 
@@ -956,7 +990,14 @@ export default class TirarMixController {
 
     const pool = players
       .filter((p) => !p.is_capitao && !p.is_selecionado)
-      .sort((a, b) => (a.nome || "").localeCompare(b.nome || ""));
+      .sort((a, b) => {
+        const sa = this.normalizePoolSlot(a.pool_slot);
+        const sb = this.normalizePoolSlot(b.pool_slot);
+        if (sa !== null && sb !== null) return sa - sb;
+        if (sa !== null) return -1;
+        if (sb !== null) return 1;
+        return (a.nome || "").localeCompare(b.nome || "");
+      });
 
     const meSessao = players.find((p) => p.jogador_id === meJogadorId) || null;
 
@@ -1167,6 +1208,19 @@ export default class TirarMixController {
   public async sessaoNova({ auth, response }: HttpContextContract) {
     try {
       const user = await auth.authenticate();
+      const userRow = await Database.from("tb_usuarios_adm")
+        .where("id", user.id)
+        .select("usuario_admin")
+        .first();
+
+      if (!userRow?.usuario_admin) {
+        return this.customResponse.erro(
+          response,
+          "Apenas administradores podem criar uma nova sessão.",
+          {},
+          403
+        );
+      }
 
       await Database.from("tb_tirar_mix_sessoes")
         .whereNotIn("status", ["finalizado", "cancelado"])
@@ -1209,6 +1263,18 @@ export default class TirarMixController {
       const user = await auth.authenticate();
       const jogador = await this.jogadorDoUsuarioOrFail(user.id);
       const role = String(request.input("role", "jogador")).toLowerCase();
+      const requestedPoolSlot = this.normalizePoolSlot(request.input("pool_slot"));
+      const requestedTeamRaw = String(request.input("team", "") || "")
+        .trim()
+        .toUpperCase();
+      const requestedCaptainTeam: Team | null =
+        requestedTeamRaw === "A" || requestedTeamRaw === "B"
+          ? (requestedTeamRaw as Team)
+          : null;
+
+      if (role !== "capitao" && role !== "jogador") {
+        return this.customResponse.erro(response, "Tipo de entrada inválido.", {}, 400);
+      }
 
       const clientSession = this.normalizeClientSession(request.header("x-client-session"), user.id);
       await this.markOnline(
@@ -1241,7 +1307,20 @@ export default class TirarMixController {
 
         if (rec.time_a_capitao_id === jogador.id) team = "A";
         else if (rec.time_b_capitao_id === jogador.id) team = "B";
-        else if (!rec.time_a_capitao_id) team = "A";
+        else if (requestedCaptainTeam) {
+          if (
+            (requestedCaptainTeam === "A" && rec.time_a_capitao_id) ||
+            (requestedCaptainTeam === "B" && rec.time_b_capitao_id)
+          ) {
+            return this.customResponse.erro(
+              response,
+              `O slot de capitão do Time ${requestedCaptainTeam} já está ocupado.`,
+              {},
+              409
+            );
+          }
+          team = requestedCaptainTeam;
+        } else if (!rec.time_a_capitao_id) team = "A";
         else if (!rec.time_b_capitao_id) team = "B";
 
         if (!team) {
@@ -1253,6 +1332,7 @@ export default class TirarMixController {
             is_capitao: true,
             is_selecionado: true,
             time: team,
+            pool_slot: null,
             updated_at: this.nowSql(),
           });
         } else {
@@ -1262,6 +1342,7 @@ export default class TirarMixController {
             is_capitao: true,
             is_selecionado: true,
             time: team,
+            pool_slot: null,
             created_at: this.nowSql(),
             updated_at: this.nowSql(),
           });
@@ -1277,15 +1358,68 @@ export default class TirarMixController {
           fase: nextA && nextB ? "aguardando_inicio" : "aguardando_capitaes",
           updated_at: this.nowSql(),
         });
-      } else if (!existing) {
-        await Database.table("tb_tirar_mix_players").insert({
-          sessao_id: rec.id,
-          jogador_id: jogador.id,
-          is_capitao: false,
-          is_selecionado: false,
-          created_at: this.nowSql(),
-          updated_at: this.nowSql(),
-        });
+      } else {
+        if (requestedPoolSlot === null) {
+          return this.customResponse.erro(
+            response,
+            `Selecione um slot de 1 a ${this.MAX_POOL_SLOTS} para entrar como jogador.`,
+            {},
+            400
+          );
+        }
+
+        const slotOwner = await Database.from("tb_tirar_mix_players")
+          .where("sessao_id", rec.id)
+          .where("is_capitao", false)
+          .where("is_selecionado", false)
+          .where("pool_slot", requestedPoolSlot)
+          .whereNot("jogador_id", jogador.id)
+          .first();
+
+        if (slotOwner) {
+          return this.customResponse.erro(response, "Este slot já está ocupado.", {}, 409);
+        }
+
+        if (rec.time_a_capitao_id === jogador.id || rec.time_b_capitao_id === jogador.id) {
+          const nextA = rec.time_a_capitao_id === jogador.id ? null : rec.time_a_capitao_id;
+          const nextB = rec.time_b_capitao_id === jogador.id ? null : rec.time_b_capitao_id;
+          const hasBothCaptains = !!(nextA && nextB);
+
+          await Database.from("tb_tirar_mix_sessoes")
+            .where("id", rec.id)
+            .update({
+              time_a_capitao_id: nextA,
+              time_b_capitao_id: nextB,
+              status: hasBothCaptains ? "capitaes_definidos" : "criando",
+              fase: hasBothCaptains ? "aguardando_inicio" : "aguardando_capitaes",
+              start_ready_a: false,
+              start_ready_b: false,
+              start_countdown_started_at: null,
+              start_countdown_ends_at: null,
+              updated_at: this.nowSql(),
+            });
+        }
+
+        if (existing) {
+          await Database.from("tb_tirar_mix_players").where("id", existing.id).update({
+            is_capitao: false,
+            is_selecionado: false,
+            time: null,
+            ordem_pick: null,
+            pool_slot: requestedPoolSlot,
+            updated_at: this.nowSql(),
+          });
+        } else {
+          await Database.table("tb_tirar_mix_players").insert({
+            sessao_id: rec.id,
+            jogador_id: jogador.id,
+            is_capitao: false,
+            is_selecionado: false,
+            pool_slot: requestedPoolSlot,
+            created_at: this.nowSql(),
+            updated_at: this.nowSql(),
+          });
+        }
       }
 
       const next = await this.reconcile(rec.id);
@@ -1343,6 +1477,7 @@ export default class TirarMixController {
             is_selecionado: true,
             time: team,
             ordem_pick: null,
+            pool_slot: null,
             updated_at: this.nowSql(),
           });
         } else {
@@ -1352,6 +1487,7 @@ export default class TirarMixController {
             is_capitao: true,
             is_selecionado: true,
             time: team,
+            pool_slot: null,
             created_at: this.nowSql(),
             updated_at: this.nowSql(),
           });
@@ -1436,6 +1572,7 @@ export default class TirarMixController {
           is_selecionado: true,
           time: opponentTeam,
           ordem_pick: null,
+          pool_slot: null,
           updated_at: this.nowSql(),
         });
       } else {
@@ -1445,6 +1582,7 @@ export default class TirarMixController {
           is_capitao: true,
           is_selecionado: true,
           time: opponentTeam,
+          pool_slot: null,
           created_at: this.nowSql(),
           updated_at: this.nowSql(),
         });
@@ -1776,14 +1914,40 @@ export default class TirarMixController {
         const toInsertIds = addIds.filter((id) => !existingInSession.has(Number(id)));
 
         if (toInsertIds.length) {
-          const rows = toInsertIds.map((id) => ({
-            sessao_id: sessao.id,
-            jogador_id: id,
-            is_capitao: false,
-            is_selecionado: false,
-            created_at: this.nowSql(),
-            updated_at: this.nowSql(),
-          }));
+          const occupiedRows = await Database.from("tb_tirar_mix_players")
+            .where("sessao_id", sessao.id)
+            .where("is_capitao", false)
+            .where("is_selecionado", false)
+            .whereNotNull("pool_slot")
+            .select("pool_slot");
+
+          const usedSlots = new Set<number>();
+          for (const row of occupiedRows) {
+            const slot = this.normalizePoolSlot((row as any)?.pool_slot);
+            if (slot !== null) usedSlots.add(slot);
+          }
+
+          const rows = toInsertIds.map((id) => {
+            const slot = (() => {
+              for (let i = 1; i <= this.MAX_POOL_SLOTS; i += 1) {
+                if (!usedSlots.has(i)) {
+                  usedSlots.add(i);
+                  return i;
+                }
+              }
+              return null;
+            })();
+
+            return {
+              sessao_id: sessao.id,
+              jogador_id: id,
+              is_capitao: false,
+              is_selecionado: false,
+              pool_slot: slot,
+              created_at: this.nowSql(),
+              updated_at: this.nowSql(),
+            };
+          });
 
           await Database.table("tb_tirar_mix_players").insert(rows);
         }
@@ -2184,6 +2348,7 @@ export default class TirarMixController {
         if (!last) return;
 
         await trx.from("tb_tirar_mix_picks").where("id", last.id).delete();
+        const firstFreeSlot = await this.firstFreePoolSlot(sessao!.id, trx);
 
         await trx
           .from("tb_tirar_mix_players")
@@ -2193,6 +2358,7 @@ export default class TirarMixController {
             is_selecionado: false,
             time: null,
             ordem_pick: null,
+            pool_slot: firstFreeSlot,
             updated_at: this.nowSql(),
           });
 
@@ -2304,6 +2470,7 @@ export default class TirarMixController {
             is_capitao: true,
             is_selecionado: true,
             time: "A",
+            pool_slot: null,
             created_at: this.nowSql(),
             updated_at: this.nowSql(),
           },
@@ -2313,6 +2480,7 @@ export default class TirarMixController {
             is_capitao: true,
             is_selecionado: true,
             time: "B",
+            pool_slot: null,
             created_at: this.nowSql(),
             updated_at: this.nowSql(),
           },
