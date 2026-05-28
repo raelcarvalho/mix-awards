@@ -337,10 +337,10 @@ export const albumStatus = () =>
 
 // ─── Álbum Figurinhas ───────────────────────────────────────────────────────
 export const meuAlbum = () =>
-  apiFetch<any>('/album')
+  apiFetch<any>('/api/album')
 
 export const abrirPacote = (pacote_id: number) =>
-  apiFetch<any>('/album/pacotes/abrir', { method: 'POST', body: JSON.stringify({ pacote_id }) })
+  apiFetch<any>('/api/album/pacotes/abrir', { method: 'POST', body: JSON.stringify({ pacote_id }) })
 
 export const ackFigurinhasNovas = (figurinhaIds: number[]) =>
   apiFetch<any>('/album/ack-novas', {

@@ -214,10 +214,18 @@ Route.group(() => {
 // ALBUM
 Route.group(() => {
   Route.post("/album", "AlbumController.criarAlbum");
-  Route.get("/album", "AlbumController.meuAlbum");
   Route.post("/album/pacotes/abrir", "AlbumController.abrirPacote");
   Route.post("/album/figurinhas", "AlbumController.cadastrarFigurinha");
 }).middleware("auth");
+
+// ALBUM API (separado da rota de página /album para evitar conflito no F5)
+Route.group(() => {
+  Route.get("/album", "AlbumController.meuAlbum");
+  Route.post("/album/pacotes/abrir", "AlbumController.abrirPacote");
+  Route.post("/album/figurinhas", "AlbumController.cadastrarFigurinha");
+})
+  .prefix("api")
+  .middleware("auth:api");
 
 Route.group(() => {
   Route.get("/album/stickers", "AlbumStickersController.meuAlbum");
