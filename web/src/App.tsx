@@ -35,15 +35,49 @@ const PAGE_VALUES: Page[] = [
   'importar',
 ]
 
+const PAGE_TO_PATH: Record<Page, string> = {
+  home: '/',
+  dashboard: '/dashboard',
+  partidas: '/partidas',
+  'tirar-time': '/tirar-time',
+  ranking: '/ranking',
+  album: '/album',
+  'album-stickers': '/album-stickers',
+  shop: '/shop',
+  importar: '/importar',
+}
+
 function isValidPage(value: unknown): value is Page {
   return typeof value === 'string' && PAGE_VALUES.includes(value as Page)
+}
+
+function normalizePathname(pathname: string): string {
+  const decoded = decodeURIComponent(String(pathname || '').trim())
+  if (!decoded || decoded === '/') return '/'
+  return decoded.endsWith('/') ? decoded.slice(0, -1) : decoded
+}
+
+function readPageFromPathname(pathname: string): Page | null {
+  const normalizedPath = normalizePathname(pathname)
+  for (const [page, path] of Object.entries(PAGE_TO_PATH)) {
+    if (path === normalizedPath) return page as Page
+  }
+  return null
 }
 
 function readInitialPage(): Page {
   if (typeof window === 'undefined') return 'home'
 
+  const fromPath = readPageFromPathname(window.location.pathname)
+  if (fromPath) return fromPath
+
   const fromHash = decodeURIComponent(String(window.location.hash || '').replace(/^#/, '').trim())
-  if (isValidPage(fromHash)) return fromHash
+  if (isValidPage(fromHash)) {
+    const targetPath = PAGE_TO_PATH[fromHash]
+    const nextUrl = `${targetPath}${window.location.search}`
+    window.history.replaceState(null, '', nextUrl)
+    return fromHash
+  }
 
   const fromStorage = String(localStorage.getItem(PAGE_STORAGE_KEY) || '').trim()
   if (isValidPage(fromStorage)) return fromStorage
@@ -87,24 +121,22 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem(PAGE_STORAGE_KEY, page)
 
-    const hash = `#${encodeURIComponent(page)}`
-    if (window.location.hash !== hash) {
-      const nextUrl = `${window.location.pathname}${window.location.search}${hash}`
+    const targetPath = PAGE_TO_PATH[page] || '/'
+    if (normalizePathname(window.location.pathname) !== targetPath) {
+      const nextUrl = `${targetPath}${window.location.search}`
       window.history.replaceState(null, '', nextUrl)
     }
   }, [page])
 
   useEffect(() => {
-    const onHashChange = () => {
-      const fromHash = decodeURIComponent(
-        String(window.location.hash || '').replace(/^#/, '').trim()
-      )
-      if (!isValidPage(fromHash)) return
-      setPage((current) => (current === fromHash ? current : fromHash))
+    const onPopState = () => {
+      const fromPath = readPageFromPathname(window.location.pathname)
+      if (!fromPath) return
+      setPage((current) => (current === fromPath ? current : fromPath))
     }
 
-    window.addEventListener('hashchange', onHashChange)
-    return () => window.removeEventListener('hashchange', onHashChange)
+    window.addEventListener('popstate', onPopState)
+    return () => window.removeEventListener('popstate', onPopState)
   }, [])
 
   return (

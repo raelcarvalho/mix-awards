@@ -215,7 +215,7 @@ export default function AppLayout({ page, setPage, onOpenPlayerDashboard, childr
   )
 
   const openSteamAuth = useCallback(async (gcId?: number) => {
-    const redirect = `${window.location.pathname}${window.location.search}${window.location.hash}`
+    const redirect = `${window.location.pathname}${window.location.search}`
     const safeGcId = Number.isFinite(Number(gcId)) && Number(gcId) > 0 ? Number(gcId) : undefined
     try {
       const url = await api.steamLoginUrlForLogged({
@@ -1029,7 +1029,7 @@ function LoginModal({
   const loginWithSteam = () => {
     setError('')
     setSteamLoading(true)
-    const redirect = `${window.location.pathname}${window.location.search}${window.location.hash}`
+    const redirect = `${window.location.pathname}${window.location.search}`
     window.location.href = api.steamLoginUrl({ redirect })
   }
 

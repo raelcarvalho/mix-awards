@@ -30,6 +30,23 @@ Route.get("/index", ({ response }) => {
   response.stream(fs.createReadStream(Application.publicPath("index.html")));
 });
 
+const spaRoutes = [
+  "/dashboard",
+  "/partidas",
+  "/tirar-time",
+  "/ranking",
+  "/album",
+  "/album-stickers",
+  "/shop",
+  "/importar",
+];
+
+spaRoutes.forEach((path) => {
+  Route.get(path, ({ response }) => {
+    response.stream(fs.createReadStream(Application.publicPath("index.html")));
+  });
+});
+
 Route.get("/login-html", ({ response }) => {
   response.stream(fs.createReadStream(Application.publicPath("login.html")));
 });
