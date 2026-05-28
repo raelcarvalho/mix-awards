@@ -100,7 +100,9 @@ const buildSeasonQuery = (
   }
 ) => {
   const q = new URLSearchParams()
-  q.set('season_id', String(parseSeasonId(filters?.seasonId)))
+  if (filters?.seasonId !== undefined && filters?.seasonId !== null && String(filters.seasonId).trim() !== '') {
+    q.set('season_id', String(parseSeasonId(filters.seasonId)))
+  }
   const month = normalizeMonth(filters?.month)
   if (month) q.set('month', month)
   const player = String(filters?.player ?? '').trim()

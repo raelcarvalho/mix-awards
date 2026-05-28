@@ -213,6 +213,12 @@ export default class AlbumStickersController {
         .where("usuario_adm_id", usuario.id)
         .firstOrFail();
       const albumAssinaturasId = await this.ensureAlbumStickers(jogador.id);
+      const revealedSlots = await this.getRevealedSlots(albumAssinaturasId);
+      const revealedSet = new Set<number>(
+        (revealedSlots || [])
+          .map((slot) => Number(slot))
+          .filter((slot) => Number.isFinite(slot) && slot > 0)
+      );
 
       const [todasAtivas, obtidas] = await Promise.all([
         Stickers.query()
@@ -225,10 +231,17 @@ export default class AlbumStickersController {
       ]);
 
       const setObtidas = new Set<number>(obtidas.map((r) => r.sticker_id));
+      const possuiByStickerId = new Set<number>();
+      for (const s of todasAtivas) {
+        const slot = Number(s.slot ?? s.id);
+        if (setObtidas.has(Number(s.id)) || revealedSet.has(slot)) {
+          possuiByStickerId.add(Number(s.id));
+        }
+      }
 
       const payload = {
         progresso: {
-          obtidas: setObtidas.size,
+          obtidas: possuiByStickerId.size,
           total: todasAtivas.length,
         },
         stickers: todasAtivas.map((s) => ({
@@ -237,7 +250,7 @@ export default class AlbumStickersController {
           ordem: s.ordem ?? s.id,
           nome: s.nome,
           imagem: s.imagem,
-          possui: setObtidas.has(s.id),
+          possui: possuiByStickerId.has(Number(s.id)),
         })),
       };
 

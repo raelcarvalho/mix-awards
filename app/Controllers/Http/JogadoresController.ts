@@ -76,8 +76,17 @@ export default class JogadoresController {
   }
 
   public async listar({ request, response }: HttpContextContract) {
-    const seasonId = this.parseSeasonId(request.input("season_id"));
     const monthKey = this.parseMonthKey(request.input("month"));
+    const seasonRaw = request.input("season_id");
+    const hasSeasonParam =
+      seasonRaw !== undefined &&
+      seasonRaw !== null &&
+      String(seasonRaw).trim() !== "";
+    const seasonId = hasSeasonParam
+      ? this.parseSeasonId(seasonRaw)
+      : monthKey
+      ? null
+      : this.DEFAULT_SEASON_ID;
     const partidaSeasonColumn = await Database.from("information_schema.columns")
       .where("table_name", "tb_partidas")
       .where("column_name", "season_id")
@@ -88,12 +97,14 @@ export default class JogadoresController {
     const aggregateQuery = Database.from("tb_partidas_jogadores as pj")
       .innerJoin("tb_partidas as p", "p.id", "pj.partidas_id");
 
-    this.applySeasonFilter(
-      aggregateQuery,
-      "p",
-      seasonId,
-      hasPartidaSeasonColumn
-    );
+    if (seasonId !== null) {
+      this.applySeasonFilter(
+        aggregateQuery,
+        "p",
+        seasonId,
+        hasPartidaSeasonColumn
+      );
+    }
     this.applyMonthFilter(aggregateQuery, "p", monthKey);
 
     const aggregateRows = await aggregateQuery

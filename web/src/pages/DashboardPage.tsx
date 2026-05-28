@@ -699,10 +699,12 @@ export default function DashboardPage({ setPage, dashboardPlayerId }: DashboardP
     let alive = true
     setLoading(true)
     setLoadError('')
-    const filters: api.SeasonFilters = {
-      seasonId,
-      month: monthKey === 'all' ? undefined : monthKey,
-    }
+    const filters: api.SeasonFilters =
+      monthKey === 'all'
+        ? { seasonId }
+        : {
+            month: monthKey,
+          }
 
     Promise.all([
       api.listarJogadores(filters).catch((err: any) => {

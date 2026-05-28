@@ -817,8 +817,17 @@ export default class PartidaController {
 
   public async consultarPartidas({ request, response }: HttpContextContract) {
     const playerRaw = String(request.input("player", "") || "").trim();
-    const seasonId = this.parseSeasonId(request.input("season_id"));
     const monthKey = this.parseMonthKey(request.input("month"));
+    const seasonRaw = request.input("season_id");
+    const hasSeasonParam =
+      seasonRaw !== undefined &&
+      seasonRaw !== null &&
+      String(seasonRaw).trim() !== "";
+    const seasonId = hasSeasonParam
+      ? this.parseSeasonId(seasonRaw)
+      : monthKey
+      ? null
+      : this.DEFAULT_SEASON_ID;
     const partidaSeasonColumn = await Database.from("information_schema.columns")
       .where("table_name", "tb_partidas")
       .where("column_name", "season_id")
@@ -827,7 +836,14 @@ export default class PartidaController {
 
     if (!playerRaw) {
       const partidasQuery = Partidas.query();
-      this.applySeasonFilter(partidasQuery, "tb_partidas", seasonId, hasPartidaSeasonColumn);
+      if (seasonId !== null) {
+        this.applySeasonFilter(
+          partidasQuery,
+          "tb_partidas",
+          seasonId,
+          hasPartidaSeasonColumn
+        );
+      }
       this.applyMonthFilter(partidasQuery, "tb_partidas", monthKey);
       const partidas = await partidasQuery.orderBy("data", "desc");
       return response.json(partidas);
@@ -843,7 +859,9 @@ export default class PartidaController {
         `%${q}%`,
       ]);
 
-    this.applySeasonFilter(partidasQuery, "p", seasonId, hasPartidaSeasonColumn);
+    if (seasonId !== null) {
+      this.applySeasonFilter(partidasQuery, "p", seasonId, hasPartidaSeasonColumn);
+    }
     this.applyMonthFilter(partidasQuery, "p", monthKey);
 
     const partidasFiltradas = await partidasQuery
@@ -1047,6 +1065,67 @@ export default class PartidaController {
 
         if (semPartidas.length > 0) {
           await Jogadores.query({ client: trx }).whereIn("id", semPartidas).delete();
+        }
+
+        const missionsTable = await trx
+          .from("information_schema.tables")
+          .where("table_name", "tb_jogadores_missoes")
+          .first();
+        const hasMissionsTable = !!missionsTable;
+
+        if (hasMissionsTable && jogadorIdsParaAtualizar.length > 0) {
+          await trx
+            .from("tb_jogadores_missoes")
+            .whereIn("jogador_id", jogadorIdsParaAtualizar)
+            .delete();
+
+          const missionStatsRows = await trx
+            .from("tb_partidas_jogadores as pj")
+            .innerJoin("tb_partidas as p", "p.id", "pj.partidas_id")
+            .whereIn("pj.jogadores_id", jogadorIdsParaAtualizar)
+            .orderBy("p.data", "asc")
+            .orderBy("p.id", "asc")
+            .select(
+              "pj.jogadores_id",
+              "pj.kills",
+              "pj.assistencias",
+              "pj.adr",
+              "pj.first_kill",
+              "pj.multi_kill",
+              "pj.partida_ganha"
+            );
+
+          const statsByJogador = new Map<number, any[]>();
+          for (const row of missionStatsRows) {
+            const jogadorId = Number(row.jogadores_id || 0);
+            if (jogadorId <= 0) continue;
+            const arr = statsByJogador.get(jogadorId) || [];
+            arr.push(row);
+            statsByJogador.set(jogadorId, arr);
+          }
+
+          const semPartidasSet = new Set<number>(semPartidas);
+          for (const jogadorId of jogadorIdsParaAtualizar) {
+            if (semPartidasSet.has(jogadorId)) continue;
+
+            const statsRows = statsByJogador.get(jogadorId) || [];
+            for (const row of statsRows) {
+              await MissionService.applyMatchProgress(
+                jogadorId,
+                {
+                  kills: Number(row.kills || 0),
+                  assistencias: Number(row.assistencias || 0),
+                  adr: Number(row.adr || 0),
+                  first_kill: Number(row.first_kill || 0),
+                  multi_kill: Number(row.multi_kill || 0),
+                  vitoria: Number(row.partida_ganha || 0) > 0,
+                },
+                trx
+              );
+            }
+
+            await MissionService.ensureActiveMissions(jogadorId, trx);
+          }
         }
       });
 
