@@ -32,7 +32,7 @@ export default class CustomResponse {
     return response.send({
       sucesso: false,
       mensagem,
-      resultados: erro,
+      resultados: {},
       erro_de_validacao: false,
     })
   }
@@ -46,8 +46,8 @@ export default class CustomResponse {
 
     return response.status(httpCode).send({
       sucesso: false,
-      mensagem: erro.message ? erro.message : 'Erro desconhecido',
-      resultados: erro.stack ? erro.stack : erro.data ? erro.data : erro ? erro : 'Indisponivel',
+      mensagem: mensagemCustomizada || 'Erro interno',
+      resultados: {},
       mensagem_codigo: mensagemCustomizada,
       erro_de_validacao: false,
     })

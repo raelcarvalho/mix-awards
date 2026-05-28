@@ -6,6 +6,12 @@ interface User {
   nome: string
   email: string
   usuario_admin?: boolean
+  steam_id?: string
+  steam_profile_url?: string
+  steam_persona?: string
+  gc_id?: number
+  gc_profile_url?: string
+  gc_nick?: string
   gold?: number
   jogador_id?: number
   imagem?: string
@@ -35,14 +41,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(false)
 
   const refreshGold = useCallback(async () => {
-    if (!api.getToken()) return
+    if (!api.getUser()) return
     try {
       const data = await api.meuGold(api.getUser()?.id)
+      const resolvedNick = String(data.gc_nick || data.nome || '').trim()
       setGold(data.gold ?? 0)
       setUser((prev) =>
         prev
           ? {
               ...prev,
+              ...(resolvedNick ? { nome: resolvedNick, gc_nick: resolvedNick } : {}),
               gold: data.gold ?? prev.gold ?? 0,
               jogador_id:
                 data.jogador_id ?? prev.jogador_id ?? undefined,
@@ -53,8 +61,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       )
       const u = api.getUser()
       if (u) {
-        api.setAuth(localStorage.getItem('auth_token')!, {
+        api.setAuth('', {
           ...u,
+          ...(resolvedNick ? { nome: resolvedNick, gc_nick: resolvedNick } : {}),
           gold: data.gold,
           jogador_id: data.jogador_id ?? u.jogador_id,
           imagem: data.imagem ?? u.imagem,
@@ -65,7 +74,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   useEffect(() => {
-    if (api.getToken() && api.getUser()) refreshGold()
+    if (api.getUser()) refreshGold()
   }, [refreshGold])
 
   const login = async (email: string, senha: string) => {
@@ -78,8 +87,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         data?.token?.token ||
         data?.token
       const usuario = data?.resultados?.usuario || data?.usuario
-      if (token && usuario) {
-        api.setAuth(token, usuario)
+      if (usuario) {
+        api.setAuth(token || '', usuario)
         setUser(usuario)
         await refreshGold()
       }
@@ -100,7 +109,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user, gold,
       jogadorId: user?.jogador_id ?? null,
       isAdmin: !!user?.usuario_admin,
-      isLogged: !!user && !!api.getToken(),
+      isLogged: !!user,
       loading, login, logout, refreshGold,
     }}>
       {children}

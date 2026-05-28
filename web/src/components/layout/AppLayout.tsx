@@ -209,6 +209,25 @@ export default function AppLayout({ page, setPage, onOpenPlayerDashboard, childr
     return null
   }, [directUserAvatar, user, searchPlayers])
 
+  const steamLinked = useMemo(
+    () => Boolean(String((user as any)?.steam_id || '').trim()),
+    [user]
+  )
+
+  const openSteamAuth = useCallback(async (gcId?: number) => {
+    const redirect = `${window.location.pathname}${window.location.search}${window.location.hash}`
+    const safeGcId = Number.isFinite(Number(gcId)) && Number(gcId) > 0 ? Number(gcId) : undefined
+    try {
+      const url = await api.steamLoginUrlForLogged({
+        redirect,
+        ...(safeGcId ? { gc_id: safeGcId } : {}),
+      })
+      window.location.href = url
+      return
+    } catch {}
+    window.location.href = api.steamLoginUrl({ redirect, ...(safeGcId ? { gc_id: safeGcId } : {}) })
+  }, [])
+
   useEffect(() => {
     if (!isLogged) return
     if (directUserAvatar) return
@@ -842,6 +861,40 @@ export default function AppLayout({ page, setPage, onOpenPlayerDashboard, childr
                     Meu Dashboard
                   </button>
 
+                  {isLogged && (
+                    <button
+                      onClick={() => {
+                        setProfileOpen(false)
+                        if (steamLinked) return
+                        void openSteamAuth(Number((user as any)?.gc_id || 0))
+                      }}
+                      style={{
+                        width: '100%',
+                        textAlign: 'left',
+                        background: steamLinked ? 'rgba(74,222,128,0.1)' : 'transparent',
+                        border: 'none',
+                        color: steamLinked ? '#86efac' : '#7dd3fc',
+                        borderRadius: 8,
+                        padding: '8px 10px',
+                        fontSize: 13,
+                        fontFamily: "'Rajdhani',sans-serif",
+                        cursor: steamLinked ? 'default' : 'pointer',
+                      }}
+                      onMouseEnter={(e) => {
+                        if (steamLinked) return
+                        ;(e.currentTarget as HTMLButtonElement).style.background =
+                          'rgba(34,211,238,0.12)'
+                      }}
+                      onMouseLeave={(e) => {
+                        if (steamLinked) return
+                        ;(e.currentTarget as HTMLButtonElement).style.background =
+                          'transparent'
+                      }}
+                    >
+                      {steamLinked ? 'Steam conectada' : 'Conectar Steam'}
+                    </button>
+                  )}
+
                   {isLogged ? (
                     <button
                       onClick={async () => {
@@ -960,6 +1013,7 @@ function LoginModal({
   const [email, setEmail] = useState('')
   const [senha, setSenha] = useState('')
   const [error, setError] = useState('')
+  const [steamLoading, setSteamLoading] = useState(false)
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -970,6 +1024,13 @@ function LoginModal({
     } catch (err: any) {
       setError(err.message || 'Erro ao fazer login')
     }
+  }
+
+  const loginWithSteam = () => {
+    setError('')
+    setSteamLoading(true)
+    const redirect = `${window.location.pathname}${window.location.search}${window.location.hash}`
+    window.location.href = api.steamLoginUrl({ redirect })
   }
 
   return (
@@ -1076,7 +1137,7 @@ function LoginModal({
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
             <Btn
               type="submit"
-              disabled={loading}
+              disabled={loading || steamLoading}
               color="#c084fc"
               fullWidth
               size="lg"
@@ -1087,7 +1148,7 @@ function LoginModal({
             <Btn
               type="button"
               onClick={onOpenRegister}
-              disabled={loading}
+              disabled={loading || steamLoading}
               color="#22d3ee"
               fullWidth
               size="lg"
@@ -1096,6 +1157,18 @@ function LoginModal({
               CADASTRAR
             </Btn>
           </div>
+          <Btn
+            type="button"
+            onClick={loginWithSteam}
+            disabled={loading || steamLoading}
+            variant="outline"
+            color="#7dd3fc"
+            fullWidth
+            size="lg"
+            className="py-3"
+          >
+            {steamLoading ? 'REDIRECIONANDO STEAM...' : 'ENTRAR COM STEAM'}
+          </Btn>
         </form>
       </div>
     </div>

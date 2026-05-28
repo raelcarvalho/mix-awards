@@ -1,5 +1,6 @@
 ﻿import { useEffect, useMemo, useState } from 'react'
 import { Card, Btn } from '@/components/ui/Card'
+import { useRef } from 'react'
 import { LEVEL_COLOR_BY_ID } from '@/components/profile/PlayerProfilePreview'
 import { useAuth } from '@/hooks/useAuth'
 import * as api from '@/services/api'
@@ -29,6 +30,11 @@ interface Partida {
   scoreA: number | null
   scoreB: number | null
   data: string
+}
+
+type SeasonDropdownOption = {
+  value: string | number
+  label: string
 }
 
 interface PartidaDetalhe {
@@ -247,6 +253,164 @@ function Toast({
       }}
     >
       {msg}
+    </div>
+  )
+}
+
+function SeasonDropdown({
+  value,
+  options,
+  onChange,
+  width = 116,
+  buttonHeight = 38,
+  optionHeight = 36,
+  selectedFontSize = 12,
+  optionFontSize = 12,
+  title,
+}: {
+  value: string | number
+  options: SeasonDropdownOption[]
+  onChange: (nextValue: string) => void
+  width?: number
+  buttonHeight?: number
+  optionHeight?: number
+  selectedFontSize?: number
+  optionFontSize?: number
+  title?: string
+}) {
+  const [open, setOpen] = useState(false)
+  const wrapperRef = useRef<HTMLDivElement | null>(null)
+  const selected =
+    options.find((opt) => String(opt.value) === String(value))?.label ||
+    options[0]?.label ||
+    ''
+
+  useEffect(() => {
+    const onDocMouseDown = (event: MouseEvent) => {
+      if (!wrapperRef.current) return
+      if (!wrapperRef.current.contains(event.target as Node)) {
+        setOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', onDocMouseDown)
+    return () => {
+      document.removeEventListener('mousedown', onDocMouseDown)
+    }
+  }, [])
+
+  return (
+    <div ref={wrapperRef} style={{ position: 'relative', width }} title={title}>
+      <button
+        type='button'
+        onClick={() => setOpen((prev) => !prev)}
+        style={{
+          width: '100%',
+          height: buttonHeight,
+          display: 'grid',
+          gridTemplateColumns: '1fr 34px',
+          alignItems: 'center',
+          background: 'linear-gradient(180deg, rgba(26,31,58,.94), rgba(20,24,48,.96))',
+          border: '1px solid rgba(139,92,246,.62)',
+          borderRadius: 10,
+          color: '#f3f4ff',
+          cursor: 'pointer',
+          overflow: 'hidden',
+          boxShadow: '0 0 0 1px rgba(109,40,217,.18) inset',
+        }}
+      >
+        <span
+          style={{
+            padding: '0 12px',
+            textAlign: 'left',
+            fontFamily: "'Rajdhani',sans-serif",
+            fontSize: selectedFontSize,
+            fontWeight: 800,
+            letterSpacing: 0.4,
+            textTransform: 'uppercase',
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            color: '#f8fafc',
+          }}
+        >
+          {selected}
+        </span>
+        <span
+          style={{
+            height: '100%',
+            borderLeft: '1px solid rgba(139,92,246,.5)',
+            display: 'grid',
+            placeItems: 'center',
+            color: '#e2e8ff',
+            fontSize: 14,
+            lineHeight: 1,
+          }}
+          aria-hidden
+        >
+          {open ? '▲' : '▼'}
+        </span>
+      </button>
+
+      {open && (
+        <div
+          style={{
+            position: 'absolute',
+            top: 'calc(100% + 5px)',
+            right: 0,
+            width: '100%',
+            zIndex: 80,
+            background: 'linear-gradient(180deg, rgba(24,30,58,.98), rgba(18,24,48,.98))',
+            border: '1px solid rgba(139,92,246,.72)',
+            borderRadius: 10,
+            boxShadow: '0 14px 30px rgba(3,6,20,.6)',
+            overflow: 'hidden',
+          }}
+        >
+          {options.map((opt, idx) => {
+            const isSelected = String(opt.value) === String(value)
+            return (
+              <button
+                key={String(opt.value)}
+                type='button'
+                onClick={() => {
+                  onChange(String(opt.value))
+                  setOpen(false)
+                }}
+                style={{
+                  width: '100%',
+                  height: optionHeight,
+                  border: 0,
+                  borderBottom:
+                    idx < options.length - 1
+                      ? '1px solid rgba(255,255,255,.08)'
+                      : 'none',
+                  background: isSelected ? 'rgba(97,125,181,.35)' : 'transparent',
+                  color: '#f8fafc',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  padding: '0 12px',
+                  fontFamily: "'Rajdhani',sans-serif",
+                  fontSize: optionFontSize,
+                  fontWeight: 800,
+                  letterSpacing: 0.45,
+                  textTransform: 'uppercase',
+                  lineHeight: 1,
+                }}
+                onMouseEnter={(e) => {
+                  ;(e.currentTarget as HTMLButtonElement).style.background =
+                    'rgba(97,125,181,.38)'
+                }}
+                onMouseLeave={(e) => {
+                  ;(e.currentTarget as HTMLButtonElement).style.background =
+                    isSelected ? 'rgba(97,125,181,.35)' : 'transparent'
+                }}
+              >
+                {opt.label}
+              </button>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }
@@ -986,6 +1150,7 @@ function DetailModal({
 // ─── Partidas Page ────────────────────────────────────────────────────────────
 export function PartidasPage({ setPage }: { setPage: (p: any) => void }) {
   const { isAdmin } = useAuth()
+  const [seasonId, setSeasonId] = useState<number>(2)
   const [partidas, setPartidas] = useState<Partida[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -1003,7 +1168,7 @@ export function PartidasPage({ setPage }: { setPage: (p: any) => void }) {
   const load = async () => {
     setLoading(true)
     try {
-      const data = await api.listarPartidas()
+      const data = await api.listarPartidas(undefined, { seasonId })
       const list = Array.isArray(data) ? data : []
       setPartidas(list.map((p) => normalizePartida(p as PartidaRaw)))
     } catch {
@@ -1014,7 +1179,7 @@ export function PartidasPage({ setPage }: { setPage: (p: any) => void }) {
 
   useEffect(() => {
     load()
-  }, [])
+  }, [seasonId])
 
   const del = async (id: number) => {
     if (!confirm('Excluir esta partida e recalcular o ranking?')) return
@@ -1078,7 +1243,7 @@ export function PartidasPage({ setPage }: { setPage: (p: any) => void }) {
       <div
         style={{
           position: 'relative',
-          overflow: 'hidden',
+          overflow: 'visible',
           background: 'linear-gradient(135deg,rgba(251,146,60,.08),rgba(192,132,252,.06))',
           border: '1px solid rgba(251,146,60,.2)',
           borderRadius: 18,
@@ -1089,6 +1254,7 @@ export function PartidasPage({ setPage }: { setPage: (p: any) => void }) {
           style={{
             position: 'absolute',
             inset: 0,
+            borderRadius: 18,
             backgroundImage:
               'linear-gradient(rgba(251,146,60,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(251,146,60,.03) 1px,transparent 1px)',
             backgroundSize: '44px 44px',
@@ -1144,7 +1310,21 @@ export function PartidasPage({ setPage }: { setPage: (p: any) => void }) {
             </div>
           </div>
 
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: 18, flexWrap: 'wrap' }}>
+            <SeasonDropdown
+              value={seasonId}
+              onChange={(nextValue) => setSeasonId(Number(nextValue) === 1 ? 1 : 2)}
+              options={[
+                { value: 2, label: 'Temporada 2' },
+                { value: 1, label: 'Temporada 1' },
+              ]}
+              width={135}
+              buttonHeight={38}
+              optionHeight={36}
+              selectedFontSize={12}
+              optionFontSize={12}
+              title='Filtro de temporada de partidas'
+            />
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -1197,7 +1377,7 @@ export function PartidasPage({ setPage }: { setPage: (p: any) => void }) {
           Nenhuma partida encontrada.
         </div>
       ) : (
-        <Card title='Consulta de Partidas'>
+        <Card title='Consulta de Partidas' titleStyle={{ paddingLeft: 5, marginTop: 2 }}>
           <div style={{ overflowX: 'auto' }}>
             <div style={{ minWidth: 980 }}>
               <div
@@ -1214,7 +1394,7 @@ export function PartidasPage({ setPage }: { setPage: (p: any) => void }) {
                   <span
                     key={h}
                     style={{
-                      fontSize: 9,
+                      fontSize: 14,
                       color: 'rgba(255,255,255,.25)',
                       letterSpacing: 1.5,
                       fontFamily: "'Rajdhani',sans-serif",
@@ -1283,7 +1463,7 @@ export function PartidasPage({ setPage }: { setPage: (p: any) => void }) {
                   <span
                     style={{
                       fontSize: 12,
-                      color: 'rgba(255,255,255,.7)',
+                      color: 'rgb(255, 255, 255)',
                       fontFamily: "'Rajdhani',sans-serif",
                     }}
                   >
@@ -1303,8 +1483,8 @@ export function PartidasPage({ setPage }: { setPage: (p: any) => void }) {
                   </span>
                   <span
                     style={{
-                      fontSize: 11,
-                      color: 'rgba(255,255,255,.35)',
+                      fontSize: 14,
+                      color: 'rgba(255, 255, 255, 0.61)',
                       fontFamily: "'Rajdhani',sans-serif",
                     }}
                   >
@@ -1373,7 +1553,7 @@ export function PartidasPage({ setPage }: { setPage: (p: any) => void }) {
 
 // ─── Importar Page ────────────────────────────────────────────────────────────
 export function ImportarPage() {
-  const { isAdmin } = useAuth()
+  const { isAdmin, refreshGold } = useAuth()
   const [json, setJson] = useState('')
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<{ ok: boolean; msg: string } | null>(null)
@@ -1398,6 +1578,7 @@ export function ImportarPage() {
       const data = await api.importarJson(payload)
       setResult({ ok: true, msg: data?.mensagem || 'Partida importada com sucesso!' })
       setJson('')
+      await refreshGold().catch(() => {})
     } catch (err: any) {
       setResult({ ok: false, msg: err.message || 'Erro ao importar partida.' })
     } finally {
@@ -1488,8 +1669,8 @@ export function ImportarPage() {
         </p>
       </div>
 
-      <Card title='Como Capturar o JSON'>
-        <ol style={{ display: 'flex', flexDirection: 'column', gap: 8, paddingLeft: 20 }}>
+      <Card title='Como Capturar o JSON' titleStyle={{ paddingLeft: 5, marginTop: 2 }}>
+        <ol style={{ display: 'flex', flexDirection: 'column', gap: 3, paddingLeft: 10 }}>
           {[
             'Acesse a página da partida na GamersClub',
             'Abra o DevTools (F12) na aba Network',
@@ -1514,7 +1695,7 @@ export function ImportarPage() {
         </ol>
       </Card>
 
-      <Card title='JSON da Partida' sub='Cole aqui'>
+      <Card title='JSON da Partida' titleStyle={{ paddingLeft: 5, marginTop: 2 }}>
         <textarea
           value={json}
           onChange={(e) => setJson(e.target.value)}

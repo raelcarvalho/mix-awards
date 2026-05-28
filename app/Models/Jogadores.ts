@@ -36,6 +36,18 @@ export default class Jogadores extends BaseModel {
   public usuario_adm_id?: number | null;
 
   @column()
+  public gc_id?: number | null;
+
+  @column()
+  public steam_id?: string | null;
+
+  @column()
+  public gc_nick?: string | null;
+
+  @column()
+  public gc_nick_normalizado?: string | null;
+
+  @column()
   public gold: number;
 
   @column()

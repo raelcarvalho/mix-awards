@@ -65,6 +65,7 @@ function levelAccentColor(level: number) {
 export default function RankingPage() {
   const [jogadores, setJogadores] = useState<Jogador[]>([])
   const [sortKey, setSortKey] = useState<SortKey>('pontos')
+  const [seasonId, setSeasonId] = useState<number>(2)
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
 
@@ -88,12 +89,13 @@ export default function RankingPage() {
   }
 
   useEffect(() => {
+    setLoading(true)
     api
-      .listarJogadores()
+      .listarJogadores({ seasonId })
       .then((d) => setJogadores(Array.isArray(d) ? d : []))
       .catch(() => {})
       .finally(() => setLoading(false))
-  }, [])
+  }, [seasonId])
 
   const sorted = useMemo(
     () =>
@@ -140,7 +142,7 @@ export default function RankingPage() {
               fontWeight: 700,
             }}
           >
-            ⭐ Temporada 1
+            ⭐ Temporada {seasonId}
           </div>
           <h1
             style={{
@@ -168,6 +170,25 @@ export default function RankingPage() {
         </div>
 
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <select
+            value={seasonId}
+            onChange={(e) => setSeasonId(Number(e.target.value) === 1 ? 1 : 2)}
+            style={{
+              background: 'rgba(255,255,255,.05)',
+              borderWidth: 1,
+              borderStyle: 'solid',
+              borderColor: 'rgba(255,255,255,.12)',
+              borderRadius: 9,
+              padding: '9px 12px',
+              color: '#fff',
+              fontSize: 13,
+              fontFamily: "'Rajdhani',sans-serif",
+              outline: 'none',
+            }}
+          >
+            <option value={2}>Temporada 2</option>
+            <option value={1}>Temporada 1</option>
+          </select>
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}

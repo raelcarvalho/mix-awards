@@ -8,6 +8,9 @@ export default defineConfig(({ mode }) => {
   const backendTarget =
     env.VITE_BACKEND_URL || env.VITE_API_TARGET || 'http://localhost:3399'
   const proxyTarget = { target: backendTarget, changeOrigin: true }
+  // Steam/OpenID depends on callback realm host, so we preserve dev host (:5173)
+  // for /auth routes instead of rewriting Host to backend target.
+  const authProxyTarget = { target: backendTarget, changeOrigin: false }
 
   return {
     plugins: [react(), tailwindcss()],
@@ -23,6 +26,7 @@ export default defineConfig(({ mode }) => {
       port: 5173,
       proxy: {
         '/api': proxyTarget,
+        '/auth': authProxyTarget,
         '/login': proxyTarget,
         '/logout': proxyTarget,
         '/cadastrar': proxyTarget,

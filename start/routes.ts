@@ -20,6 +20,7 @@
 import Application from "@ioc:Adonis/Core/Application";
 import fs from "fs";
 import Route from "@ioc:Adonis/Core/Route";
+import { clearAuthCookie } from "App/Utils/AuthCookie";
 
 Route.get("/", ({ response }) => {
   response.stream(fs.createReadStream(Application.publicPath("index.html")));
@@ -258,6 +259,9 @@ Route.group(() => {
   Route.post("/login", "LoginController.login");
 });
 
+Route.get("/auth/steam/login", "SteamAuthController.steamLogin");
+Route.get("/auth/steam/callback", "SteamAuthController.steamCallback");
+
 Route.post("/cadastrar", "LoginController.cadastrar");
 Route.post("/recuperar-senha", "LoginController.recuperarSenha");
 Route.post("/alterar-senha", "LoginController.alterarSenha").middleware(
@@ -269,8 +273,9 @@ Route.get("/shop/album-status", "AlbumController.status").middleware("auth");
 Route.group(() => {
   Route.post("/logout", async ({ auth, response }) => {
     try {
-      await auth.use("api").revoke();
+      await (auth as any).use("api").invalidateToken();
     } catch {}
+    clearAuthCookie(response);
     return response.ok({ mensagem: "Logout efetuado" });
   });
 })
@@ -343,6 +348,14 @@ Route.group(() => {
   .prefix("api")
   .middleware("auth:api");
 
+Route.group(() => {
+  Route.get("/steam/login-url", "SteamAuthController.steamLoginAuthUrl");
+  Route.get("/steam/status", "SteamAuthController.steamStatus");
+  Route.post("/steam/vincular-gc", "SteamAuthController.vincularGc");
+})
+  .prefix("api/auth")
+  .middleware("auth:api");
+
 // LEVELS (REST)
 Route.group(() => {
   Route.get("/", "LevelController.lista");
@@ -366,6 +379,13 @@ Route.group(() => {
   Route.post("/:id/link", "JogadoresController.vincularUsuarioJogador");
 })
   .prefix("api/players")
+  .middleware("auth:api");
+
+// MISSÕES (REST)
+Route.group(() => {
+  Route.get("/players/:id", "MissoesController.jogador");
+})
+  .prefix("api/missions")
   .middleware("auth:api");
 
 // MATCHES (REST)

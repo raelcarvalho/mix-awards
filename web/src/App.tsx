@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { AuthProvider } from '@/hooks/useAuth'
 import AppLayout from '@/components/layout/AppLayout'
 import HomePage from '@/pages/HomePage'
@@ -20,6 +20,36 @@ type Page =
   | 'album-stickers'
   | 'shop'
   | 'importar'
+
+const PAGE_STORAGE_KEY = 'mixawards:last-page'
+
+const PAGE_VALUES: Page[] = [
+  'home',
+  'dashboard',
+  'partidas',
+  'tirar-time',
+  'ranking',
+  'album',
+  'album-stickers',
+  'shop',
+  'importar',
+]
+
+function isValidPage(value: unknown): value is Page {
+  return typeof value === 'string' && PAGE_VALUES.includes(value as Page)
+}
+
+function readInitialPage(): Page {
+  if (typeof window === 'undefined') return 'home'
+
+  const fromHash = decodeURIComponent(String(window.location.hash || '').replace(/^#/, '').trim())
+  if (isValidPage(fromHash)) return fromHash
+
+  const fromStorage = String(localStorage.getItem(PAGE_STORAGE_KEY) || '').trim()
+  if (isValidPage(fromStorage)) return fromStorage
+
+  return 'home'
+}
 
 function Router({
   page,
@@ -45,19 +75,48 @@ function Router({
 }
 
 export default function App() {
-  const [page, setPage] = useState<Page>('home')
+  const [page, setPage] = useState<Page>(() => readInitialPage())
   const [dashboardPlayerId, setDashboardPlayerId] = useState<number | null>(null)
+  const setPagePersisted = useMemo(
+    () => (next: Page) => {
+      setPage(next)
+    },
+    []
+  )
+
+  useEffect(() => {
+    localStorage.setItem(PAGE_STORAGE_KEY, page)
+
+    const hash = `#${encodeURIComponent(page)}`
+    if (window.location.hash !== hash) {
+      const nextUrl = `${window.location.pathname}${window.location.search}${hash}`
+      window.history.replaceState(null, '', nextUrl)
+    }
+  }, [page])
+
+  useEffect(() => {
+    const onHashChange = () => {
+      const fromHash = decodeURIComponent(
+        String(window.location.hash || '').replace(/^#/, '').trim()
+      )
+      if (!isValidPage(fromHash)) return
+      setPage((current) => (current === fromHash ? current : fromHash))
+    }
+
+    window.addEventListener('hashchange', onHashChange)
+    return () => window.removeEventListener('hashchange', onHashChange)
+  }, [])
 
   return (
     <AuthProvider>
       <AppLayout
         page={page}
-        setPage={setPage}
+        setPage={setPagePersisted}
         onOpenPlayerDashboard={(playerId) => setDashboardPlayerId(playerId)}
       >
         <Router
           page={page}
-          setPage={setPage}
+          setPage={setPagePersisted}
           dashboardPlayerId={dashboardPlayerId}
         />
       </AppLayout>

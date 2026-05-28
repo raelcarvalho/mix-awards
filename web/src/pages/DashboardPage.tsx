@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Card } from '@/components/ui/Card'
 import { useAuth } from '@/hooks/useAuth'
 import * as api from '@/services/api'
@@ -38,6 +38,7 @@ interface Partida {
   nome_time2?: string
   data?: string
   created_at?: string
+  season_id?: number
   partida_ganha?: boolean | number | string
   score_time_1?: number | string
   score_time_2?: number | string
@@ -65,10 +66,32 @@ type MapStat = {
   imageCandidates: string[]
 }
 
+type MissionCardItem = {
+  id: string | number
+  order?: number
+  type: 'kills' | 'assistencias' | 'adr' | 'first_kill' | 'multi_kill' | 'vitorias'
+  name: string
+  description: string
+  target: number
+  progress: number
+  percentage: number
+  completed: boolean
+}
+
+type DashboardDropdownOption = {
+  value: string | number
+  label: string
+}
+
 const RADAR_LABELS = ['KDA', 'ADR', 'WinRate%', 'First Kill', 'KAST%', 'Assistencia']
 const RADAR_COLORS = ['#c084fc', '#22d3ee', '#4ade80', '#fb923c', '#f472b6', '#fbbf24']
 const HISTORY_POINTS_PER_PAGE = 10
 const DASHBOARD_OPEN_PARTIDA_CODE_KEY = 'dashboard_open_partida_codigo'
+const DEFAULT_SEASON_ID = 2
+const SEASON_OPTIONS = [
+  { id: 2, label: 'Temporada 2' },
+  { id: 1, label: 'Temporada 1' },
+] as const
 const MAP_CANONICAL_ORDER = [
   'de_ancient',
   'de_anubis',
@@ -79,6 +102,82 @@ const MAP_CANONICAL_ORDER = [
   'de_nuke',
   'de_overpass',
 ]
+
+const MISSION_PLACEHOLDERS: MissionCardItem[] = [
+  {
+    id: 'mission-placeholder-kills',
+    type: 'kills',
+    name: 'Matador',
+    description: 'Mate 30 jogadores',
+    target: 30,
+    progress: 0,
+    percentage: 0,
+    completed: false,
+  },
+  {
+    id: 'mission-placeholder-assist',
+    type: 'assistencias',
+    name: 'Garçom',
+    description: 'Dê 15 assistências',
+    target: 15,
+    progress: 0,
+    percentage: 0,
+    completed: false,
+  },
+  {
+    id: 'mission-placeholder-adr',
+    type: 'adr',
+    name: 'Bate em coitado',
+    description: 'Cause 130 de ADR',
+    target: 130,
+    progress: 0,
+    percentage: 0,
+    completed: false,
+  },
+  {
+    id: 'mission-placeholder-fk',
+    type: 'first_kill',
+    name: 'Entry',
+    description: 'Faça 15 first kills',
+    target: 15,
+    progress: 0,
+    percentage: 0,
+    completed: false,
+  },
+  {
+    id: 'mission-placeholder-mk',
+    type: 'multi_kill',
+    name: 'Assasino',
+    description: 'Faça 15 multi kills',
+    target: 15,
+    progress: 0,
+    percentage: 0,
+    completed: false,
+  },
+]
+
+function missionIconByType(type: MissionCardItem['type']) {
+  switch (type) {
+    case 'kills':
+      return '🎯'
+    case 'assistencias':
+      return '🤝'
+    case 'adr':
+      return '💥'
+    case 'first_kill':
+      return '⚡'
+    case 'multi_kill':
+      return '🔥'
+    case 'vitorias':
+      return '🏆'
+    default:
+      return '•'
+  }
+}
+
+function seasonLabel(seasonId: number) {
+  return `Temporada ${seasonId}`
+}
 
 function toNumber(value: unknown): number {
   if (typeof value === 'number') return Number.isFinite(value) ? value : 0
@@ -196,7 +295,202 @@ function readWon(p: Partida): boolean | null {
 }
 
 function readMatchDate(p: Partida): string {
-  return String(p.created_at || p.data || '')
+  return String(p.data || p.created_at || '')
+}
+
+function readMonthKey(value?: string | null): string | null {
+  const raw = String(value || '').trim()
+  if (!raw) return null
+  const ts = new Date(raw).getTime()
+  if (!Number.isFinite(ts)) return null
+  const d = new Date(ts)
+  const year = d.getUTCFullYear()
+  const month = String(d.getUTCMonth() + 1).padStart(2, '0')
+  return `${year}-${month}`
+}
+
+function monthLabel(monthKey: string): string {
+  const [yearRaw, monthRaw] = monthKey.split('-')
+  const year = Number(yearRaw)
+  const month = Number(monthRaw)
+  if (!Number.isFinite(year) || !Number.isFinite(month) || month < 1 || month > 12) {
+    return monthKey
+  }
+  return new Date(Date.UTC(year, month - 1, 1))
+    .toLocaleDateString('pt-BR', {
+      month: 'short',
+      year: 'numeric',
+      timeZone: 'UTC',
+    })
+    .replace('.', '')
+    .toUpperCase()
+}
+
+function DashboardDropdown({
+  value,
+  options,
+  onChange,
+  width = 140,
+  rightSpacing = 0,
+  buttonHeight = 32,
+  optionHeight = 38,
+  selectedFontSize = 12,
+  optionFontSize = 12,
+  title,
+}: {
+  value: string | number
+  options: DashboardDropdownOption[]
+  onChange: (nextValue: string) => void
+  width?: number
+  rightSpacing?: number
+  buttonHeight?: number
+  optionHeight?: number
+  selectedFontSize?: number
+  optionFontSize?: number
+  title?: string
+}) {
+  const [open, setOpen] = useState(false)
+  const wrapperRef = useRef<HTMLDivElement | null>(null)
+  const selected =
+    options.find((opt) => String(opt.value) === String(value))?.label ||
+    options[0]?.label ||
+    ''
+
+  useEffect(() => {
+    const onDocMouseDown = (event: MouseEvent) => {
+      if (!wrapperRef.current) return
+      if (!wrapperRef.current.contains(event.target as Node)) {
+        setOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', onDocMouseDown)
+    return () => {
+      document.removeEventListener('mousedown', onDocMouseDown)
+    }
+  }, [])
+
+  return (
+    <div
+      ref={wrapperRef}
+      style={{ position: 'relative', width, marginRight: rightSpacing }}
+      title={title}
+    >
+      <button
+        type='button'
+        onClick={() => setOpen((prev) => !prev)}
+        style={{
+          width: '100%',
+          height: buttonHeight,
+          display: 'grid',
+          gridTemplateColumns: '1fr 34px',
+          alignItems: 'center',
+          background: 'linear-gradient(180deg, rgba(26,31,58,.94), rgba(20,24,48,.96))',
+          border: '1px solid rgba(139,92,246,.62)',
+          borderRadius: 10,
+          color: '#f3f4ff',
+          cursor: 'pointer',
+          overflow: 'hidden',
+          boxShadow: '0 0 0 1px rgba(109,40,217,.18) inset',
+        }}
+      >
+        <span
+          style={{
+            padding: '0 12px',
+            textAlign: 'left',
+            fontFamily: "'Rajdhani',sans-serif",
+            fontSize: selectedFontSize,
+            fontWeight: 800,
+            letterSpacing: 0.4,
+            textTransform: 'uppercase',
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            color: '#f8fafc',
+          }}
+        >
+          {selected}
+        </span>
+        <span
+          style={{
+            height: '100%',
+            borderLeft: '1px solid rgba(139,92,246,.5)',
+            display: 'grid',
+            placeItems: 'center',
+            color: '#e2e8ff',
+            fontSize: 14,
+            lineHeight: 1,
+          }}
+          aria-hidden
+        >
+          {open ? '▲' : '▼'}
+        </span>
+      </button>
+
+      {open && (
+        <div
+          style={{
+            position: 'absolute',
+            top: 'calc(100% + 5px)',
+            right: 0,
+            width: '100%',
+            zIndex: 80,
+            background: 'linear-gradient(180deg, rgba(24,30,58,.98), rgba(18,24,48,.98))',
+            border: '1px solid rgba(139,92,246,.72)',
+            borderRadius: 10,
+            boxShadow: '0 14px 30px rgba(3,6,20,.6)',
+            maxHeight: 220,
+            overflowY: 'auto',
+            scrollbarWidth: 'thin',
+            scrollbarColor: 'rgba(139,92,246,.72) rgba(255,255,255,.06)',
+          }}
+        >
+          {options.map((opt, idx) => {
+            const isSelected = String(opt.value) === String(value)
+            return (
+              <button
+                key={String(opt.value)}
+                type='button'
+                onClick={() => {
+                  onChange(String(opt.value))
+                  setOpen(false)
+                }}
+                style={{
+                  width: '100%',
+                  height: optionHeight,
+                  border: 0,
+                  borderBottom:
+                    idx < options.length - 1
+                      ? '1px solid rgba(255,255,255,.08)'
+                      : 'none',
+                  background: isSelected ? 'rgba(97,125,181,.35)' : 'transparent',
+                  color: '#f8fafc',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  padding: '0 12px',
+                  fontFamily: "'Rajdhani',sans-serif",
+                  fontSize: optionFontSize,
+                  fontWeight: 800,
+                  letterSpacing: 0.45,
+                  textTransform: 'uppercase',
+                  lineHeight: 1,
+                }}
+                onMouseEnter={(e) => {
+                  ;(e.currentTarget as HTMLButtonElement).style.background =
+                    'rgba(97,125,181,.38)'
+                }}
+                onMouseLeave={(e) => {
+                  ;(e.currentTarget as HTMLButtonElement).style.background =
+                    isSelected ? 'rgba(97,125,181,.35)' : 'transparent'
+                }}
+              >
+                {opt.label}
+              </button>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
 }
 
 function MapPlayedTile({ stat }: { stat: MapStat }) {
@@ -382,17 +676,21 @@ export default function DashboardPage({ setPage, dashboardPlayerId }: DashboardP
   const [jogador, setJogador] = useState<Jogador | null>(null)
   const [allJogadores, setAllJogadores] = useState<Jogador[]>([])
   const [partidas, setPartidas] = useState<Partida[]>([])
+  const [missions, setMissions] = useState<api.PlayerMission[]>([])
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
   const [animated, setAnimated] = useState(false)
   const [historyPage, setHistoryPage] = useState(0)
   const [hoveredHistoryPointKey, setHoveredHistoryPointKey] = useState<string | null>(null)
+  const [seasonId, setSeasonId] = useState<number>(DEFAULT_SEASON_ID)
+  const [monthKey, setMonthKey] = useState<string>('all')
 
   useEffect(() => {
     if (!isLogged) {
       setJogador(null)
       setAllJogadores([])
       setPartidas([])
+      setMissions([])
       setLoadError('')
       setLoading(false)
       return
@@ -401,13 +699,17 @@ export default function DashboardPage({ setPage, dashboardPlayerId }: DashboardP
     let alive = true
     setLoading(true)
     setLoadError('')
+    const filters: api.SeasonFilters = {
+      seasonId,
+      month: monthKey === 'all' ? undefined : monthKey,
+    }
 
     Promise.all([
-      api.listarJogadores().catch((err: any) => {
+      api.listarJogadores(filters).catch((err: any) => {
         if (alive) setLoadError(err?.message || 'Erro ao carregar ranking')
         return []
       }),
-      api.listarPartidas().catch((err: any) => {
+      api.listarPartidas(undefined, filters).catch((err: any) => {
         if (alive) setLoadError(err?.message || 'Erro ao carregar partidas')
         return []
       }),
@@ -446,7 +748,7 @@ export default function DashboardPage({ setPage, dashboardPlayerId }: DashboardP
         let preferredParts = safeArray<Partida>(parts)
         if (me?.nome) {
           try {
-            const filtered = safeArray<Partida>(await api.listarPartidas(me.nome))
+            const filtered = safeArray<Partida>(await api.listarPartidas(me.nome, filters))
             if (filtered.length > 0) preferredParts = filtered
           } catch {}
         }
@@ -467,12 +769,41 @@ export default function DashboardPage({ setPage, dashboardPlayerId }: DashboardP
     return () => {
       alive = false
     }
-  }, [isLogged, user?.id, user?.nome, jogadorId, dashboardPlayerId])
+  }, [isLogged, user?.id, user?.nome, jogadorId, dashboardPlayerId, seasonId, monthKey])
+
+  useEffect(() => {
+    if (!isLogged) {
+      setMissions([])
+      return
+    }
+
+    const selectedId = toNumber(jogador?.id)
+    if (selectedId <= 0) {
+      setMissions([])
+      return
+    }
+
+    let alive = true
+    api
+      .listarMissoesJogador(selectedId)
+      .then((rows) => {
+        if (!alive) return
+        setMissions(safeArray<api.PlayerMission>(rows))
+      })
+      .catch(() => {
+        if (!alive) return
+        setMissions([])
+      })
+
+    return () => {
+      alive = false
+    }
+  }, [isLogged, jogador?.id])
 
   useEffect(() => {
     setHistoryPage(0)
     setHoveredHistoryPointKey(null)
-  }, [jogador?.id])
+  }, [jogador?.id, seasonId, monthKey])
 
   const mapStats = useMemo<MapStat[]>(() => {
     const mapCount = new Map<string, { matches: number; wins: number }>()
@@ -503,6 +834,25 @@ export default function DashboardPage({ setPage, dashboardPlayerId }: DashboardP
       }
     })
   }, [partidas])
+
+  const monthOptions = useMemo(() => {
+    const keys = new Set<string>()
+    for (const p of partidas) {
+      const key = readMonthKey(readMatchDate(p))
+      if (key) keys.add(key)
+    }
+    const sorted = Array.from(keys).sort((a, b) => b.localeCompare(a))
+    return [
+      { value: 'all', label: 'TODOS' },
+      ...sorted.map((value) => ({ value, label: monthLabel(value) })),
+    ]
+  }, [partidas])
+
+  useEffect(() => {
+    if (monthKey === 'all') return
+    const exists = monthOptions.some((opt) => opt.value === monthKey)
+    if (!exists) setMonthKey('all')
+  }, [monthKey, monthOptions])
 
   const currentPlayerName = normalizeName(String(jogador?.nome || user?.nome || ''))
   const currentPlayerId = toNumber(jogador?.id)
@@ -949,6 +1299,38 @@ export default function DashboardPage({ setPage, dashboardPlayerId }: DashboardP
     { label: 'Partidas', value: nParts, color: '#94a3b8' },
     { label: 'Vitórias', value: wins, color: '#4ade80' },
   ]
+  const missionCards: MissionCardItem[] = (() => {
+    const normalized = safeArray<api.PlayerMission>(missions)
+      .map((mission, index) => {
+        const target = Math.max(1, toNumber(mission.target || 0))
+        const progress = Math.max(0, Math.min(target, toNumber(mission.progress || 0)))
+        const percentage = Math.max(
+          0,
+          Math.min(
+            100,
+            Number.isFinite(toNumber(mission.percentage))
+              ? Math.round(toNumber(mission.percentage))
+              : Math.round((progress / target) * 100)
+          )
+        )
+        return {
+          id: mission.id ?? `mission-${index}`,
+          order: toNumber((mission as any).order || index + 1),
+          type: mission.type,
+          name: String(mission.name || '').trim() || 'Missão',
+          description:
+            String(mission.description || '').trim() || `Progresso ${progress}/${target}`,
+          target,
+          progress,
+          percentage,
+          completed: !!mission.completed || progress >= target,
+        } as MissionCardItem
+      })
+      .sort((a, b) => toNumber(a.order) - toNumber(b.order))
+
+    if (normalized.length >= 5) return normalized.slice(0, 5)
+    return MISSION_PLACEHOLDERS.slice(0, 5)
+  })()
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
@@ -985,6 +1367,29 @@ export default function DashboardPage({ setPage, dashboardPlayerId }: DashboardP
           title="Gráfico do Jogador"
           centerTitle
           titleStyle={{ marginTop: 5, width: '100%', letterSpacing: 0.3 }}
+          action={
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', marginTop: 5 }}>
+              <DashboardDropdown
+                value={seasonId}
+                onChange={(nextValue) => {
+                  const next = Number(nextValue)
+                  setSeasonId(next === 1 ? 1 : 2)
+                  setMonthKey('all')
+                }}
+                options={SEASON_OPTIONS.map((opt) => ({
+                  value: opt.id,
+                  label: opt.label,
+                }))}
+                width={130}
+                rightSpacing={0}
+                buttonHeight={30}
+                optionHeight={36}
+                selectedFontSize={11}
+                optionFontSize={11}
+                title='Filtro de temporada do gráfico'
+              />
+            </div>
+          }
           style={{ height: '100%', ...dashboardGlowCardStyle }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 14, justifyContent: 'center' }}>
@@ -1066,6 +1471,132 @@ export default function DashboardPage({ setPage, dashboardPlayerId }: DashboardP
               </div>
             ))}
           </div>
+
+          <div
+            style={{
+              marginTop: 8,
+              borderRadius: 10,
+              border: '1px solid rgba(139,92,246,.24)',
+              background: 'linear-gradient(180deg, rgba(16,19,40,.78), rgba(11,16,31,.9))',
+              padding: '10px 10px 9px',
+            }}
+          >
+            <div
+              style={{
+                fontFamily: "'Orbitron',monospace",
+                fontSize: 12,
+                color: '#c4b5fd',
+                letterSpacing: 0.8,
+                fontWeight: 700,
+                textTransform: 'uppercase',
+                marginBottom: 8,
+              }}
+            >
+              Missões do Level
+            </div>
+
+            <div style={{ display: 'grid', gap: 7 }}>
+              {missionCards.map((mission) => {
+                const progressText = `${Math.round(mission.progress)} / ${Math.round(mission.target)}`
+                return (
+                  <div key={String(mission.id)}>
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: 8,
+                        marginBottom: 4,
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 6,
+                          minWidth: 0,
+                        }}
+                      >
+                        <span style={{ fontSize: 13, lineHeight: 1 }}>
+                          {missionIconByType(mission.type)}
+                        </span>
+                        <span
+                          style={{
+                            fontFamily: "'Rajdhani',sans-serif",
+                            fontSize: 13,
+                            color: '#e5e7eb',
+                            fontWeight: 700,
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                          }}
+                        >
+                          {`${mission.name}: ${mission.description}`}
+                        </span>
+                      </div>
+                      {!mission.completed ? (
+                        <span
+                          style={{
+                            fontFamily: "'Orbitron',monospace",
+                            fontSize: 10,
+                            fontWeight: 700,
+                            color: 'rgba(255,255,255,.78)',
+                            flexShrink: 0,
+                          }}
+                        >
+                          {progressText}
+                        </span>
+                      ) : null}
+                    </div>
+
+                    {!mission.completed ? (
+                      <div
+                        style={{
+                          height: 7,
+                          borderRadius: 999,
+                          background: 'rgba(255,255,255,.12)',
+                          overflow: 'hidden',
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: `${mission.percentage}%`,
+                            height: '100%',
+                            borderRadius: 999,
+                            background:
+                              'linear-gradient(90deg, rgba(168,85,247,.95) 0%, rgba(129,140,248,.95) 100%)',
+                            boxShadow: '0 0 12px rgba(168,85,247,.35)',
+                            transition: 'width 420ms ease',
+                          }}
+                        />
+                      </div>
+                    ) : (
+                      <div
+                        style={{
+                          height: 22,
+                          borderRadius: 7,
+                          border: '1px solid rgba(250,204,21,.38)',
+                          background: 'rgba(250,204,21,.08)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontFamily: "'Orbitron',monospace",
+                          fontSize: 10.5,
+                          fontWeight: 700,
+                          color: '#facc15',
+                          letterSpacing: 0.65,
+                          textTransform: 'uppercase',
+                          animation: 'dashboard-text-scale-up 340ms ease',
+                        }}
+                      >
+                        Missão Concluída
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
         </Card>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, height: '100%' }}>
@@ -1075,7 +1606,7 @@ export default function DashboardPage({ setPage, dashboardPlayerId }: DashboardP
             titleStyle={{ marginTop: 5, width: '100%', letterSpacing: 0.3 }}
             style={{ ...dashboardGlowCardStyle, flex: 1, minHeight: 0 }}
             action={
-              <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 7, marginTop: 5 }}>
                 {canGoHistoryNewer && (
                   <button
                     onClick={() => setHistoryPage((prev) => Math.max(0, prev - 1))}
@@ -1119,6 +1650,14 @@ export default function DashboardPage({ setPage, dashboardPlayerId }: DashboardP
                     ›
                   </button>
                 )}
+                <DashboardDropdown
+                  value={monthKey}
+                  onChange={(nextValue) => setMonthKey(nextValue)}
+                  options={monthOptions}
+                  width={170}
+                  rightSpacing={0}
+                  title={`Filtro de mês em ${seasonLabel(seasonId)}`}
+                />
               </div>
             }
           >

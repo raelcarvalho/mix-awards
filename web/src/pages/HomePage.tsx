@@ -522,9 +522,9 @@ function RecentMatchesPanel({ recent }: { recent: RecentEntry[] }) {
         <div style={{ overflowX: 'auto' }}>
           <div style={{ minWidth: 620 }}>
             <div style={{ display: 'grid', gridTemplateColumns: '100px 120px 1fr 1fr 80px', gap: 6, padding: '3px 10px', marginBottom: 4 }}>
-              {['MAPA', 'RESULTADO', 'TIME ', 'TIME ', 'DATA'].map((h) => (
+              {['MAPA', 'RESULTADO', 'TIME ', 'TIME ', 'DATA'].map((h, idx) => (
                 <span
-                  key={h}
+                  key={`${h}-${idx}`}
                   style={{
                     fontSize: 13,
                     color: 'rgb(255, 255, 255)',
@@ -719,10 +719,10 @@ export default function HomePage({ setPage }: { setPage: (p: any) => void }) {
       : Promise.resolve([])
 
     Promise.all([
-      api.listarJogadores().catch((e: any) => {
+      api.listarJogadores({ seasonId: 2 }).catch((e: any) => {
         throw new Error(e?.message || 'Erro ao carregar ranking')
       }),
-      api.listarPartidas().catch((e: any) => {
+      api.listarPartidas(undefined, { seasonId: 2 }).catch((e: any) => {
         throw new Error(e?.message || 'Erro ao carregar partidas')
       }),
       isLogged ? api.meuAlbum().catch(() => null) : Promise.resolve(null),
@@ -994,7 +994,7 @@ export default function HomePage({ setPage }: { setPage: (p: any) => void }) {
               fontWeight: 700,
             }}
           >
-            ✦ Temporada 1 — Ativa
+            ✦ Temporada 2 — Ativa
           </div>
           <h1
             style={{

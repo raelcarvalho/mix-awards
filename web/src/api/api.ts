@@ -1,4 +1,6 @@
 // ─── Token helpers ─────────────────────────────────────────────────────────
+const COOKIE_SESSION_MARKER = '__cookie_session__'
+
 const normalizeToken = (raw: string | null): string => {
   if (!raw) return ''
   if (raw.startsWith('{') || raw.startsWith('[')) {
@@ -15,8 +17,8 @@ export const getUser  = (): Record<string, any> | null => {
   try { return JSON.parse(localStorage.getItem('auth_user') || 'null') }
   catch { return null }
 }
-export const setAuth = (token: string, user: object) => {
-  localStorage.setItem('auth_token', token)
+export const setAuth = (_token: string, user: object) => {
+  localStorage.setItem('auth_token', COOKIE_SESSION_MARKER)
   localStorage.setItem('auth_user', JSON.stringify(user))
 }
 export const clearAuth = () => {
@@ -26,12 +28,10 @@ export const clearAuth = () => {
 
 // ─── Base fetch ─────────────────────────────────────────────────────────────
 async function apiFetch<T>(url: string, options: RequestInit = {}): Promise<T> {
-  const token = getToken()
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     ...(options.headers as Record<string, string> ?? {}),
   }
-  if (token) headers['Authorization'] = `Bearer ${token}`
 
   const res = await fetch(url, { credentials: 'include', ...options, headers })
   const raw = await res.text()
@@ -47,10 +47,18 @@ async function apiFetch<T>(url: string, options: RequestInit = {}): Promise<T> {
 
   if (res.status === 401) {
     clearAuth()
-    throw new Error(data?.mensagem || data?.message || 'Unauthorized')
+    const err: any = new Error(data?.mensagem || data?.message || 'Unauthorized')
+    err.status = 401
+    err.payload = data
+    throw err
   }
 
-  if (!res.ok) throw new Error(data?.mensagem || data?.message || 'Erro na requisição')
+  if (!res.ok) {
+    const err: any = new Error(data?.mensagem || data?.message || 'Erro na requisição')
+    err.status = res.status
+    err.payload = data
+    throw err
+  }
   return data as T
 }
 
@@ -64,6 +72,41 @@ const unwrapArray = (data: any): any[] => {
   if (Array.isArray(data?.data)) return data.data
   if (Array.isArray(data?.rows)) return data.rows
   return []
+}
+
+export type SeasonFilters = {
+  seasonId?: number
+  month?: string | null
+}
+
+const DEFAULT_SEASON_ID = 2
+
+const parseSeasonId = (value: unknown): number => {
+  const n = Number(value)
+  if (n === 1 || n === 2) return n
+  return DEFAULT_SEASON_ID
+}
+
+const normalizeMonth = (value: unknown): string | null => {
+  const month = String(value ?? '').trim().toLowerCase()
+  if (!month || month === 'all' || month === 'todos') return null
+  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) return null
+  return month
+}
+
+const buildSeasonQuery = (
+  filters?: SeasonFilters & {
+    player?: string
+  }
+) => {
+  const q = new URLSearchParams()
+  q.set('season_id', String(parseSeasonId(filters?.seasonId)))
+  const month = normalizeMonth(filters?.month)
+  if (month) q.set('month', month)
+  const player = String(filters?.player ?? '').trim()
+  if (player) q.set('player', player)
+  const query = q.toString()
+  return query ? `?${query}` : ''
 }
 
 // ─── Auth ───────────────────────────────────────────────────────────────────
@@ -87,17 +130,87 @@ export const cadastrar = (
 export const alterarSenha = (senha_anterior: string, nova_senha: string) =>
   apiFetch<any>('/alterar-senha', { method: 'POST', body: JSON.stringify({ senha_anterior, nova_senha }) })
 
-// ─── Jogadores / Ranking ────────────────────────────────────────────────────
-export const listarJogadores = async () =>
-  unwrapArray(
-    await apiFetch<any>('/api/players').catch(() => apiFetch<any>('/api/partida/ranking'))
+export const steamLoginUrl = (params?: {
+  redirect?: string
+  gc_profile_url?: string
+  gc_id?: number
+}) => {
+  const q = new URLSearchParams()
+  if (typeof window !== 'undefined' && window.location?.origin) {
+    q.set('origin', window.location.origin)
+  }
+  if (params?.redirect) q.set('redirect', params.redirect)
+  if (params?.gc_profile_url) q.set('gc_profile_url', params.gc_profile_url)
+  if (Number.isFinite(Number(params?.gc_id)) && Number(params?.gc_id) > 0) {
+    q.set('gc_id', String(Number(params?.gc_id)))
+  }
+  return `/auth/steam/login${q.toString() ? `?${q.toString()}` : ''}`
+}
+
+export const steamStatus = () =>
+  apiFetch<any>('/api/auth/steam/status')
+
+export const steamLoginUrlForLogged = async (params?: {
+  redirect?: string
+  gc_profile_url?: string
+  gc_id?: number
+}) => {
+  const q = new URLSearchParams()
+  if (typeof window !== 'undefined' && window.location?.origin) {
+    q.set('origin', window.location.origin)
+  }
+  if (params?.redirect) q.set('redirect', params.redirect)
+  if (params?.gc_profile_url) q.set('gc_profile_url', params.gc_profile_url)
+  if (Number.isFinite(Number(params?.gc_id)) && Number(params?.gc_id) > 0) {
+    q.set('gc_id', String(Number(params?.gc_id)))
+  }
+  const data = await apiFetch<any>(
+    `/api/auth/steam/login-url${q.toString() ? `?${q.toString()}` : ''}`
   )
+  const url = String(data?.resultados?.url || data?.url || '').trim()
+  if (!url) throw new Error('Não foi possível iniciar o login Steam.')
+  return url
+}
+
+export const steamVincularGc = (payload: { gc_profile_url?: string; gc_id?: number }) =>
+  apiFetch<any>('/api/auth/steam/vincular-gc', {
+    method: 'POST',
+    body: JSON.stringify(payload || {}),
+  })
+
+// ─── Jogadores / Ranking ────────────────────────────────────────────────────
+export const listarJogadores = async (filters?: SeasonFilters) => {
+  const query = buildSeasonQuery(filters)
+  return unwrapArray(
+    !getToken()
+      ? await apiFetch<any>(`/api/partida/ranking${query}`)
+      : await apiFetch<any>(`/api/players${query}`).catch(() =>
+          apiFetch<any>(`/api/partida/ranking${query}`)
+        )
+  )
+}
 
 export const meuGold = (usuario_id?: number) =>
-  apiFetch<{ gold: number; jogador_id?: number; imagem?: string; level?: number; level_pontos?: number }>(
+  apiFetch<{
+    gold: number
+    jogador_id?: number
+    imagem?: string
+    level?: number
+    level_pontos?: number
+    nome?: string
+    gc_nick?: string
+  }>(
     `/api/players/me${usuario_id ? `?usuario_id=${usuario_id}` : ''}`
   ).catch(() =>
-    apiFetch<{ gold: number; jogador_id?: number; imagem?: string; level?: number; level_pontos?: number }>(
+    apiFetch<{
+      gold: number
+      jogador_id?: number
+      imagem?: string
+      level?: number
+      level_pontos?: number
+      nome?: string
+      gc_nick?: string
+    }>(
       `/api/jogadores/gold${usuario_id ? `?usuario_id=${usuario_id}` : ''}`
     )
   )
@@ -107,25 +220,38 @@ export const vincularJogador = (id: number) =>
     apiFetch<any>(`/api/jogadores/vincular/${id}`, { method: 'POST' })
   )
 
+export interface PlayerMission {
+  id: number
+  jogador_id: number
+  cycle: number
+  order: number
+  type: 'kills' | 'assistencias' | 'adr' | 'first_kill' | 'multi_kill' | 'vitorias'
+  name: string
+  description: string
+  target: number
+  progress: number
+  percentage: number
+  completed: boolean
+  completed_at: string | null
+}
+
+export const listarMissoesJogador = async (jogadorId: number): Promise<PlayerMission[]> => {
+  const data = await apiFetch<any>(`/api/missions/players/${jogadorId}`)
+  if (Array.isArray(data)) return data as PlayerMission[]
+  if (Array.isArray(data?.resultados?.missoes)) return data.resultados.missoes as PlayerMission[]
+  if (Array.isArray(data?.missoes)) return data.missoes as PlayerMission[]
+  return []
+}
+
 // ─── Partidas ───────────────────────────────────────────────────────────────
-export const listarPartidas = async (player?: string) =>
-  unwrapArray(
-    await apiFetch<any>(
-      `/api/matches${
-        player && String(player).trim()
-          ? `?player=${encodeURIComponent(String(player).trim())}`
-          : ''
-      }`
-    ).catch(() =>
-      apiFetch<any>(
-        `/api/partida/listar${
-          player && String(player).trim()
-            ? `?player=${encodeURIComponent(String(player).trim())}`
-            : ''
-        }`
-      )
+export const listarPartidas = async (player?: string, filters?: SeasonFilters) => {
+  const query = buildSeasonQuery({ ...filters, player })
+  return unwrapArray(
+    await apiFetch<any>(`/api/matches${query}`).catch(() =>
+      apiFetch<any>(`/api/partida/listar${query}`)
     )
   )
+}
 
 export const detalhesPartida = (codigo: string) =>
   apiFetch<any>(`/api/matches/${codigo}`).catch(() =>
@@ -133,9 +259,13 @@ export const detalhesPartida = (codigo: string) =>
   )
 
 export const importarJson = (json: object) =>
-  apiFetch<any>('/api/matches', { method: 'POST', body: JSON.stringify(json) }).catch(() =>
-    apiFetch<any>('/api/partida/importar-json', { method: 'POST', body: JSON.stringify(json) })
-  )
+  apiFetch<any>('/api/matches', { method: 'POST', body: JSON.stringify(json) }).catch((err: any) => {
+    const status = Number(err?.status || 0)
+    if (status === 404 || status === 405) {
+      return apiFetch<any>('/api/partida/importar-json', { method: 'POST', body: JSON.stringify(json) })
+    }
+    throw err
+  })
 
 export const deletarPartida = (id: number) =>
   apiFetch<any>(`/api/matches/${id}`, { method: 'DELETE' }).catch(() =>
