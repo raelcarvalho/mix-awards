@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
-import type { CSSProperties } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import type { CSSProperties, PointerEvent } from 'react'
 
 export const LEVEL_NAME_BY_ID = {
   0: 'Newba',
@@ -88,6 +88,78 @@ function fmt(value: number) {
   return Number.isFinite(value) ? value.toLocaleString('pt-BR') : '0'
 }
 
+const PROFILE_AVATAR_SIZE = 108
+const PROFILE_FRAME_STAGE_SIZE = 168
+const PROFILE_FRAME_HOLE_TARGET = PROFILE_AVATAR_SIZE + 30
+
+type FrameAdjustment = {
+  offsetX: number
+  offsetY: number
+  scale: number
+}
+
+const DEFAULT_FRAME_ADJUSTMENT: FrameAdjustment = {
+  offsetX: 0,
+  offsetY: 0,
+  scale: 1,
+}
+
+// Ajustes oficiais por level (produção): altere estes valores e suba o código.
+const FRAME_ADJUSTMENT_BY_LEVEL: Record<number, FrameAdjustment> = {
+  1: { offsetX: -2, offsetY: 6, scale: 1.16 },
+  2: { offsetX: -2, offsetY: -1, scale: 1.14 },
+  3: { offsetX: -1, offsetY: 7, scale: 1.37 },
+  4: { offsetX: 0, offsetY: 5, scale: 1.16 },
+  5: { offsetX: 0, offsetY: 3, scale: 1.19 },
+  6: { offsetX: 0, offsetY: -6, scale: 1.26 },
+  7: { offsetX: 0, offsetY: 2, scale: 1.35 },
+  8: { offsetX: -1, offsetY: -10, scale: 1.21 },
+  9: { offsetX: 0, offsetY: 3, scale: 1.3 },
+  10: { offsetX: 1, offsetY: -5, scale: 1.27 },
+  11: { offsetX: -6, offsetY: 12, scale: 1.54 },
+  12: { offsetX: -3, offsetY: -4, scale: 1.35 },
+  13: { offsetX: -1, offsetY: 7, scale: 1.4 },
+  14: { offsetX: 0, offsetY: -4, scale: 1.3 },
+  15: { offsetX: 0, offsetY: 2, scale: 1.34 },
+}
+
+const FRAME_HOLE_RATIO_BY_LEVEL: Record<number, number> = {
+  1: 0.517,
+  2: 0.525,
+  3: 0.434,
+  4: 0.538,
+  5: 0.535,
+  6: 0.489,
+  7: 0.447,
+  8: 0.488,
+  9: 0.444,
+  10: 0.447,
+  11: 0.378,
+  12: 0.404,
+  13: 0.428,
+  14: 0.435,
+  15: 0.376,
+}
+
+function clampNumber(value: number, min: number, max: number) {
+  if (!Number.isFinite(value)) return min
+  return Math.max(min, Math.min(max, value))
+}
+
+function normalizeFrameAdjustment(value: Partial<FrameAdjustment> = {}): FrameAdjustment {
+  return {
+    offsetX: Math.round(clampNumber(Number(value.offsetX ?? 0), -90, 90)),
+    offsetY: Math.round(clampNumber(Number(value.offsetY ?? 0), -90, 90)),
+    scale: Number(clampNumber(Number(value.scale ?? 1), 0.7, 3).toFixed(2)),
+  }
+}
+
+function getCodeFrameAdjustment(level: number): FrameAdjustment {
+  return normalizeFrameAdjustment(
+    FRAME_ADJUSTMENT_BY_LEVEL[level] ?? DEFAULT_FRAME_ADJUSTMENT
+  )
+}
+
 function StatItem({
   icon,
   value,
@@ -160,6 +232,73 @@ export default function PlayerProfilePreview({
   const xpPercent = isMaxLevel
     ? 100
     : clampPercent(nextLevelXp > 0 ? (currentXp / nextLevelXp) * 100 : 0)
+  const frameLevel = Math.max(1, Math.min(15, lv))
+  const frameImageCandidates = useMemo(
+    () =>
+      Array.from(
+        new Set([
+          `/molduras/moldura_${frameLevel}.png`,
+          `/molduras/moldura-${frameLevel}.png`,
+          `/molduras/level_${frameLevel}.png`,
+          `/molduras/level-${frameLevel}.png`,
+          `/molduras/level ${frameLevel}.png`,
+          `/level-icons/level-${frameLevel}.png`,
+          `/level-icons/level ${frameLevel}.png`,
+          `/uploads/levels/level-${frameLevel}.png`,
+          `/uploads/levels/level ${frameLevel}.png`,
+          `/uploads/levels/${frameLevel}.png`,
+        ])
+      ),
+    [frameLevel]
+  )
+  const [frameImageIndex, setFrameImageIndex] = useState(0)
+  const frameImageSrc = frameImageCandidates[frameImageIndex] || ''
+  const frameIsFromMolduras = frameImageSrc.includes('/molduras/')
+  const frameHoleRatio = FRAME_HOLE_RATIO_BY_LEVEL[frameLevel] || 0.5
+  const frameRenderSize = frameIsFromMolduras
+    ? Math.round(PROFILE_FRAME_HOLE_TARGET / frameHoleRatio)
+    : PROFILE_FRAME_STAGE_SIZE
+  const onlineDotOffset = (PROFILE_FRAME_STAGE_SIZE - PROFILE_AVATAR_SIZE) / 2 - 16
+  const [runtimeFrameAdjustmentByLevel, setRuntimeFrameAdjustmentByLevel] = useState<
+    Partial<Record<number, FrameAdjustment>>
+  >(() => ({}))
+  const savedFrameAdjustment = useMemo(
+    () =>
+      normalizeFrameAdjustment(
+        runtimeFrameAdjustmentByLevel[frameLevel] ?? getCodeFrameAdjustment(frameLevel)
+      ),
+    [frameLevel, runtimeFrameAdjustmentByLevel]
+  )
+  const [draftFrameAdjustment, setDraftFrameAdjustment] = useState<FrameAdjustment>(
+    savedFrameAdjustment
+  )
+  const [frameEditorOpen, setFrameEditorOpen] = useState(false)
+  const dragStartRef = useRef<{
+    pointerId: number
+    startX: number
+    startY: number
+    baseX: number
+    baseY: number
+  } | null>(null)
+  const activeFrameAdjustment = frameEditorOpen
+    ? draftFrameAdjustment
+    : savedFrameAdjustment
+  const frameFilter = useMemo(() => {
+    if (!frameIsFromMolduras) {
+      return `brightness(1.1) contrast(1.08) drop-shadow(0 0 10px ${glow})`
+    }
+
+    if (frameLevel === 6) {
+      // Level 6 (Ouro): glow dourado mais intenso em camadas.
+      return [
+        'drop-shadow(0 0 6px rgba(250,204,21,.95))',
+        'drop-shadow(0 0 14px rgba(250,204,21,.72))',
+        'drop-shadow(0 0 24px rgba(245,158,11,.52))',
+      ].join(' ')
+    }
+
+    return `drop-shadow(0 0 10px ${glow})`
+  }, [frameIsFromMolduras, frameLevel, glow])
   const levelImageCandidates = useMemo(
     () =>
       Array.from(
@@ -182,6 +321,69 @@ export default function PlayerProfilePreview({
   useEffect(() => {
     setLevelImageIndex(0)
   }, [lv, levelIconUrl])
+  useEffect(() => {
+    setFrameImageIndex(0)
+  }, [frameLevel])
+
+  useEffect(() => {
+    if (!frameEditorOpen) setDraftFrameAdjustment(savedFrameAdjustment)
+  }, [frameEditorOpen, savedFrameAdjustment])
+
+  const updateDraftFrameAdjustment = (next: Partial<FrameAdjustment>) => {
+    setDraftFrameAdjustment((current) =>
+      normalizeFrameAdjustment({ ...current, ...next })
+    )
+  }
+
+  const saveFrameAdjustment = () => {
+    const next = normalizeFrameAdjustment(draftFrameAdjustment)
+    setRuntimeFrameAdjustmentByLevel((current) => ({
+      ...current,
+      [frameLevel]: next,
+    }))
+    setFrameEditorOpen(false)
+  }
+
+  const resetFrameAdjustment = () => {
+    setDraftFrameAdjustment(getCodeFrameAdjustment(frameLevel))
+  }
+
+  const cancelFrameAdjustment = () => {
+    setDraftFrameAdjustment(savedFrameAdjustment)
+    setFrameEditorOpen(false)
+  }
+
+  const startFrameDrag = (event: PointerEvent<HTMLImageElement>) => {
+    if (!frameEditorOpen) return
+
+    event.preventDefault()
+    event.currentTarget.setPointerCapture(event.pointerId)
+    dragStartRef.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      baseX: draftFrameAdjustment.offsetX,
+      baseY: draftFrameAdjustment.offsetY,
+    }
+  }
+
+  const moveFrameDrag = (event: PointerEvent<HTMLImageElement>) => {
+    const start = dragStartRef.current
+    if (!frameEditorOpen || !start || start.pointerId !== event.pointerId) return
+
+    updateDraftFrameAdjustment({
+      offsetX: start.baseX + event.clientX - start.startX,
+      offsetY: start.baseY + event.clientY - start.startY,
+    })
+  }
+
+  const endFrameDrag = (event: PointerEvent<HTMLImageElement>) => {
+    const start = dragStartRef.current
+    if (!start || start.pointerId !== event.pointerId) return
+
+    event.currentTarget.releasePointerCapture(event.pointerId)
+    dragStartRef.current = null
+  }
 
   return (
     <aside
@@ -242,17 +444,27 @@ export default function PlayerProfilePreview({
             textAlign: 'center',
           }}
         >
-          Perfil do Jogador
+          {/* Perfil do Jogador */}
         </div>
 
         <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-          <div style={{ position: 'relative' }}>
+          <div
+            style={{
+              position: 'relative',
+              width: PROFILE_FRAME_STAGE_SIZE,
+              height: PROFILE_FRAME_STAGE_SIZE,
+              display: 'grid',
+              placeItems: 'center',
+              overflow: 'visible',
+            }}
+          >
             <div
               style={{
                 position: 'absolute',
-                inset: -16,
+                width: PROFILE_AVATAR_SIZE + 36,
+                height: PROFILE_AVATAR_SIZE + 36,
                 borderRadius: '50%',
-                background: `radial-gradient(circle, ${glow} 0%, transparent 70%)`,
+                background: `radial-gradient(circle, ${glow} 0%, transparent 72%)`,
                 filter: 'blur(14px)',
               }}
             />
@@ -262,20 +474,21 @@ export default function PlayerProfilePreview({
                 alt={`Avatar de ${playerName}`}
                 style={{
                   position: 'relative',
-                  width: 108,
-                  height: 108,
+                  width: PROFILE_AVATAR_SIZE,
+                  height: PROFILE_AVATAR_SIZE,
                   borderRadius: '50%',
                   objectFit: 'cover',
                   border: `4px solid ${accent}`,
                   boxShadow: `0 0 22px ${glow}`,
+                  zIndex: 2,
                 }}
               />
             ) : (
               <div
                 style={{
                   position: 'relative',
-                  width: 108,
-                  height: 108,
+                  width: PROFILE_AVATAR_SIZE,
+                  height: PROFILE_AVATAR_SIZE,
                   borderRadius: '50%',
                   border: `4px solid ${accent}`,
                   display: 'grid',
@@ -286,30 +499,228 @@ export default function PlayerProfilePreview({
                   fontWeight: 800,
                   background: 'rgba(17,23,44,.9)',
                   boxShadow: `0 0 22px ${glow}`,
+                  zIndex: 2,
                 }}
               >
                 {String(playerName || '?').slice(0, 1).toUpperCase()}
               </div>
             )}
+            {frameImageSrc ? (
+              <img
+                src={frameImageSrc}
+                alt=""
+                aria-hidden="true"
+                style={{
+                  position: 'absolute',
+                  left: `calc(50% + ${activeFrameAdjustment.offsetX}px)`,
+                  top: `calc(50% + ${activeFrameAdjustment.offsetY}px)`,
+                  width: frameRenderSize,
+                  height: frameRenderSize,
+                  transform: `translate(-50%, -50%) scale(${activeFrameAdjustment.scale})`,
+                  transformOrigin: 'center center',
+                  objectFit: 'contain',
+                  pointerEvents: frameEditorOpen ? 'auto' : 'none',
+                  zIndex: 3,
+                  mixBlendMode: frameIsFromMolduras ? 'normal' : 'screen',
+                  filter: frameFilter,
+                  cursor: frameEditorOpen ? 'grab' : 'default',
+                  touchAction: 'none',
+                }}
+                onPointerDown={startFrameDrag}
+                onPointerMove={moveFrameDrag}
+                onPointerUp={endFrameDrag}
+                onPointerCancel={endFrameDrag}
+                onError={() => {
+                  setFrameImageIndex((prev) => {
+                    const next = prev + 1
+                    return next < frameImageCandidates.length ? next : prev
+                  })
+                }}
+              />
+            ) : null}
             <span
               style={{
                 position: 'absolute',
-                right: 4,
-                bottom: 4,
+                right: onlineDotOffset,
+                bottom: onlineDotOffset,
                 width: 16,
                 height: 16,
                 borderRadius: '50%',
                 background: online ? '#4ade80' : '#64748b',
                 border: '3px solid #0a1021',
                 boxShadow: online ? '0 0 10px rgba(74,222,128,.85)' : 'none',
+                zIndex: 4,
               }}
             />
+            {/* <button
+              type="button"
+              onClick={() => {
+                setDraftFrameAdjustment(savedFrameAdjustment)
+                setFrameEditorOpen(true)
+              }}
+              style={{
+                position: 'absolute',
+                top: 2,
+                right: 2,
+                zIndex: 5,
+                border: `1px solid ${accent}77`,
+                borderRadius: 8,
+                background: 'rgba(7,12,26,.86)',
+                color: accent,
+                fontFamily: "'Rajdhani',sans-serif",
+                fontSize: 10,
+                fontWeight: 800,
+                letterSpacing: 0.8,
+                lineHeight: 1,
+                padding: '6px 8px',
+                textTransform: 'uppercase',
+                cursor: 'pointer',
+                boxShadow: `0 0 12px ${glow}`,
+              }}
+            >
+              Ajustar
+            </button> */}
+            {frameEditorOpen && (
+              <div
+                style={{
+                  position: 'absolute',
+                  left: '50%',
+                  bottom: -58,
+                  transform: 'translateX(-50%)',
+                  zIndex: 6,
+                  width: 230,
+                  borderRadius: 10,
+                  border: `1px solid ${accent}88`,
+                  background: 'rgba(5,8,18,.96)',
+                  boxShadow: `0 0 18px ${glow}`,
+                  padding: '8px 9px',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      updateDraftFrameAdjustment({
+                        scale: draftFrameAdjustment.scale - 0.03,
+                      })
+                    }
+                    style={{
+                      width: 26,
+                      height: 24,
+                      borderRadius: 7,
+                      border: '1px solid rgba(255,255,255,.13)',
+                      background: 'rgba(255,255,255,.06)',
+                      color: '#fff',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    -
+                  </button>
+                  <input
+                    aria-label="Tamanho da moldura"
+                    type="range"
+                    min="0.7"
+                    max="3"
+                    step="0.01"
+                    value={draftFrameAdjustment.scale}
+                    onChange={(event) =>
+                      updateDraftFrameAdjustment({
+                        scale: Number(event.currentTarget.value),
+                      })
+                    }
+                    style={{ flex: 1, accentColor: accent }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() =>
+                      updateDraftFrameAdjustment({
+                        scale: draftFrameAdjustment.scale + 0.03,
+                      })
+                    }
+                    style={{
+                      width: 26,
+                      height: 24,
+                      borderRadius: 7,
+                      border: '1px solid rgba(255,255,255,.13)',
+                      background: 'rgba(255,255,255,.06)',
+                      color: '#fff',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    +
+                  </button>
+                </div>
+                <div
+                  style={{
+                    marginTop: 5,
+                    textAlign: 'center',
+                    fontFamily: "'Orbitron',monospace",
+                    fontSize: 9,
+                    fontWeight: 800,
+                    color: accent,
+                  }}
+                >
+                  {Math.round(draftFrameAdjustment.scale * 100)}%
+                </div>
+                <div
+                  style={{
+                    marginTop: 4,
+                    textAlign: 'center',
+                    fontFamily: "'Rajdhani',sans-serif",
+                    fontSize: 10,
+                    color: 'rgba(255,255,255,.62)',
+                    lineHeight: 1.15,
+                  }}
+                >
+                  {`Level ${frameLevel}: x ${draftFrameAdjustment.offsetX}, y ${draftFrameAdjustment.offsetY}, scale ${draftFrameAdjustment.scale.toFixed(2)}`}
+                </div>
+                <div
+                  style={{
+                    marginTop: 3,
+                    textAlign: 'center',
+                    fontFamily: "'Rajdhani',sans-serif",
+                    fontSize: 9,
+                    color: 'rgba(255,255,255,.5)',
+                    lineHeight: 1.1,
+                  }}
+                >
+                  Producao: edite FRAME_ADJUSTMENT_BY_LEVEL neste arquivo.
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6, marginTop: 7 }}>
+                  {[
+                    { label: 'Aplicar', action: saveFrameAdjustment, primary: true },
+                    { label: 'Cancelar', action: cancelFrameAdjustment, primary: false },
+                    { label: 'Resetar', action: resetFrameAdjustment, primary: false },
+                  ].map(({ label, action, primary }) => (
+                    <button
+                      key={label}
+                      type="button"
+                      onClick={action}
+                      style={{
+                        borderRadius: 7,
+                        border: `1px solid ${primary ? accent : 'rgba(255,255,255,.12)'}`,
+                        background: primary ? `${accent}22` : 'rgba(255,255,255,.05)',
+                        color: primary ? accent : 'rgba(255,255,255,.72)',
+                        fontFamily: "'Rajdhani',sans-serif",
+                        fontSize: 10,
+                        fontWeight: 800,
+                        letterSpacing: 0.4,
+                        padding: '6px 4px',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           <h2
             style={{
-              marginTop: 12,
-              marginBottom: 0,
+              marginTop: frameEditorOpen ? 70 : 25,
+              marginBottom: -20,
               fontFamily: "'Rajdhani',sans-serif",
               fontSize: 44,
               lineHeight: 1,
@@ -329,6 +740,7 @@ export default function PlayerProfilePreview({
               maxHeight: 190,
               width: 'auto',
               objectFit: 'contain',
+              mixBlendMode: 'screen',
               filter: `drop-shadow(0 0 18px ${glow})`,
             }}
             onError={() => {
