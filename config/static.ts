@@ -5,7 +5,7 @@ const staticConfig: AssetsConfig = {
   dotFiles: "ignore",
   etag: true,
   lastModified: true,
-  maxAge: 0,
+  maxAge: "7d",
   immutable: false,
 };
 

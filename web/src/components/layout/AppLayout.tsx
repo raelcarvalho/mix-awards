@@ -13,6 +13,8 @@ type Page =
   | 'album-stickers'
   | 'shop'
   | 'importar'
+  | 'level-frames'
+  | 'copa-do-mundo'
 
 interface Props {
   page: Page
@@ -29,14 +31,16 @@ type HeaderSearchPlayer = {
   adr: number
 }
 
-const NAV: { id: Page; icon: string; label: string; adminOnly?: boolean }[] = [
+const NAV: { id: Page; icon: string; label: string; adminOnly?: boolean; neon?: boolean }[] = [
   { id: 'home', icon: '▦', label: 'Início' },
   { id: 'dashboard', icon: '◈', label: 'Meu Dashboard' },
   { id: 'partidas', icon: '⚔', label: 'Partidas' },
   { id: 'tirar-time', icon: '🎲', label: 'Tirar Time' },
   { id: 'album', icon: '📋', label: 'Álbum' },
+  { id: 'copa-do-mundo', icon: '🏆', label: 'Copa do Mundo', neon: true },
   { id: 'shop', icon: '🛒', label: 'Shop' },
-  { id: 'ranking', icon: '🏆', label: 'Ranking' },
+  { id: 'ranking', icon: '🥇', label: 'Ranking' },
+  { id: 'level-frames', icon: '✶', label: 'Molduras' },
   { id: 'album-stickers', icon: '✨', label: 'Álbum Stickers' },
   { id: 'importar', icon: '⬆', label: 'Importar', adminOnly: true },
 ]
@@ -51,6 +55,8 @@ const PAGE_TITLES: Record<Page, string> = {
   'album-stickers': 'Álbum Stickers',
   shop: 'Shop',
   importar: 'Importar Partida',
+  'level-frames': 'Molduras',
+  'copa-do-mundo': 'Copa do Mundo',
 }
 
 function normalizeAvatarMedia(raw?: string | null): string | null {
@@ -240,14 +246,18 @@ export default function AppLayout({ page, setPage, onOpenPlayerDashboard, childr
   }, [userAvatar])
 
   const sidebarWidth = collapsed ? 68 : 216
+  const isCopaPage = page === 'copa-do-mundo'
 
   return (
     <div
       className="flex h-screen overflow-hidden"
       style={{
-        background: '#09091a',
+        background: isCopaPage
+          ? `url('/copa/background.png') center/cover no-repeat, #060d06`
+          : '#09091a',
         color: '#fff',
         fontFamily: "'Rajdhani', system-ui, sans-serif",
+        transition: 'background 0.4s ease',
       }}
     >
       <div className="fixed inset-0 pointer-events-none z-0">
@@ -259,7 +269,9 @@ export default function AppLayout({ page, setPage, onOpenPlayerDashboard, childr
             width: 600,
             height: 500,
             background:
-              'radial-gradient(circle, rgba(192,132,252,0.04) 0%, transparent 70%)',
+              isCopaPage
+                ? 'radial-gradient(circle, rgba(255,223,0,0.08) 0%, rgba(0,156,59,0.035) 46%, transparent 74%)'
+                : 'radial-gradient(circle, rgba(192,132,252,0.04) 0%, transparent 70%)',
           }}
         />
         <div
@@ -270,7 +282,9 @@ export default function AppLayout({ page, setPage, onOpenPlayerDashboard, childr
             width: 400,
             height: 400,
             background:
-              'radial-gradient(circle, rgba(34,211,238,0.03) 0%, transparent 70%)',
+              isCopaPage
+                ? 'radial-gradient(circle, rgba(0,156,59,0.08) 0%, rgba(255,223,0,0.03) 50%, transparent 74%)'
+                : 'radial-gradient(circle, rgba(34,211,238,0.03) 0%, transparent 70%)',
           }}
         />
       </div>
@@ -288,8 +302,11 @@ export default function AppLayout({ page, setPage, onOpenPlayerDashboard, childr
         className="flex flex-col flex-shrink-0 z-40 transition-all duration-300"
         style={{
           width: isMobile ? 216 : sidebarWidth,
-          background: 'linear-gradient(180deg, #0e0e1c 0%, #090912 100%)',
-          borderRight: '1px solid rgba(192,132,252,0.1)',
+          background: isCopaPage
+            ? 'linear-gradient(180deg, rgba(4,24,10,0.88) 0%, rgba(4,22,9,0.84) 54%, rgba(4,18,8,0.56) 78%, rgba(4,16,7,0.18) 100%)'
+            : 'linear-gradient(180deg, #0e0e1c 0%, #090912 100%)',
+          borderRight: 'none',
+          backdropFilter: isCopaPage ? 'blur(16px)' : undefined,
           position: isMobile ? 'fixed' : 'relative',
           left: 0,
           top: 0,
@@ -300,13 +317,89 @@ export default function AppLayout({ page, setPage, onOpenPlayerDashboard, childr
               : 'translateX(-108%)'
             : 'translateX(0)',
           overflow: 'hidden',
+          boxShadow: isCopaPage
+            ? 'inset -32px 0 60px rgba(255,223,0,0.05), inset 0 -80px 120px rgba(0,0,0,0.14)'
+            : undefined,
+          transition:
+            'background 0.4s ease, border-color 0.4s ease, backdrop-filter 0.4s ease, box-shadow 0.4s ease',
         }}
       >
+        {/* Animated neon gradient border — Copa do Mundo only */}
+        {isCopaPage && (
+          <>
+            <div
+              aria-hidden="true"
+              style={{
+                position: 'absolute',
+                top: 0,
+                right: 0,
+                width: 22,
+                height: '100%',
+                pointerEvents: 'none',
+                background:
+                  'linear-gradient(180deg, rgba(0,156,59,0.22) 0%, rgba(255,223,0,0.42) 50%, rgba(0,156,59,0.22) 100%)',
+                backgroundSize: '100% 200%',
+                animation: 'sidebar-neon-flow 3s ease-in-out infinite',
+                filter: 'blur(11px)',
+                opacity: 0.85,
+              }}
+            />
+            <div
+              aria-hidden="true"
+              style={{
+                position: 'absolute',
+                top: 0,
+                right: 0,
+                width: 2,
+                height: '100%',
+                pointerEvents: 'none',
+                background:
+                  'linear-gradient(180deg, #009c3b 0%, #ffdf00 50%, #009c3b 100%)',
+                backgroundSize: '100% 200%',
+                animation: 'sidebar-neon-flow 3s ease-in-out infinite',
+                boxShadow:
+                  '0 0 6px rgba(255,223,0,0.95), 0 0 14px rgba(0,156,59,0.8), 0 0 26px rgba(255,223,0,0.4)',
+              }}
+            />
+          </>
+        )}
+        {isCopaPage && (
+          <>
+            <div
+              aria-hidden="true"
+              style={{
+                position: 'absolute',
+                inset: 0,
+                pointerEvents: 'none',
+                background:
+                  'linear-gradient(180deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.015) 22%, rgba(255,255,255,0.01) 48%, rgba(255,255,255,0.0) 72%)',
+                opacity: 0.55,
+              }}
+            />
+            <div
+              aria-hidden="true"
+              style={{
+                position: 'absolute',
+                left: 0,
+                right: 0,
+                bottom: 0,
+                height: '34%',
+                pointerEvents: 'none',
+                background:
+                  'linear-gradient(180deg, rgba(4,22,9,0) 0%, rgba(4,22,9,0.08) 25%, rgba(4,22,9,0.18) 48%, rgba(4,22,9,0.04) 100%)',
+              }}
+            />
+          </>
+        )}
         <div
           className="flex items-center gap-3 overflow-hidden"
           style={{
             padding: '22px 16px 18px',
-            borderBottom: '1px solid rgba(255,255,255,0.05)',
+            borderBottom: isCopaPage
+              ? '1px solid rgba(255,223,0,0.18)'
+              : '1px solid rgba(255,255,255,0.05)',
+            position: 'relative',
+            zIndex: 1,
           }}
         >
           <div
@@ -314,9 +407,15 @@ export default function AppLayout({ page, setPage, onOpenPlayerDashboard, childr
             style={{
               width: 38,
               height: 38,
-              background: 'linear-gradient(135deg,rgba(192,132,252,0.22),rgba(129,140,248,0.18))',
-              boxShadow: '0 0 20px rgba(192,132,252,0.3)',
-              border: '1px solid rgba(192,132,252,0.35)',
+              background: isCopaPage
+                ? 'linear-gradient(135deg, rgba(0,156,59,0.22), rgba(255,223,0,0.2))'
+                : 'linear-gradient(135deg,rgba(192,132,252,0.22),rgba(129,140,248,0.18))',
+              boxShadow: isCopaPage
+                ? '0 0 20px rgba(255,223,0,0.18), 0 0 28px rgba(0,156,59,0.14)'
+                : '0 0 20px rgba(192,132,252,0.3)',
+              border: isCopaPage
+                ? '1px solid rgba(255,223,0,0.42)'
+                : '1px solid rgba(192,132,252,0.35)',
             }}
           >
             <img
@@ -336,13 +435,21 @@ export default function AppLayout({ page, setPage, onOpenPlayerDashboard, childr
                 className="font-orbitron font-bold text-white leading-none"
                 style={{ fontSize: 13, letterSpacing: 2 }}
               >
-                MIX<span style={{ color: '#c084fc' }}>AWARDS</span>
+                MIX
+                <span
+                  style={{
+                    color: isCopaPage ? '#ffdf00' : '#c084fc',
+                    textShadow: isCopaPage ? '0 0 10px rgba(255,223,0,0.18)' : undefined,
+                  }}
+                >
+                  AWARDS
+                </span>
               </div>
               <div
                 className="font-rajdhani"
                 style={{
                   fontSize: 9,
-                  color: 'rgba(192,132,252,0.5)',
+                  color: isCopaPage ? 'rgba(198,255,154,0.58)' : 'rgba(192,132,252,0.5)',
                   letterSpacing: 3,
                   marginTop: 2,
                 }}
@@ -353,10 +460,82 @@ export default function AppLayout({ page, setPage, onOpenPlayerDashboard, childr
           )}
         </div>
 
-        <nav className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-0.5 p-2.5">
+        <nav
+          className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-0.5 p-2.5"
+          style={{ position: 'relative', zIndex: 1 }}
+        >
           {visibleNav.map((item) => {
             const active = page === item.id
             const showLabel = !collapsed || isMobile
+            const isNeon = item.neon && isCopaPage
+
+            if (isNeon) {
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => {
+                    setPage(item.id)
+                    if (isMobile) setMobileNavOpen(false)
+                  }}
+                  className="flex items-center rounded-xl overflow-hidden whitespace-nowrap w-full cursor-pointer copa-neon-btn"
+                  style={{
+                    padding: showLabel ? '10px 12px' : '10px 8px',
+                     fontWeight: active ? 700 : 600,
+                     fontSize: 14,
+                     fontFamily: "'Rajdhani', sans-serif",
+                     lineHeight: 1.15,
+                    justifyContent: showLabel ? 'flex-start' : 'center',
+                    gap: showLabel ? 10 : 0,
+                    textAlign: showLabel ? 'left' : 'center',
+                    border: 'none',
+                    background: active
+                      ? 'linear-gradient(135deg,rgba(0,156,59,.28),rgba(255,223,0,.2))'
+                      : 'linear-gradient(135deg,rgba(0,156,59,.1),rgba(255,223,0,.06))',
+                    color: '#ffdf00',
+                    position: 'relative',
+                  }}
+                >
+                  {/* neon border glow */}
+                  <span
+                    aria-hidden="true"
+                    style={{
+                      position: 'absolute',
+                      inset: 0,
+                      borderRadius: 12,
+                      pointerEvents: 'none',
+                      boxShadow: active
+                        ? '0 0 0 1.5px #009c3b, 0 0 10px 2px rgba(0,156,59,.6), 0 0 22px 4px rgba(255,223,0,.25), inset 0 0 8px rgba(255,223,0,.08)'
+                        : '0 0 0 1px rgba(0,156,59,.5), 0 0 6px 1px rgba(0,156,59,.3), inset 0 0 14px rgba(255,223,0,.04)',
+                      transition: 'box-shadow .25s ease',
+                    }}
+                  />
+                  <span
+                    className="flex-shrink-0"
+                    style={{ width: 18, minWidth: 18, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, lineHeight: 1 }}
+                  >
+                    {item.icon}
+                  </span>
+                  {showLabel && (
+                    <span
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        minHeight: 16,
+                        letterSpacing: 0.5,
+                        background: 'linear-gradient(90deg,#009c3b,#ffdf00,#009c3b)',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                        backgroundClip: 'text',
+                        fontWeight: 700,
+                      }}
+                    >
+                      {item.label}
+                    </span>
+                  )}
+                </button>
+              )
+            }
+
             return (
               <button
                 key={item.id}
@@ -368,9 +547,6 @@ export default function AppLayout({ page, setPage, onOpenPlayerDashboard, childr
                 className="flex items-center rounded-xl border-l-2 transition-all duration-200 overflow-hidden whitespace-nowrap w-full cursor-pointer"
                 style={{
                   padding: showLabel ? '10px 12px' : '10px 8px',
-                  background: active ? 'rgba(192,132,252,0.15)' : 'transparent',
-                  borderColor: active ? '#c084fc' : 'transparent',
-                  color: active ? '#c084fc' : 'rgba(255,255,255,0.4)',
                   fontWeight: active ? 700 : 500,
                   fontSize: 14,
                   fontFamily: "'Rajdhani', sans-serif",
@@ -379,21 +555,51 @@ export default function AppLayout({ page, setPage, onOpenPlayerDashboard, childr
                   gap: showLabel ? 10 : 0,
                   textAlign: showLabel ? 'left' : 'center',
                   border: 'none',
-                  borderLeft: `2px solid ${active ? '#c084fc' : 'transparent'}`,
+                  borderLeft: `2px solid ${
+                    active
+                      ? isCopaPage
+                        ? '#ffdf00'
+                        : '#c084fc'
+                      : 'transparent'
+                  }`,
+                  background: active
+                    ? isCopaPage
+                      ? 'linear-gradient(90deg, rgba(96,155,20,0.36) 0%, rgba(67,106,18,0.28) 62%, rgba(33,64,12,0.26) 100%)'
+                      : 'rgba(192,132,252,0.15)'
+                    : isCopaPage
+                      ? 'linear-gradient(90deg, rgba(4,22,9,0.14) 0%, rgba(4,22,9,0.08) 100%)'
+                      : 'transparent',
+                  color: active
+                    ? isCopaPage
+                      ? '#ffdf00'
+                      : '#c084fc'
+                    : isCopaPage
+                      ? 'rgba(250,255,225,0.72)'
+                      : 'rgba(255,255,255,0.4)',
+                  boxShadow:
+                    active && isCopaPage
+                      ? '0 0 0 1px rgba(255,223,0,0.24), inset 0 0 18px rgba(255,223,0,0.08), 0 0 24px rgba(0,156,59,0.08)'
+                      : undefined,
                 }}
                 onMouseEnter={(e) => {
                   if (!active) {
                     const el = e.currentTarget as HTMLElement
-                    el.style.background = 'rgba(255,255,255,0.05)'
-                    el.style.color = 'rgba(255,255,255,0.7)'
-                    el.style.borderLeftColor = 'rgba(192,132,252,0.45)'
+                    el.style.background = isCopaPage
+                      ? 'linear-gradient(90deg, rgba(67,106,18,0.3) 0%, rgba(25,57,11,0.18) 100%)'
+                      : 'rgba(255,255,255,0.05)'
+                    el.style.color = isCopaPage ? '#fff6b0' : 'rgba(255,255,255,0.7)'
+                    el.style.borderLeftColor = isCopaPage
+                      ? 'rgba(255,223,0,0.55)'
+                      : 'rgba(192,132,252,0.45)'
                   }
                 }}
                 onMouseLeave={(e) => {
                   if (!active) {
                     const el = e.currentTarget as HTMLElement
-                    el.style.background = 'transparent'
-                    el.style.color = 'rgba(255,255,255,0.4)'
+                    el.style.background = isCopaPage
+                      ? 'linear-gradient(90deg, rgba(4,22,9,0.14) 0%, rgba(4,22,9,0.08) 100%)'
+                      : 'transparent'
+                    el.style.color = isCopaPage ? 'rgba(250,255,225,0.72)' : 'rgba(255,255,255,0.4)'
                     el.style.borderLeftColor = 'transparent'
                   }
                 }}
@@ -434,16 +640,21 @@ export default function AppLayout({ page, setPage, onOpenPlayerDashboard, childr
             <div
               className="rounded-xl p-3"
               style={{
-                background: 'rgba(245,200,66,0.08)',
-                border: '1px solid rgba(245,200,66,0.2)',
+                background: isCopaPage
+                  ? 'linear-gradient(180deg, rgba(56,80,16,0.42) 0%, rgba(44,60,12,0.28) 100%)'
+                  : 'rgba(245,200,66,0.08)',
+                border: isCopaPage
+                  ? '1px solid rgba(255,223,0,0.24)'
+                  : '1px solid rgba(245,200,66,0.2)',
                 marginBottom: 8,
                 textAlign: 'center',
+                boxShadow: isCopaPage ? 'inset 0 0 18px rgba(255,223,0,0.06)' : undefined,
               }}
             >
               <div
                 className="text-xs tracking-widest mb-1 font-rajdhani font-bold"
                 style={{
-                  color: 'rgba(245,200,66,0.7)',
+                  color: isCopaPage ? 'rgba(255,239,171,0.84)' : 'rgba(245,200,66,0.7)',
                   letterSpacing: '0.15em',
                   textAlign: 'center',
                 }}
@@ -452,7 +663,11 @@ export default function AppLayout({ page, setPage, onOpenPlayerDashboard, childr
               </div>
               <div
                 className="font-orbitron font-bold text-xl"
-                style={{ color: '#f5c842', textAlign: 'center' }}
+                style={{
+                  color: isCopaPage ? '#ffdf00' : '#f5c842',
+                  textAlign: 'center',
+                  textShadow: isCopaPage ? '0 0 12px rgba(255,223,0,0.18)' : undefined,
+                }}
               >
                 {gold.toLocaleString('pt-BR')}
               </div>
@@ -464,22 +679,28 @@ export default function AppLayout({ page, setPage, onOpenPlayerDashboard, childr
               onClick={() => setCollapsed(!collapsed)}
               className="w-full rounded-lg p-2 cursor-pointer transition-colors duration-200 font-rajdhani tracking-wide"
               style={{
-                background: 'rgba(255,255,255,0.04)',
-                border: '1px solid rgba(255,255,255,0.08)',
-                color: 'rgba(255,255,255,0.45)',
+                background: isCopaPage ? 'rgba(20,43,9,0.4)' : 'rgba(255,255,255,0.04)',
+                border: isCopaPage
+                  ? '1px solid rgba(255,223,0,0.16)'
+                  : '1px solid rgba(255,255,255,0.08)',
+                color: isCopaPage ? 'rgba(255,250,214,0.62)' : 'rgba(255,255,255,0.45)',
                 fontSize: 11,
               }}
               onMouseEnter={(e) => {
                 const el = e.currentTarget as HTMLButtonElement
-                el.style.background = 'rgba(255,255,255,0.08)'
-                el.style.color = 'rgba(255,255,255,0.75)'
-                el.style.borderColor = 'rgba(192,132,252,0.35)'
+                el.style.background = isCopaPage ? 'rgba(58,88,17,0.45)' : 'rgba(255,255,255,0.08)'
+                el.style.color = isCopaPage ? '#fff4b1' : 'rgba(255,255,255,0.75)'
+                el.style.borderColor = isCopaPage
+                  ? 'rgba(255,223,0,0.35)'
+                  : 'rgba(192,132,252,0.35)'
               }}
               onMouseLeave={(e) => {
                 const el = e.currentTarget as HTMLButtonElement
-                el.style.background = 'rgba(255,255,255,0.04)'
-                el.style.color = 'rgba(255,255,255,0.45)'
-                el.style.borderColor = 'rgba(255,255,255,0.08)'
+                el.style.background = isCopaPage ? 'rgba(20,43,9,0.4)' : 'rgba(255,255,255,0.04)'
+                el.style.color = isCopaPage ? 'rgba(255,250,214,0.62)' : 'rgba(255,255,255,0.45)'
+                el.style.borderColor = isCopaPage
+                  ? 'rgba(255,223,0,0.16)'
+                  : 'rgba(255,255,255,0.08)'
               }}
             >
               {collapsed ? '→' : '← RECOLHER'}
@@ -497,9 +718,14 @@ export default function AppLayout({ page, setPage, onOpenPlayerDashboard, childr
           style={{
             height: 58,
             padding: isMobile ? '0 12px' : '0 28px',
-            borderBottom: '1px solid rgba(255,255,255,0.06)',
-            background: 'rgba(9,9,18,0.92)',
+            borderBottom: isCopaPage
+              ? '1px solid rgba(255,223,0,0.12)'
+              : '1px solid rgba(255,255,255,0.06)',
+            background: isCopaPage
+              ? 'linear-gradient(180deg, rgba(5,18,8,0.9) 0%, rgba(4,14,7,0.84) 100%)'
+              : 'rgba(9,9,18,0.92)',
             backdropFilter: 'blur(24px)',
+            boxShadow: isCopaPage ? 'inset 0 -8px 22px rgba(0,156,59,0.06)' : undefined,
           }}
         >
           <div className="flex items-center gap-2">
@@ -519,14 +745,17 @@ export default function AppLayout({ page, setPage, onOpenPlayerDashboard, childr
             )}
             <span
               className="text-xs tracking-widest uppercase"
-              style={{ color: 'rgba(255,255,255,0.25)' }}
+              style={{ color: isCopaPage ? 'rgba(255,244,188,0.6)' : 'rgba(255,255,255,0.25)' }}
             >
               MixAwards
             </span>
-            <span style={{ color: 'rgba(192,132,252,0.4)' }}>›</span>
+            <span style={{ color: isCopaPage ? 'rgba(150,255,118,0.46)' : 'rgba(192,132,252,0.4)' }}>›</span>
             <span
               className="text-xs font-bold tracking-wide uppercase font-rajdhani"
-              style={{ color: '#c084fc' }}
+              style={{
+                color: isCopaPage ? '#ffdf00' : '#c084fc',
+                textShadow: isCopaPage ? '0 0 10px rgba(255,223,0,0.14)' : undefined,
+              }}
             >
               {PAGE_TITLES[page]}
             </span>

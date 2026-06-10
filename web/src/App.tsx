@@ -9,6 +9,8 @@ import AlbumPage from '@/pages/AlbumPage'
 import AlbumStickersPage from '@/pages/AlbumStickersPage'
 import { PartidasPage, ImportarPage } from '@/pages/PartidasPage'
 import TirarTimePage from '@/pages/TirarTimePage'
+import LevelFramesPage from '@/pages/LevelFramesPage'
+import CopaDoMundoPage from '@/pages/CopaDoMundoPage'
 
 type Page =
   | 'home'
@@ -20,6 +22,8 @@ type Page =
   | 'album-stickers'
   | 'shop'
   | 'importar'
+  | 'level-frames'
+  | 'copa-do-mundo'
 
 const PAGE_STORAGE_KEY = 'mixawards:last-page'
 
@@ -33,6 +37,8 @@ const PAGE_VALUES: Page[] = [
   'album-stickers',
   'shop',
   'importar',
+  'level-frames',
+  'copa-do-mundo',
 ]
 
 const PAGE_TO_PATH: Record<Page, string> = {
@@ -45,6 +51,8 @@ const PAGE_TO_PATH: Record<Page, string> = {
   'album-stickers': '/album-stickers',
   shop: '/shop',
   importar: '/importar',
+  'level-frames': '/level-frames',
+  'copa-do-mundo': '/copa-do-mundo',
 }
 
 function isValidPage(value: unknown): value is Page {
@@ -104,6 +112,8 @@ function Router({
     case 'album-stickers': return <AlbumStickersPage setPage={setPage} />
     case 'shop':           return <ShopPage setPage={setPage} />
     case 'importar':       return <ImportarPage />
+    case 'level-frames':   return <LevelFramesPage />
+    case 'copa-do-mundo':  return <CopaDoMundoPage setPage={setPage} />
     default:               return <HomePage setPage={setPage} />
   }
 }

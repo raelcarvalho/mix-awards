@@ -158,6 +158,27 @@
   font-weight: 700;
 }
 
+.ma-album-slot-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ma-album-img-container {
+  width: 100%;
+  height: 100%;
+}
+
+.ma-album-img-container.dimmed img {
+  filter: brightness(0.08) contrast(1.1) saturate(0.7);
+}
+
+.ma-album-slot img.ma-album-img-pandemonium,
+.ma-card-preview img.ma-album-img-pandemonium {
+  transform: scale(1.084);
+  transform-origin: left center;
+}
+
 .ma-album-slot.normal {
   background: linear-gradient(180deg, rgba(10, 18, 28, 0.88), rgba(10, 20, 30, 0.94));
   border: 2px dashed rgba(220, 240, 255, 0.22);
@@ -230,8 +251,10 @@
   inset: -3px;
   border-radius: 16px;
   pointer-events: none;
-  box-shadow: 0 0 0 0 var(--pulse-color, rgba(255, 189, 89, 0.5));
+  border: 2px solid var(--pulse-color, rgba(255, 189, 89, 0.5));
+  opacity: 0.9;
   animation: maPulseVar 1.35s ease-in-out infinite;
+  will-change: transform, opacity;
 }
 
 .ma-album-slot.normal.is-new {
@@ -254,14 +277,18 @@
   --pulse-color: rgba(0, 150, 255, 0.62);
 }
 
+/* Anima apenas transform/opacity (compositor-only) em vez de box-shadow,
+   que força repaint da área inteira do cartão a cada quadro. */
 @keyframes maPulseVar {
-  0%,
-  100% {
-    box-shadow: 0 0 0 0 var(--pulse-color);
+  0% {
+    transform: scale(1);
+    opacity: 0.9;
   }
 
-  50% {
-    box-shadow: 0 0 0 9px color-mix(in srgb, var(--pulse-color) 25%, transparent);
+  70%,
+  100% {
+    transform: scale(1.09);
+    opacity: 0;
   }
 }
 
@@ -353,37 +380,35 @@
   }
 }
 
+/* `filter` animado força o navegador a re-rasterizar e recompositar o
+   elemento inteiro a cada quadro — é uma das propriedades mais caras de
+   animar em CSS. Mantemos o efeito de gradiente "correndo" apenas com
+   background-position (o visual de holograma deslizante permanece). */
 @keyframes maHoloMythic {
   0% {
     background-position: 0% 0%;
-    filter: hue-rotate(0deg);
   }
 
   50% {
     background-position: 100% 100%;
-    filter: hue-rotate(180deg);
   }
 
   100% {
     background-position: 0% 0%;
-    filter: hue-rotate(360deg);
   }
 }
 
 @keyframes maHoloGod {
   0% {
     background-position: 0% 0%;
-    filter: hue-rotate(0deg);
   }
 
   50% {
     background-position: 100% 100%;
-    filter: hue-rotate(30deg);
   }
 
   100% {
     background-position: 0% 0%;
-    filter: hue-rotate(0deg);
   }
 }
 
@@ -1048,6 +1073,84 @@
     grid-template-columns: repeat(2, minmax(140px, var(--card-w)));
     transform: translate(-50%, -50%);
   }
+}
+
+
+
+/* ══════════════════════════════════════════════════════════════
+   Copa do Mundo — TCG Holographic effect
+   Overrides generic .ma-holo inside .copa-album-grid slots.
+   Container uses color-dodge to blend the whole holo composite
+   (sparkles + rainbow) with the card image behind it.
+   ══════════════════════════════════════════════════════════════ */
+
+.copa-album-grid .ma-album-slot .ma-holo {
+  mix-blend-mode: screen;
+  opacity: 0.70;
+  transition: opacity .2s ease;
+}
+
+.copa-album-grid .ma-album-slot:hover .ma-holo {
+  opacity: 0.7;
+}
+
+/* Sparkle / glitter layer — colored dots on near-black base */
+.copa-album-grid .ma-album-slot .ma-holo::before {
+  /* Reduzido de 25 para 13 pontos de brilho — mantém a densidade visual de
+     "glitter" perceptível, mas corta quase pela metade o custo de
+     rasterização que o filter:hue-rotate animado precisa refazer a cada
+     quadro (ver nota em copaSparkleHue). */
+  background:
+    radial-gradient(circle 4px  at 14% 22%, rgba(0,255,255,.95)   0%, transparent 65%),
+    radial-gradient(circle 5px  at 39% 61%, rgba(0,180,255,.9)    0%, transparent 65%),
+    radial-gradient(circle 4px  at 22% 77%, rgba(255,60,120,.9)   0%, transparent 65%),
+    radial-gradient(circle 5px  at  5% 51%, rgba(255,140,0,.9)    0%, transparent 65%),
+    radial-gradient(circle 4px  at 51%  8%, rgba(255,60,200,.9)   0%, transparent 65%),
+    radial-gradient(circle 5px  at 76% 93%, rgba(0,255,255,.9)    0%, transparent 65%),
+    radial-gradient(circle 4px  at 44% 44%, rgba(220,0,255,.9)    0%, transparent 65%),
+    radial-gradient(circle 5px  at 29% 36%, rgba(255,80,0,.9)     0%, transparent 65%),
+    radial-gradient(circle 4px  at 73% 55%, rgba(180,255,0,.9)    0%, transparent 65%),
+    radial-gradient(circle 5px  at 96% 48%, rgba(0,255,160,.9)    0%, transparent 65%),
+    radial-gradient(circle 4px  at  3% 31%, rgba(180,0,255,.9)    0%, transparent 65%),
+    radial-gradient(circle 5px  at 25% 55%, rgba(255,255,0,.9)    0%, transparent 65%),
+    radial-gradient(circle 4px  at 42% 17%, rgba(80,255,80,.9)    0%, transparent 65%),
+    rgba(0,0,0,.88);
+  background-size: auto;
+  opacity: 1;
+  animation: copaSparkleHue 5s linear infinite;
+}
+
+/* Rainbow prism layer — screens over sparkle base, follows mouse */
+.copa-album-grid .ma-album-slot .ma-holo::after {
+  background: linear-gradient(
+    115deg,
+    rgba(86, 250, 10, 0.884)   0%,
+    rgba(224, 184, 6, 0.842)  16.66%,
+    rgba(  0,255,120,.55)  33.33%,
+    rgba(72, 193, 245, 0.616)  50%,
+    rgba(0, 192, 250, 0.918)  66.66%,
+    rgba(235, 231, 15, 0.925)  83.33%,
+    rgba(179, 3, 233, 0.55) 100%
+  );
+  background-size: 300% 300%;
+  background-position: var(--mouse-x, 50%) var(--mouse-y, 50%);
+  mix-blend-mode: screen;
+  opacity: 0.25;
+  transition: background-position .12s ease;
+}
+
+.copa-album-grid .ma-album-slot:hover .ma-holo::after {
+  opacity: 0.7;
+}
+
+/* `filter: hue-rotate` animado é a operação mais cara desta folha de
+   estilos: o navegador precisa re-rasterizar e recompositar a camada
+   inteira a cada quadro. Mantido aqui (é a assinatura visual da skin
+   Copa do Mundo), mas com a camada de glitter reduzida acima para
+   diminuir a área/complexidade que o filtro precisa reprocessar. */
+@keyframes copaSparkleHue {
+  from { filter: hue-rotate(0deg); }
+  to   { filter: hue-rotate(360deg); }
 }
 
 @media (prefers-reduced-motion: reduce) {

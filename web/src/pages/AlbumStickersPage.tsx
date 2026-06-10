@@ -154,6 +154,8 @@ function StickerPreviewModal({
             <img
               src={sticker.imagem}
               alt={sticker.nome}
+              loading='lazy'
+              decoding='async'
               onError={(e) => {
                 ;(e.target as HTMLImageElement).src = '/uploads/stickers/capsula_sticker.png'
               }}
@@ -204,6 +206,8 @@ function SlotCard({
           <img
             src={isOwned ? sticker.imagem || slotImagePath(sticker.slot) : slotImagePath(sticker.slot)}
             alt={displayName}
+            loading='lazy'
+            decoding='async'
             onError={(e) => {
               ;(e.target as HTMLImageElement).src = '/uploads/stickers/capsula_sticker.png'
             }}

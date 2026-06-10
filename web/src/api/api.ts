@@ -350,6 +350,16 @@ export const ackFigurinhasNovas = (figurinhaIds: number[]) =>
     body: JSON.stringify({ figurinhaIds }),
   })
 
+// ─── Álbum Copa do Mundo ────────────────────────────────────────────────────
+export const meuAlbumCopa = () =>
+  apiFetch<any>('/api/copa')
+
+export const revelarCartaCopa = (figurinha_id: number) =>
+  apiFetch<any>('/api/copa/cartas/revelar', {
+    method: 'POST',
+    body: JSON.stringify({ figurinha_id }),
+  })
+
 // ─── Álbum Stickers ─────────────────────────────────────────────────────────
 export const meuAlbumStickers = () =>
   apiFetch<any>('/album/stickers')

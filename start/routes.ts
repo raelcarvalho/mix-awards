@@ -227,6 +227,14 @@ Route.group(() => {
   .prefix("api")
   .middleware("auth:api");
 
+// COPA API
+Route.group(() => {
+  Route.get("/copa", "CopaController.meuAlbum");
+  Route.post("/copa/cartas/revelar", "CopaController.revelarCarta");
+})
+  .prefix("api")
+  .middleware("auth:api");
+
 Route.group(() => {
   Route.get("/album/stickers", "AlbumStickersController.meuAlbum");
   Route.get("/album/stickers/revelados", "AlbumStickersController.revelados");
