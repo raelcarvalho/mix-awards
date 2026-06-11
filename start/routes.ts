@@ -39,6 +39,7 @@ const spaRoutes = [
   "/album-stickers",
   "/shop",
   "/importar",
+  "/copa-do-mundo",
 ];
 
 spaRoutes.forEach((path) => {
