@@ -66,5 +66,3 @@ body {
 .animate-fade-in-up {
   animation: fadeInUp 0.4s ease both;
 }
-
-@import './styles/levelFrames.css';

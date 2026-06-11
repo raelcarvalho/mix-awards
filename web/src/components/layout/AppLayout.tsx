@@ -13,7 +13,6 @@ type Page =
   | 'album-stickers'
   | 'shop'
   | 'importar'
-  | 'level-frames'
   | 'copa-do-mundo'
 
 interface Props {
@@ -40,7 +39,6 @@ const NAV: { id: Page; icon: string; label: string; adminOnly?: boolean; neon?: 
   { id: 'copa-do-mundo', icon: '🏆', label: 'Copa do Mundo', neon: true },
   { id: 'shop', icon: '🛒', label: 'Shop' },
   { id: 'ranking', icon: '🥇', label: 'Ranking' },
-  { id: 'level-frames', icon: '✶', label: 'Molduras' },
   { id: 'album-stickers', icon: '✨', label: 'Álbum Stickers' },
   { id: 'importar', icon: '⬆', label: 'Importar', adminOnly: true },
 ]
@@ -55,7 +53,6 @@ const PAGE_TITLES: Record<Page, string> = {
   'album-stickers': 'Álbum Stickers',
   shop: 'Shop',
   importar: 'Importar Partida',
-  'level-frames': 'Molduras',
   'copa-do-mundo': 'Copa do Mundo',
 }
 
