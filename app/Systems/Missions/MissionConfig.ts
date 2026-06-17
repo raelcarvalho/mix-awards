@@ -67,3 +67,6 @@ export const MISSION_DEFINITIONS: MissionDefinition[] = [
 ];
 
 export const MISSIONS_PER_CYCLE = 5;
+
+// Gold concedido ao resgatar um ciclo de missões totalmente concluído.
+export const MISSION_REWARD_GOLD = 40;

@@ -237,6 +237,17 @@ export interface PlayerMission {
   completed_at: string | null
 }
 
+export const resgatarMissoes = async (jogadorId: number) => {
+  const data = await apiFetch<any>(`/api/missions/players/${jogadorId}/claim`, {
+    method: 'POST',
+  })
+  const payload = data?.resultados ?? data ?? {}
+  return {
+    missoes: Array.isArray(payload?.missoes) ? (payload.missoes as PlayerMission[]) : [],
+    gold_creditado: Number(payload?.gold_creditado || 0),
+  }
+}
+
 export const listarMissoesJogador = async (jogadorId: number): Promise<PlayerMission[]> => {
   const data = await apiFetch<any>(`/api/missions/players/${jogadorId}`)
   if (Array.isArray(data)) return data as PlayerMission[]

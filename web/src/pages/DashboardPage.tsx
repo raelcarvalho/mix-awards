@@ -672,8 +672,10 @@ type DashboardPageProps = {
 }
 
 export default function DashboardPage({ setPage, dashboardPlayerId }: DashboardPageProps) {
-  const { user, jogadorId, isLogged } = useAuth()
+  const { user, jogadorId, isLogged, refreshGold } = useAuth()
   const [jogador, setJogador] = useState<Jogador | null>(null)
+  const [claimingMissions, setClaimingMissions] = useState(false)
+  const [claimToast, setClaimToast] = useState('')
   const [allJogadores, setAllJogadores] = useState<Jogador[]>([])
   const [partidas, setPartidas] = useState<Partida[]>([])
   const [missions, setMissions] = useState<api.PlayerMission[]>([])
@@ -1334,6 +1336,29 @@ export default function DashboardPage({ setPage, dashboardPlayerId }: DashboardP
     return MISSION_PLACEHOLDERS.slice(0, 5)
   })()
 
+  const realMissions = safeArray<api.PlayerMission>(missions)
+  const allMissionsCompleted =
+    realMissions.length >= 5 &&
+    realMissions.every((m) => !!m.completed || toNumber(m.progress) >= toNumber(m.target))
+
+  const handleClaimMissions = async () => {
+    const playerId = toNumber(jogador?.id)
+    if (playerId <= 0 || claimingMissions || !allMissionsCompleted) return
+    setClaimingMissions(true)
+    try {
+      const result = await api.resgatarMissoes(playerId)
+      setMissions(safeArray<api.PlayerMission>(result.missoes))
+      await refreshGold()
+      setClaimToast(`✓ +${result.gold_creditado || 40} gold resgatado! Novas missões liberadas.`)
+      window.setTimeout(() => setClaimToast(''), 2800)
+    } catch (err: any) {
+      setClaimToast(err?.message || 'Erro ao resgatar recompensa.')
+      window.setTimeout(() => setClaimToast(''), 2800)
+    } finally {
+      setClaimingMissions(false)
+    }
+  }
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
       <style>{`
@@ -1598,6 +1623,48 @@ export default function DashboardPage({ setPage, dashboardPlayerId }: DashboardP
                 )
               })}
             </div>
+
+            {allMissionsCompleted && (
+              <button
+                type="button"
+                onClick={handleClaimMissions}
+                disabled={claimingMissions}
+                style={{
+                  marginTop: 10,
+                  width: '100%',
+                  height: 38,
+                  borderRadius: 9,
+                  border: '1px solid rgba(250,204,21,.55)',
+                  background: 'linear-gradient(90deg, rgba(250,204,21,.18), rgba(245,158,11,.18))',
+                  color: '#fde68a',
+                  fontFamily: "'Orbitron',monospace",
+                  fontSize: 12.5,
+                  fontWeight: 800,
+                  letterSpacing: 0.8,
+                  textTransform: 'uppercase',
+                  cursor: claimingMissions ? 'not-allowed' : 'pointer',
+                  opacity: claimingMissions ? 0.65 : 1,
+                  boxShadow: '0 0 16px rgba(250,204,21,.28)',
+                }}
+              >
+                {claimingMissions ? 'Resgatando...' : '🪙 Resgatar 40 gold'}
+              </button>
+            )}
+
+            {claimToast && (
+              <div
+                style={{
+                  marginTop: 8,
+                  textAlign: 'center',
+                  fontFamily: "'Rajdhani',sans-serif",
+                  fontWeight: 700,
+                  fontSize: 12,
+                  color: '#facc15',
+                }}
+              >
+                {claimToast}
+              </div>
+            )}
           </div>
         </Card>
 

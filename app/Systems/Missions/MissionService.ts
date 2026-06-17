@@ -2,6 +2,7 @@ import Database from "@ioc:Adonis/Lucid/Database";
 import { DateTime } from "luxon";
 import {
   MISSION_DEFINITIONS,
+  MISSION_REWARD_GOLD,
   MISSIONS_PER_CYCLE,
   MissionDefinition,
   MissionType,
@@ -185,7 +186,13 @@ export class MissionService {
 
   static async ensureActiveMissions(jogadorId: number, client?: any) {
     const id = Number(jogadorId || 0);
-    if (id <= 0) return { cycle: 1, missions: [] as MissionSnapshot[] };
+    if (id <= 0)
+      return {
+        cycle: 1,
+        missions: [] as MissionSnapshot[],
+        reward_gold: MISSION_REWARD_GOLD,
+        reward_claimable: false,
+      };
 
     const db = client || Database;
     const maxCycleRow = await db
@@ -205,15 +212,17 @@ export class MissionService {
       if (rows.length < MISSIONS_PER_CYCLE) {
         await db.from(TABLE).where("jogador_id", id).where("ciclo", cycle).delete();
         rows = await this.createCycle(db, id, cycle);
-      } else if (this.isCycleCompleted(rows)) {
-        cycle += 1;
-        rows = await this.createCycle(db, id, cycle);
       }
+      // Ao concluir o ciclo, NÃO avançamos automaticamente: o jogador precisa
+      // resgatar a recompensa (claimReward) para gerar o próximo ciclo.
     }
 
+    const missions = rows.map((row) => this.toSnapshot(row));
     return {
       cycle,
-      missions: rows.map((row) => this.toSnapshot(row)),
+      missions,
+      reward_gold: MISSION_REWARD_GOLD,
+      reward_claimable: this.isCycleCompleted(rows),
     };
   }
 
@@ -257,14 +266,53 @@ export class MissionService {
       row.concluida = completed;
       row.concluida_em = completed ? now : null;
     }
-
-    if (this.isCycleCompleted(rows)) {
-      await this.createCycle(db, id, active.cycle + 1);
-    }
+    // Não cria novo ciclo automaticamente: aguarda o resgate da recompensa.
   }
 
   static async getPlayerMissions(jogadorId: number, client?: any) {
     return this.ensureActiveMissions(jogadorId, client);
+  }
+
+  /**
+   * Resgata a recompensa do ciclo concluído: credita o gold e gera um novo ciclo.
+   * Falha se o ciclo atual não estiver totalmente concluído.
+   */
+  static async claimReward(jogadorId: number) {
+    const id = Number(jogadorId || 0);
+    if (id <= 0) throw new Error("Jogador inválido.");
+
+    return Database.transaction(async (trx) => {
+      const maxCycleRow = await trx
+        .from(TABLE)
+        .where("jogador_id", id)
+        .max("ciclo as ciclo")
+        .first();
+      const cycle = Number(maxCycleRow?.ciclo || 0);
+      if (cycle <= 0) {
+        throw new Error("Nenhuma missão ativa para resgatar.");
+      }
+
+      const rows = await this.fetchCycleRows(trx, id, cycle);
+      if (!this.isCycleCompleted(rows)) {
+        throw new Error("Conclua todas as missões antes de resgatar.");
+      }
+
+      await trx
+        .from("tb_jogadores")
+        .where("id", id)
+        .update({ gold: trx.raw("COALESCE(gold, 0) + ?", [MISSION_REWARD_GOLD]) });
+
+      const novoCiclo = cycle + 1;
+      const novasRows = await this.createCycle(trx, id, novoCiclo);
+
+      return {
+        gold_creditado: MISSION_REWARD_GOLD,
+        cycle: novoCiclo,
+        missions: novasRows.map((row) => this.toSnapshot(row)),
+        reward_gold: MISSION_REWARD_GOLD,
+        reward_claimable: false,
+      };
+    });
   }
 }
 
