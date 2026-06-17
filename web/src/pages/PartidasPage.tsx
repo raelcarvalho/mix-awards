@@ -446,10 +446,18 @@ function DetailModal({
   const matchStatus =
     scoreA !== null && scoreB !== null ? 'Finalizado' : scoreA !== null || scoreB !== null ? 'Em andamento' : '-'
 
+  const playerPoints = (j: PartidaDetalhe['jogadores'][number]) => {
+    const ptsRaw = toNumber(j.pontos)
+    return ptsRaw === null ? pointsFromPartida(j, detalhe?.partida || {}) : ptsRaw
+  }
+
   const renderTeamTable = (
     teamPlayers: PartidaDetalhe['jogadores'],
     accent: string
   ) => {
+    const sortedPlayers = [...teamPlayers].sort(
+      (a, b) => (playerPoints(b) ?? 0) - (playerPoints(a) ?? 0)
+    )
     const cols = '26% 7% 7% 7% 7% 7% 11% 10% 10% 8%'
     const headerStyle = {
       fontSize: 10,
@@ -515,12 +523,11 @@ function DetailModal({
             Sem jogadores neste time.
           </div>
         ) : (
-          teamPlayers.map((j, idx) => {
+          sortedPlayers.map((j, idx) => {
             const name = String(j.nome || j.jogadores_id || 'Jogador')
             const level = readPlayerLevel(j)
             const levelColor = levelAccentColor(level)
-            const ptsRaw = toNumber(j.pontos)
-            const points = ptsRaw === null ? pointsFromPartida(j, detalhe?.partida || {}) : ptsRaw
+            const points = playerPoints(j)
             return (
               <div
                 key={`${name}-${idx}`}

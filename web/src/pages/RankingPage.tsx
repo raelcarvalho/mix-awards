@@ -22,10 +22,11 @@ interface Jogador {
   level_tier?: string
 }
 
-type SortKey = 'level_pontos' | 'pontos' | 'kills' | 'adr' | 'kda_player' | 'vitorias'
+type SortKey = 'level_pontos' | 'pontos' | 'pontos_total' | 'kills' | 'adr' | 'kda_player' | 'vitorias'
 
 const SORT_OPTIONS: { key: SortKey; label: string; color: string }[] = [
-  { key: 'pontos', label: 'Pontos', color: '#c084fc' },
+  { key: 'pontos', label: 'Média', color: '#c084fc' },
+  { key: 'pontos_total', label: 'Total', color: '#a855f7' },
   { key: 'level_pontos', label: 'XP Level', color: '#22d3ee' },
   { key: 'adr', label: 'ADR', color: '#f5c842' },
   { key: 'kills', label: 'Kills', color: '#22d3ee' },
@@ -73,6 +74,8 @@ export default function RankingPage() {
     switch (key) {
       case 'pontos':
         return toNumber(j.pontos)
+      case 'pontos_total':
+        return Math.round(toNumber(j.pontos) * toNumber(j.qtd_partidas))
       case 'level_pontos':
         return toNumber(j.level_pontos)
       case 'kills':
@@ -382,7 +385,7 @@ export default function RankingPage() {
                     marginBottom: 4,
                   }}
                 >
-                  {['', ' ', 'JOGADOR', 'LEVEL', 'ADR', 'KILLS', 'ASSIST', 'DEATHS', 'KDR', 'KAST', 'WINRATE%', 'PTS'].map((h) => (
+                  {['', ' ', 'JOGADOR', 'LEVEL', 'ADR', 'KILLS', 'ASSIST', 'DEATHS', 'KDR', 'KAST', 'WINRATE%', sortKey === 'pontos_total' ? 'TOTAL' : 'MÉDIA'].map((h) => (
                     <span
                       key={h}
                       style={{
@@ -401,7 +404,10 @@ export default function RankingPage() {
                 {sorted.map((j, i) => {
                   const color = ACCENT[i % ACCENT.length]
                   const isTop3 = i < 3
-                  const points = toNumber(j.pontos)
+                  const points =
+                    sortKey === 'pontos_total'
+                      ? Math.round(toNumber(j.pontos) * toNumber(j.qtd_partidas))
+                      : toNumber(j.pontos)
                   const kills = toNumber(j.kills)
                   const assists = toNumber(j.assistencias)
                   const deaths = toNumber(j.mortes)
@@ -603,7 +609,10 @@ export default function RankingPage() {
                           fontFamily: "'Orbitron',monospace",
                           fontSize: 13,
                           fontWeight: 700,
-                          color: sortKey === 'pontos' ? '#c084fc' : 'rgba(255,255,255,.72)',
+                          color:
+                            sortKey === 'pontos' || sortKey === 'pontos_total'
+                              ? '#c084fc'
+                              : 'rgba(255,255,255,.72)',
                         }}
                       >
                         {fmt(points)}

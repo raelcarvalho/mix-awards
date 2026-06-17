@@ -367,6 +367,7 @@ Route.group(() => {
 
   // draft
   Route.post("tirar-mix/draft/iniciar", "TirarMixController.iniciarDraftPost");
+  Route.post("tirar-mix/aceitar", "TirarMixController.aceitarPartida");
   Route.post("tirar-mix/dados/rolar", "TirarMixController.rolarDados");
   Route.post("tirar-mix/draft/rolar-dados", "TirarMixController.rolarDados");
   Route.post("tirar-mix/draft/desfazer", "TirarMixController.undoPost");

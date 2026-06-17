@@ -156,6 +156,8 @@ function StickerPreviewModal({
               alt={sticker.nome}
               loading='lazy'
               decoding='async'
+              draggable={false}
+              onDragStart={(e) => e.preventDefault()}
               onError={(e) => {
                 ;(e.target as HTMLImageElement).src = '/uploads/stickers/capsula_sticker.png'
               }}
@@ -208,6 +210,9 @@ function SlotCard({
             alt={displayName}
             loading='lazy'
             decoding='async'
+            draggable={false}
+            onDragStart={(e) => e.preventDefault()}
+            style={!isRevealed ? { pointerEvents: 'none', userSelect: 'none' } : undefined}
             onError={(e) => {
               ;(e.target as HTMLImageElement).src = '/uploads/stickers/capsula_sticker.png'
             }}

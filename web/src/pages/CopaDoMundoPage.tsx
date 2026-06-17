@@ -27,7 +27,7 @@ const RARITY_STYLE: Record<
   { color: string; label: string; glow: string; infoLabel: string; border: string; shadow: string }
 > = {
   normal:   { color: '#94a3b8', label: 'Normal',   glow: 'rgba(148,163,184,.2)', infoLabel: 'Carta Normal',   border: 'rgba(0,156,59,.5)',    shadow: '0 0 10px rgba(0,156,59,.25)' },
-  epica:    { color: '#962ffdd3', label: 'Épica',     glow: 'rgba(192,132,252,.3)', infoLabel: 'Carta Épica',    border: 'rgba(192,132,252,.6)', shadow: '0 0 14px rgba(192,132,252,.35)' },
+  epica:    { color: '#a450f8', label: 'Épica',     glow: 'rgba(29, 252, 0, 0.3)', infoLabel: 'Carta Épica',    border: 'rgba(192,132,252,.6)', shadow: '0 0 14px rgba(132, 252, 186, 0.35)' },
   lendaria: { color: '#dda600', label: 'Lendária',  glow: 'rgba(245,200,66,.35)', infoLabel: 'Carta Lendária', border: 'rgba(255,223,0,.65)',  shadow: '0 0 16px rgba(255,223,0,.4)' },
   mitica:   { color: '#fd07dc', label: 'Mítica',    glow: 'rgb(15, 11, 255)', infoLabel: 'Carta Mítica',   border: 'rgba(255, 255, 255, 0.7)',  shadow: '0 0 18px rgba(76, 0, 253, 0.4)' },
   god:      { color: '#56c1ff', label: 'GOD',       glow: 'rgba(86,193,255,.5)',  infoLabel: 'Carta God',      border: 'rgba(86,193,255,.8)',  shadow: '0 0 22px rgba(86,193,255,.5)' },
@@ -100,10 +100,13 @@ function AlbumCard({
               <div className={`ma-album-img-container ${locked ? 'dimmed' : ''}`}>
                 <img
                   src={slot.imagem}
-                  alt={slot.nome}
+                  alt={locked ? `Figurinha ${slot.slot}` : slot.nome}
                   loading='lazy'
                   decoding='async'
+                  draggable={false}
+                  onDragStart={(e) => e.preventDefault()}
                   className={slot.slot === 16 ? 'ma-album-img-pandemonium' : ''}
+                  style={locked ? { pointerEvents: 'none', userSelect: 'none' } : undefined}
                   onError={(e) => {
                     ;(e.target as HTMLImageElement).style.display = 'none'
                   }}

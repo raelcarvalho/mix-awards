@@ -1652,6 +1652,7 @@ export default function DashboardPage({ setPage, dashboardPlayerId }: DashboardP
                     ›
                   </button>
                 )}
+                
                 <DashboardDropdown
                   value={monthKey}
                   onChange={(nextValue) => setMonthKey(nextValue)}

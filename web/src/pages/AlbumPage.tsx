@@ -482,7 +482,9 @@ export default function AlbumPage({ setPage }: { setPage: (p: any) => void }) {
               <AlbumCard
                 key={s.slot}
                 slot={s}
-                onClick={() => setSelected(s)}
+                onClick={() => {
+                  if (s.possui) setSelected(s)
+                }}
                 onAcknowledgeNew={acknowledgeNew}
               />
             ))}

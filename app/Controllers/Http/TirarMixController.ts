@@ -52,6 +52,7 @@ type SessaoRow = {
   mapa_escolhido_em: string | Date | null;
   iniciado_em: string | Date | null;
   finalizado_em: string | Date | null;
+  accept_ends_at: string | Date | null;
 };
 
 type SessaoPlayerRow = {
@@ -63,6 +64,7 @@ type SessaoPlayerRow = {
   time: Team | null;
   ordem_pick: number | null;
   pool_slot: number | null;
+  aceitou: boolean;
   nome: string;
   imagem: string | null;
   kda_player: string | null;
@@ -88,6 +90,11 @@ export default class TirarMixController {
   protected customResponse = new CustomResponse();
   private ONLINE_SECONDS = 90;
   private MAX_POOL_SLOTS = 8;
+  // Se houver jogadores aguardando e os capitães não entrarem dentro desse tempo,
+  // a sessão é limpa (pool zerado) para não ficar cacheada.
+  private CAPTAIN_WAIT_TIMEOUT_SECONDS = 120;
+  // Duração do "ready check" (aceite de partida) após os 2 capitães iniciarem.
+  private ACCEPT_TIMEOUT_SECONDS = 20;
   private MAP_POOL = [
     "de_ancient",
     "de_anubis",
@@ -305,6 +312,7 @@ export default class TirarMixController {
         "sp.time",
         "sp.ordem_pick",
         "sp.pool_slot",
+        "sp.aceitou",
         "j.nome",
         "j.imagem",
         "j.kda_player",
@@ -678,6 +686,29 @@ export default class TirarMixController {
     const hasCaptains = !!(sessao.time_a_capitao_id && sessao.time_b_capitao_id);
 
     if (!hasCaptains) {
+      // Só limpa o pool quando NENHUM capitão entrou. Se ao menos um capitão já entrou
+      // (mesmo que o outro esteja pendente ou ainda não tenham startado), não reseta.
+      const nenhumCapitao = !sessao.time_a_capitao_id && !sessao.time_b_capitao_id;
+      // Se há jogadores aguardando e os capitães não entraram dentro do tempo limite,
+      // limpa o pool para a sessão não ficar cacheada com jogadores presos.
+      const waiting = (await Database.from("tb_tirar_mix_players")
+        .where("sessao_id", sessao.id)
+        .where("is_capitao", false)
+        .min("created_at as oldest")
+        .count("* as total")
+        .first()) as { oldest: string | Date | null; total: number | string } | undefined;
+
+      const waitingCount = Number(waiting?.total || 0);
+      const oldestMs = this.toMillis(waiting?.oldest);
+      if (
+        nenhumCapitao &&
+        waitingCount > 0 &&
+        oldestMs !== null &&
+        Date.now() - oldestMs >= this.CAPTAIN_WAIT_TIMEOUT_SECONDS * 1000
+      ) {
+        await Database.from("tb_tirar_mix_players").where("sessao_id", sessao.id).delete();
+      }
+
       await Database.from("tb_tirar_mix_sessoes").where("id", sessao.id).update({
         status: "criando",
         fase: "aguardando_capitaes",
@@ -713,6 +744,47 @@ export default class TirarMixController {
         updated_at: this.nowSql(),
       });
       sessao = await this.sessionById(sessao.id);
+    }
+
+    // Ready check (aceite de partida): ativo enquanto accept_ends_at estiver setado.
+    if (sessao && sessao.accept_ends_at) {
+      const stats = (await Database.from("tb_tirar_mix_players")
+        .where("sessao_id", sessao.id)
+        .select(Database.raw("COUNT(*)::int as total"))
+        .select(Database.raw("COUNT(*) FILTER (WHERE aceitou)::int as aceitos"))
+        .first()) as { total: number | string; aceitos: number | string } | undefined;
+      const total = Number(stats?.total || 0);
+      const aceitos = Number(stats?.aceitos || 0);
+      const endMs = this.toMillis(sessao.accept_ends_at);
+      const expirado = endMs !== null && endMs <= Date.now();
+
+      if (total > 0 && aceitos >= total) {
+        // todos aceitaram → segue para o countdown dos dados
+        await Database.from("tb_tirar_mix_sessoes").where("id", sessao.id).update({
+          accept_ends_at: null,
+          fase: "countdown",
+          start_countdown_started_at: this.nowSql(),
+          start_countdown_ends_at: DateTime.now().plus({ seconds: 3 }).toSQL(),
+          updated_at: this.nowSql(),
+        });
+        sessao = await this.sessionById(sessao.id);
+      } else if (expirado) {
+        // tempo esgotou sem todos aceitarem → cancela o início, capitães precisam reiniciar
+        await Database.from("tb_tirar_mix_sessoes").where("id", sessao.id).update({
+          accept_ends_at: null,
+          fase: "aguardando_inicio",
+          start_ready_a: false,
+          start_ready_b: false,
+          start_countdown_started_at: null,
+          start_countdown_ends_at: null,
+          updated_at: this.nowSql(),
+        });
+        await Database.from("tb_tirar_mix_players")
+          .where("sessao_id", sessao.id)
+          .update({ aceitou: false, aceitou_em: null, updated_at: this.nowSql() });
+        sessao = await this.sessionById(sessao.id);
+      }
+      // senão: ainda aguardando aceites — mantém estado para o modal continuar aberto
     }
 
     if (sessao && sessao.fase === "countdown" && sessao.start_countdown_ends_at) {
@@ -1009,6 +1081,18 @@ export default class TirarMixController {
     const startReadyCount = (sessao.start_ready_a ? 1 : 0) + (sessao.start_ready_b ? 1 : 0);
     const mapStage = sessao.map_stage || "idle";
 
+    const acceptEndsMs = this.toMillis(sessao.accept_ends_at);
+    const acceptActive = acceptEndsMs !== null;
+    const acceptPlayers = players.map((p) => ({
+      jogador_id: p.jogador_id,
+      nome: p.nome,
+      imagem: p.imagem,
+      is_capitao: !!p.is_capitao,
+      time: p.time,
+      aceitou: !!p.aceitou,
+    }));
+    const acceptedCount = acceptPlayers.filter((p) => p.aceitou).length;
+
     let mapRows = await this.sessaoMapas(sessao.id);
     if ((mapStage !== "idle" || !!sessao.mapa_escolhido) && !mapRows.length) {
       await this.ensureMapPool(sessao.id);
@@ -1060,6 +1144,15 @@ export default class TirarMixController {
         total: 2,
         countdownSeconds:
           countdownMs !== null ? Math.max(0, Math.ceil((countdownMs - Date.now()) / 1000)) : 0,
+      },
+      accept: {
+        active: acceptActive,
+        secondsLeft:
+          acceptEndsMs !== null ? Math.max(0, Math.ceil((acceptEndsMs - Date.now()) / 1000)) : 0,
+        total: acceptPlayers.length,
+        acceptedCount,
+        meAceitou: !!meSessao?.aceitou,
+        players: acceptPlayers,
       },
       dice: {
         firstTurn: sessao.dice_first_turn,
@@ -2118,13 +2211,28 @@ export default class TirarMixController {
       const readyA = myTeam === "A" ? true : !!sessao.start_ready_a;
       const readyB = myTeam === "B" ? true : !!sessao.start_ready_b;
 
-      if (readyA && readyB && sessao.fase !== "countdown") {
-        patch.fase = "countdown";
-        patch.start_countdown_started_at = this.nowSql();
-        patch.start_countdown_ends_at = DateTime.now().plus({ seconds: 3 }).toSQL();
+      // Quando os 2 capitães iniciarem, abre o "ready check" (aceite de partida) de 20s
+      // em vez de ir direto para o countdown. Os capitães já entram como aceitos.
+      const iniciarAceite =
+        readyA && readyB && sessao.fase !== "countdown" && !sessao.accept_ends_at;
+      if (iniciarAceite) {
+        patch.accept_ends_at = DateTime.now()
+          .plus({ seconds: this.ACCEPT_TIMEOUT_SECONDS })
+          .toSQL();
       }
 
       await Database.from("tb_tirar_mix_sessoes").where("id", sessao.id).update(patch);
+
+      if (iniciarAceite) {
+        // reseta o aceite de todos e marca os capitães como já aceitos
+        await Database.from("tb_tirar_mix_players")
+          .where("sessao_id", sessao.id)
+          .update({ aceitou: false, aceitou_em: null, updated_at: this.nowSql() });
+        await Database.from("tb_tirar_mix_players")
+          .where("sessao_id", sessao.id)
+          .where("is_capitao", true)
+          .update({ aceitou: true, aceitou_em: this.nowSql(), updated_at: this.nowSql() });
+      }
 
       const next = await this.reconcile(sessao.id);
       if (!next) throw new Error("Erro ao iniciar.");
@@ -2132,6 +2240,49 @@ export default class TirarMixController {
       return this.customResponse.sucesso(response, "Status de início atualizado.", snap);
     } catch (error) {
       return this.customResponse.erro(response, "Erro ao iniciar draft.", error, 500);
+    }
+  }
+
+  public async aceitarPartida({ auth, request, response }: HttpContextContract) {
+    try {
+      const user = await auth.authenticate();
+      const jogador = await this.jogadorDoUsuarioOrFail(user.id);
+      const sessaoId = Number(request.input("sessao_id"));
+
+      let sessao = sessaoId ? await this.sessionById(sessaoId) : await this.sessionAtiva(user.id);
+      if (!sessao) throw new Error("Sessão não encontrada.");
+      sessao = await this.reconcile(sessao.id);
+      if (!sessao) throw new Error("Sessão inválida.");
+
+      if (!sessao.accept_ends_at) {
+        return this.customResponse.erro(
+          response,
+          "Não há aceite de partida ativo.",
+          {},
+          409
+        );
+      }
+
+      const updated = await Database.from("tb_tirar_mix_players")
+        .where("sessao_id", sessao.id)
+        .where("jogador_id", jogador.id)
+        .update({ aceitou: true, aceitou_em: this.nowSql(), updated_at: this.nowSql() });
+
+      if (!updated) {
+        return this.customResponse.erro(
+          response,
+          "Você não faz parte desta sessão.",
+          {},
+          403
+        );
+      }
+
+      const next = await this.reconcile(sessao.id);
+      if (!next) throw new Error("Erro ao registrar aceite.");
+      const snap = await this.snapshotFromSessao(next, jogador.id);
+      return this.customResponse.sucesso(response, "Partida aceita.", snap);
+    } catch (error) {
+      return this.customResponse.erro(response, "Erro ao aceitar partida.", error, 500);
     }
   }
 

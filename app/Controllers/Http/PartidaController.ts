@@ -545,7 +545,7 @@ export default class PartidaController {
             : estatisticas.adr >= 79 && estatisticas.adr < 100
             ? 15
             : 20;
-        pontosPartida += vitoria ? 20 : 10;
+        pontosPartida += vitoria ? 30 : 5;
 
         const nivelMedioAdv = _time === "A" ? nivelMedioB : nivelMedioA;
         const levelResult = LevelService.calcularPontos(
@@ -626,19 +626,16 @@ export default class PartidaController {
             novaQtdPartidas
           ).toFixed(2);
 
-          let bonus = 0;
-          if (novaQtdPartidas === 15) bonus = 20;
-          else if (novaQtdPartidas === 20) bonus = 30;
-          else if (novaQtdPartidas === 30) bonus = 40;
-          else if (novaQtdPartidas === 40) bonus = 50;
-
+          // O bônus de marco (15/20/30/40 jogos) NÃO é aplicado aqui — ele é
+          // calculado por temporada no agregado do ranking (JogadoresController.listar),
+          // creditado no total da temporada e sem distorcer o placar de uma partida.
           const pontosTotaisAnterior =
             Number(jogadorModel.pontos || 0) * (novaQtdPartidas - 1);
-          const novoTotalPontos = pontosTotaisAnterior + pontosPartida + bonus;
-          const mediaComBonus = novoTotalPontos / novaQtdPartidas;
+          const novoTotalPontos = pontosTotaisAnterior + pontosPartida;
+          const mediaPontos = novoTotalPontos / novaQtdPartidas;
 
           jogadorModel.qtd_partidas = novaQtdPartidas.toString();
-          jogadorModel.pontos = mediaComBonus.toFixed(0);
+          jogadorModel.pontos = mediaPontos.toFixed(0);
           jogadorModel.level_pontos = levelResult.pontos_depois;
           jogadorModel.level = levelResult.level_depois.level;
 
@@ -721,15 +718,9 @@ export default class PartidaController {
         });
       }
 
-      // monta pivot com bônus por marcos
+      // monta pivot — o placar exibido da partida é apenas performance + resultado.
+      // O bônus de marco (milestone) é creditado somente no acumulado/média do jogador.
       const pivotData = jogadoresCriados.reduce((acc, j) => {
-        const qtd = Number(j.origem.qtd_partidas); // apenas para calcular bônus
-        let bonus = 0;
-        if (qtd === 15) bonus = 20;
-        else if (qtd === 20) bonus = 30;
-        else if (qtd === 30) bonus = 40;
-        else if (qtd === 40) bonus = 50;
-
         const pivotRow: Record<string, any> = {};
         if (hasPivotColumn("nome")) pivotRow.nome = j.origem.nome;
         if (hasPivotColumn("time")) pivotRow.time = j.origem.time;
@@ -749,7 +740,9 @@ export default class PartidaController {
         if (hasPivotColumn("adr")) pivotRow.adr = Number(j.origem.adr).toFixed(2);
         if (hasPivotColumn("partida_ganha")) pivotRow.partida_ganha = j.origem.partida_ganha ? 1 : 0;
         if (hasPivotColumn("vitorias")) pivotRow.vitorias = j.origem.partida_ganha ? 1 : 0;
-        if (hasPivotColumn("pontos")) pivotRow.pontos = j.origem.pontos + bonus;
+        // bônus de marco (milestone) NÃO entra no placar exibido da partida —
+        // ele continua creditado no acumulado/média do jogador (mediaComBonus acima).
+        if (hasPivotColumn("pontos")) pivotRow.pontos = j.origem.pontos;
         if (hasPivotColumn("qtd_partidas")) pivotRow.qtd_partidas = String(j.origem.qtd_partidas || "");
         if (hasPivotColumn("level_delta")) pivotRow.level_delta = j.levelDelta;
         if (hasPivotColumn("level_antes")) pivotRow.level_antes = j.levelAntes;

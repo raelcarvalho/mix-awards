@@ -433,6 +433,21 @@ export interface TirarMixSnapshot {
     total: number
     countdownSeconds: number
   }
+  accept: {
+    active: boolean
+    secondsLeft: number
+    total: number
+    acceptedCount: number
+    meAceitou: boolean
+    players: Array<{
+      jogador_id: number
+      nome: string
+      imagem: string | null
+      is_capitao: boolean
+      time: MixTeam | null
+      aceitou: boolean
+    }>
+  }
   dice: {
     firstTurn: MixTeam | null
     turn: MixTeam | null
@@ -591,6 +606,15 @@ export const mixMockPickAleatorio = async (sessaoId?: number) =>
 export const mixIniciar = async (sessaoId?: number) =>
   unwrapResult<TirarMixSnapshot>(
     await apiFetch<any>('/api/tirar-mix/draft/iniciar', {
+      method: 'POST',
+      headers: mixHeaders(),
+      body: JSON.stringify(sessaoId ? { sessao_id: sessaoId } : {}),
+    })
+  )
+
+export const mixAceitarPartida = async (sessaoId?: number) =>
+  unwrapResult<TirarMixSnapshot>(
+    await apiFetch<any>('/api/tirar-mix/aceitar', {
       method: 'POST',
       headers: mixHeaders(),
       body: JSON.stringify(sessaoId ? { sessao_id: sessaoId } : {}),

@@ -8,7 +8,7 @@ import type { MixMapCard, MixMapPlayerStats, MixPlayer, TirarMixSnapshot } from 
 type Team = 'A' | 'B'
 type MixPhase = TirarMixSnapshot['fase']
 const CAPTAIN_SLOT_BTN_CLASS =
-  '!text-sm sm:!text-[15px] min-h-[42px] sm:min-h-[46px] !px-4 sm:!px-5'
+  '!text-xs sm:!text-sm min-h-[32px] sm:min-h-[34px] !px-3 sm:!px-4'
 
 const TEAM_META: Record<Team, { color: string; soft: string; border: string }> = {
   A: {
@@ -593,6 +593,235 @@ function MapStatsProjection({
   )
 }
 
+function AcceptMatchModal({
+  accept,
+  isParticipant,
+  busy,
+  onAccept,
+}: {
+  accept: TirarMixSnapshot['accept']
+  isParticipant: boolean
+  busy: boolean
+  onAccept: () => void
+}) {
+  const [secondsLeft, setSecondsLeft] = useState(accept.secondsLeft)
+
+  // Sincroniza com o servidor a cada poll e faz a contagem regressiva local de 1s.
+  useEffect(() => {
+    setSecondsLeft(accept.secondsLeft)
+  }, [accept.secondsLeft])
+
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      setSecondsLeft((s) => Math.max(0, s - 1))
+    }, 1000)
+    return () => window.clearInterval(id)
+  }, [])
+
+  const total = accept.total || 0
+  const aceitos = accept.acceptedCount || 0
+  const jaAceitei = accept.meAceitou
+
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 120,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'rgba(0,0,0,.72)',
+        backdropFilter: 'blur(6px)',
+        padding: 16,
+      }}
+    >
+      <div
+        style={{
+          width: 'min(560px, 96vw)',
+          borderRadius: 16,
+          border: '2px solid #16a34a',
+          background: 'linear-gradient(180deg, rgba(8,30,16,.98), rgba(4,16,9,.98))',
+          boxShadow: '0 0 0 1px rgba(34,197,94,.25), 0 24px 80px rgba(0,0,0,.7), 0 0 36px rgba(34,197,94,.35)',
+          padding: '22px 22px 24px',
+          textAlign: 'center',
+        }}
+      >
+        <div
+          style={{
+            fontFamily: "'Orbitron',monospace",
+            fontWeight: 900,
+            letterSpacing: 2,
+            fontSize: 'clamp(18px,2.6vw,24px)',
+            color: '#4ade80',
+            textShadow: '0 0 16px rgba(74,222,128,.5)',
+          }}
+        >
+          A SUA PARTIDA ESTÁ PRONTA!
+        </div>
+        <div
+          style={{
+            marginTop: 6,
+            fontFamily: "'Rajdhani',sans-serif",
+            fontWeight: 700,
+            color: 'rgba(255,255,255,.7)',
+            fontSize: 14,
+          }}
+        >
+          {aceitos}/{total} aceitaram · {secondsLeft}s
+        </div>
+
+        <div
+          style={{
+            height: 6,
+            borderRadius: 3,
+            background: 'rgba(255,255,255,.12)',
+            overflow: 'hidden',
+            margin: '12px auto 0',
+            maxWidth: 360,
+          }}
+        >
+          <div
+            style={{
+              height: '100%',
+              width: `${total ? (aceitos / total) * 100 : 0}%`,
+              background: 'linear-gradient(90deg,#16a34a,#4ade80)',
+              borderRadius: 3,
+              transition: 'width .3s ease',
+            }}
+          />
+        </div>
+
+        <div
+          style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            justifyContent: 'center',
+            gap: 10,
+            margin: '18px 0 6px',
+          }}
+        >
+          {accept.players.map((p) => {
+            const avatar = avatarSrc(p as unknown as MixPlayer)
+            return (
+              <div
+                key={`accept-${p.jogador_id}`}
+                title={p.nome}
+                style={{
+                  width: 78,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: 5,
+                  opacity: p.aceitou ? 1 : 0.5,
+                }}
+              >
+                <div style={{ position: 'relative' }}>
+                  {avatar ? (
+                    <img
+                      src={avatar}
+                      alt={p.nome}
+                      style={{
+                        width: 46,
+                        height: 46,
+                        borderRadius: '50%',
+                        objectFit: 'cover',
+                        border: `2px solid ${p.aceitou ? '#4ade80' : 'rgba(255,255,255,.25)'}`,
+                        boxShadow: p.aceitou ? '0 0 12px rgba(74,222,128,.5)' : 'none',
+                      }}
+                      onError={(e) => {
+                        ;(e.target as HTMLImageElement).style.display = 'none'
+                      }}
+                    />
+                  ) : (
+                    <div
+                      style={{
+                        width: 46,
+                        height: 46,
+                        borderRadius: '50%',
+                        background: 'rgba(255,255,255,.08)',
+                        border: `2px solid ${p.aceitou ? '#4ade80' : 'rgba(255,255,255,.25)'}`,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontFamily: "'Orbitron',monospace",
+                        fontWeight: 800,
+                        fontSize: 13,
+                        color: '#fff',
+                      }}
+                    >
+                      {initials(p.nome)}
+                    </div>
+                  )}
+                  <span
+                    style={{
+                      position: 'absolute',
+                      right: -2,
+                      bottom: -2,
+                      width: 18,
+                      height: 18,
+                      borderRadius: '50%',
+                      background: p.aceitou ? '#16a34a' : 'rgba(20,20,20,.9)',
+                      border: '2px solid rgba(4,16,9,1)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: 10,
+                      color: '#fff',
+                      fontWeight: 900,
+                    }}
+                  >
+                    {p.aceitou ? '✓' : '…'}
+                  </span>
+                </div>
+                <div
+                  style={{
+                    fontFamily: "'Rajdhani',sans-serif",
+                    fontWeight: 700,
+                    fontSize: 11,
+                    color: p.aceitou ? '#fff' : 'rgba(255,255,255,.55)',
+                    maxWidth: 78,
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                  }}
+                >
+                  {p.is_capitao ? '★ ' : ''}
+                  {p.nome}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+
+        {isParticipant ? (
+          <Btn
+            color='#16a34a'
+            size='lg'
+            className='!text-base min-h-[48px] !px-8 mt-2'
+            disabled={jaAceitei || busy}
+            onClick={onAccept}
+          >
+            {jaAceitei ? '✓ VOCÊ ACEITOU' : busy ? 'ACEITANDO...' : 'ACEITAR'}
+          </Btn>
+        ) : (
+          <div
+            style={{
+              marginTop: 8,
+              fontFamily: "'Rajdhani',sans-serif",
+              fontWeight: 700,
+              color: 'rgba(255,255,255,.55)',
+              fontSize: 13,
+            }}
+          >
+            Aguardando os jogadores aceitarem a partida...
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 export default function TirarTimePage() {
   const { isLogged, isAdmin } = useAuth()
 
@@ -777,6 +1006,18 @@ export default function TirarTimePage() {
       setMapImageTry({})
     }
   }, [snapshot?.id, snapshot?.mapDraft?.stage])
+
+  // Após concluir os vetos dos mapas, recarrega a página depois de 1 minuto para
+  // limpar o estado/cache e não ficar travado na tela de conclusão.
+  useEffect(() => {
+    const vetosConcluidos =
+      snapshot?.fase === 'finalizado' && snapshot?.mapDraft?.stage === 'done'
+    if (!vetosConcluidos) return
+    const timer = window.setTimeout(() => {
+      window.location.reload()
+    }, 60_000)
+    return () => window.clearTimeout(timer)
+  }, [snapshot?.id, snapshot?.fase, snapshot?.mapDraft?.stage])
 
   useEffect(() => {
     if (!mapProjectionKey || !snapshot?.mapDraft?.maps?.length) return
@@ -1154,7 +1395,7 @@ export default function TirarTimePage() {
           align-items: stretch;
         }
         .tmx-side-panel {
-          min-height: 620px;
+          min-height: 500px;
           backdrop-filter: blur(6px);
           box-shadow: inset 0 0 28px rgba(7,12,30,0.44);
         }
@@ -1172,10 +1413,10 @@ export default function TirarTimePage() {
           box-shadow: inset 0 0 34px rgba(7,12,30,0.48);
         }
         .tmx-chip {
-          border-radius: 14px;
-          padding: 10px 12px;
+          border-radius: 12px;
+          padding: 7px 10px;
           display: flex;
-          gap: 12px;
+          gap: 10px;
           align-items: center;
           overflow: hidden;
         }
@@ -1195,11 +1436,11 @@ export default function TirarTimePage() {
           letter-spacing: .5px;
         }
         .tmx-action-btn {
-          min-height: 38px;
-          padding: 0 14px !important;
-          font-size: 13px !important;
+          min-height: 30px;
+          padding: 0 11px !important;
+          font-size: 12px !important;
           letter-spacing: .5px;
-          border-radius: 10px !important;
+          border-radius: 9px !important;
         }
         .tmx-action-btn:hover:not(:disabled) {
           transform: translateY(-1px);
@@ -1426,11 +1667,11 @@ export default function TirarTimePage() {
           border-radius: 12px;
           border: 1px solid rgba(255,255,255,0.12);
           background: linear-gradient(145deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01));
-          padding: 10px;
-          min-height: 152px;
+          padding: 8px;
+          min-height: 120px;
           display: flex;
           flex-direction: column;
-          gap: 8px;
+          gap: 6px;
         }
         .tmx-slot-empty {
           border: 1px dashed rgba(255,255,255,0.2);
@@ -1470,9 +1711,9 @@ export default function TirarTimePage() {
           background: rgba(34,211,238,0.12);
           color: #8be9ff;
           border-radius: 8px;
-          height: 34px;
+          height: 30px;
           font-family: 'Rajdhani', sans-serif;
-          font-size: 13px;
+          font-size: 12px;
           letter-spacing: .4px;
           font-weight: 800;
           cursor: pointer;
@@ -1491,16 +1732,16 @@ export default function TirarTimePage() {
           border-radius: 12px;
           border: 1px solid rgba(255,255,255,0.1);
           background: linear-gradient(145deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01));
-          padding: 14px 12px;
+          padding: 10px 10px;
           color: #fff;
           transition: transform .2s ease, border-color .2s ease, filter .2s ease, opacity .2s ease;
           cursor: pointer;
           display: flex;
           flex-direction: column;
           align-items: center;
-          gap: 8px;
+          gap: 6px;
           text-align: center;
-          min-height: 172px;
+          min-height: 140px;
         }
         .tmx-pool-card:hover {
           transform: translateY(-2px);
@@ -2091,7 +2332,7 @@ export default function TirarTimePage() {
             font-size: 20px;
           }
           .tmx-pool-card {
-            min-height: 154px;
+            min-height: 132px;
           }
           .tmx-proj-overlay {
             padding: 10px;
@@ -2122,7 +2363,8 @@ export default function TirarTimePage() {
           border: '1px solid rgba(94,183,255,0.22)',
           background:
             'linear-gradient(135deg,rgba(94,183,255,0.08) 0%, rgba(255,107,130,0.08) 55%, rgba(192,132,252,0.08) 100%)',
-          padding: '18px 20px',
+          padding: '40px 28px',
+          minHeight: 150,
           position: 'relative',
           overflow: 'hidden',
         }}
@@ -2162,12 +2404,18 @@ export default function TirarTimePage() {
             </div>
             <h1
               style={{
+                position: 'absolute',
+                left: '50%',
+                top: '50%',
+                transform: 'translate(-50%, -50%)',
+                textAlign: 'center',
+                pointerEvents: 'none',
                 margin: 0,
                 color: '#fff',
                 fontFamily: "'Orbitron',monospace",
                 fontWeight: 900,
-                letterSpacing: 1.5,
-                fontSize: 'clamp(20px,2.8vw,28px)',
+                letterSpacing: 2,
+                fontSize: 'clamp(36px,4.5vw,58px)',
               }}
             >
               PICK <span style={{ color: '#c084fc' }}>MIX</span>
@@ -2222,19 +2470,19 @@ export default function TirarTimePage() {
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit,minmax(160px,1fr))',
-          gap: 10,
+          gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))',
+          gap: 8,
         }}
       >
-        <Card title='Fase' style={{ padding: '16px 18px' }}>
+        <Card title='Fase' style={{ padding: '6px 14px' }}>
           <div
             style={{
-              fontSize: 24,
+              fontSize: 18,
               color: '#fff',
               fontFamily: "'Rajdhani',sans-serif",
               fontWeight: 800,
-              lineHeight: 1.25,
-              padding: '4px 2px 0',
+              lineHeight: 1.2,
+              padding: '0 2px',
             }}
           >
             {phaseLabel}
@@ -2243,23 +2491,23 @@ export default function TirarTimePage() {
             style={{
               color: 'rgba(255,255,255,0.82)',
               fontFamily: "'Rajdhani',sans-serif",
-              fontSize: 14,
-              lineHeight: 1.35,
-              marginTop: 6,
-              padding: '0 2px 2px',
+              fontSize: 13,
+              lineHeight: 1.3,
+              marginTop: 3,
+              padding: '0 2px',
             }}
           >
             {phaseDescription}
           </div>
         </Card>
-        <Card title='Iniciar' style={{ padding: '16px 18px' }}>
+        <Card title='Iniciar' style={{ padding: '6px 14px' }}>
           {isMapFlow ? (
             <div
               style={{
                 color: '#22d3ee',
                 fontFamily: "'Orbitron',monospace",
-                fontSize: 24,
-                padding: '6px 2px',
+                fontSize: 18,
+                padding: '2px 2px',
               }}
             >
               {mapStage === 'countdown'
@@ -2278,10 +2526,10 @@ export default function TirarTimePage() {
                   alignItems: 'center',
                   justifyContent: 'space-between',
                   gap: 12,
-                  padding: '6px 4px 6px 2px',
+                  padding: '2px 4px 2px 2px',
                 }}
               >
-                <div style={{ fontFamily: "'Orbitron',monospace", fontSize: 24, color: '#22d3ee' }}>
+                <div style={{ fontFamily: "'Orbitron',monospace", fontSize: 18, color: '#22d3ee' }}>
                   {readyLabel}
                 </div>
                 <Btn
@@ -2312,8 +2560,8 @@ export default function TirarTimePage() {
             </>
           )}
         </Card>
-        <Card title='Vez Atual' style={{ padding: '16px 18px' }}>
-          <div style={{ color: '#fff', fontFamily: "'Orbitron',monospace", fontSize: 20, padding: '4px 2px 2px' }}>
+        <Card title='Vez Atual' style={{ padding: '6px 14px' }}>
+          <div style={{ color: '#fff', fontFamily: "'Orbitron',monospace", fontSize: 16, padding: '2px 2px' }}>
             {isMapFlow
               ? mapStage === 'dice'
                 ? snapshot?.mapDraft?.dice.turn
@@ -2337,8 +2585,8 @@ export default function TirarTimePage() {
               : '—'}
           </div>
         </Card>
-        <Card title='Timer de Pick' style={{ padding: '16px 18px' }}>
-          <div style={{ fontFamily: "'Orbitron',monospace", fontSize: 24, color: '#f87171', padding: '4px 2px 2px' }}>
+        <Card title='Timer de Pick' style={{ padding: '6px 14px' }}>
+          <div style={{ fontFamily: "'Orbitron',monospace", fontSize: 18, color: '#f87171', padding: '2px 2px' }}>
             {isMapFlow
               ? mapStage === 'veto'
                 ? `${snapshot?.mapDraft?.vetoSecondsLeft ?? 0}s`
@@ -3298,6 +3546,17 @@ export default function TirarTimePage() {
           mapCard={mapProjectionCard}
           teamNames={{ A: teamDisplayName('A'), B: teamDisplayName('B') }}
           onClose={closeMapProjection}
+        />
+      )}
+
+      {snapshot?.accept?.active && (
+        <AcceptMatchModal
+          accept={snapshot.accept}
+          isParticipant={snapshot.me.role !== 'fora'}
+          busy={busy === 'accept'}
+          onAccept={() =>
+            runAction('accept', () => api.mixAceitarPartida(snapshot.id), 'Você aceitou a partida.')
+          }
         />
       )}
 
