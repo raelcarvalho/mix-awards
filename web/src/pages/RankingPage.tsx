@@ -72,10 +72,14 @@ export default function RankingPage() {
 
   const metricValue = (j: Jogador, key: SortKey) => {
     switch (key) {
-      case 'pontos':
-        return toNumber(j.pontos)
+      case 'pontos': {
+        // Média = total de pontos da temporada ÷ nº de partidas
+        const parts = toNumber(j.qtd_partidas)
+        return parts > 0 ? Math.round(toNumber(j.pontos) / parts) : 0
+      }
       case 'pontos_total':
-        return Math.round(toNumber(j.pontos) * toNumber(j.qtd_partidas))
+        // Total = soma dos pontos da temporada (valor que vem do backend)
+        return Math.round(toNumber(j.pontos))
       case 'level_pontos':
         return toNumber(j.level_pontos)
       case 'kills':
@@ -404,10 +408,14 @@ export default function RankingPage() {
                 {sorted.map((j, i) => {
                   const color = ACCENT[i % ACCENT.length]
                   const isTop3 = i < 3
+                  // coluna PTS acompanha o modo ativo: Total = soma; Média = soma ÷ partidas
+                  const parts = toNumber(j.qtd_partidas)
                   const points =
                     sortKey === 'pontos_total'
-                      ? Math.round(toNumber(j.pontos) * toNumber(j.qtd_partidas))
-                      : toNumber(j.pontos)
+                      ? Math.round(toNumber(j.pontos))
+                      : parts > 0
+                      ? Math.round(toNumber(j.pontos) / parts)
+                      : 0
                   const kills = toNumber(j.kills)
                   const assists = toNumber(j.assistencias)
                   const deaths = toNumber(j.mortes)
