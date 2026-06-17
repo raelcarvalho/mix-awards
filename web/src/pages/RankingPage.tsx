@@ -383,13 +383,13 @@ export default function RankingPage() {
                   style={{
                     display: 'grid',
                     gridTemplateColumns:
-                      '40px 50px minmax(170px,1fr) 70px 70px 70px 70px 70px 70px 70px 70px 80px',
+                      '40px 50px minmax(170px,1fr) 70px 70px 70px 70px 70px 70px 70px 70px 70px 80px',
                     gap: 6,
                     padding: '6px 12px',
                     marginBottom: 4,
                   }}
                 >
-                  {['', ' ', 'JOGADOR', 'LEVEL', 'ADR', 'KILLS', 'ASSIST', 'DEATHS', 'KDR', 'KAST', 'WINRATE%', sortKey === 'pontos_total' ? 'TOTAL' : 'MÉDIA'].map((h) => (
+                  {['', ' ', 'JOGADOR', 'LEVEL', 'ADR', 'KILLS', 'ASSIST', 'DEATHS', 'KDR', 'KAST', 'PARTIDAS', 'WINRATE%', sortKey === 'pontos_total' ? 'TOTAL' : 'MÉDIA'].map((h) => (
                     <span
                       key={h}
                       style={{
@@ -436,7 +436,7 @@ export default function RankingPage() {
                       style={{
                         display: 'grid',
                         gridTemplateColumns:
-                          '40px 50px minmax(170px,1fr) 70px 70px 70px 70px 70px 70px 70px 70px 80px',
+                          '40px 50px minmax(170px,1fr) 70px 70px 70px 70px 70px 70px 70px 70px 70px 80px',
                         gap: 6,
                         padding: '10px 12px',
                         borderRadius: 9,
@@ -608,6 +608,9 @@ export default function RankingPage() {
                       </span>
                       <span style={{ fontSize: 12, color: '#f472b6', fontFamily: "'Orbitron',monospace" }}>
                         {kast ? `${fmt(kast)}%` : '0%'}
+                      </span>
+                      <span style={{ fontSize: 12, color: 'rgba(255,255,255,.78)', fontFamily: "'Orbitron',monospace" }}>
+                        {fmt(toNumber(j.qtd_partidas))}
                       </span>
                       <span style={{ fontSize: 12, color: '#4ade80', fontFamily: "'Orbitron',monospace" }}>
                         {wr}%
