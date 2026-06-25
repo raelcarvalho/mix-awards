@@ -23,6 +23,7 @@ interface Jogador {
   level_pontos?: number | string
   level_nome?: string
   level_tier?: 'bronze' | 'prata' | 'ouro' | 'platina' | 'apex' | string
+  moldura_equipada?: string | null
   level_progresso?: {
     pontos_no_level?: number | string
     pontos_para_proximo?: number | null
@@ -1388,6 +1389,7 @@ export default function DashboardPage({ setPage, dashboardPlayerId }: DashboardP
           losses={losses}
           currentXp={xpCurrent}
           nextLevelXp={xpNext}
+          molduraEquipada={jogador.moldura_equipada}
         />
 
         <Card
@@ -1624,7 +1626,7 @@ export default function DashboardPage({ setPage, dashboardPlayerId }: DashboardP
               })}
             </div>
 
-            {allMissionsCompleted && (
+            {allMissionsCompleted && isLogged && toNumber(jogador?.id) === toNumber(jogadorId) && (
               <button
                 type="button"
                 onClick={handleClaimMissions}

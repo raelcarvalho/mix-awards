@@ -424,7 +424,7 @@ Route.group(() => {
 // MISSÕES (REST)
 Route.group(() => {
   Route.get("/players/:id", "MissoesController.jogador");
-  Route.post("/players/:id/claim", "MissoesController.resgatar");
+  Route.post("/claim", "MissoesController.resgatar");
 })
   .prefix("api/missions")
   .middleware("auth:api");
