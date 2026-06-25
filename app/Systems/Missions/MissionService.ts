@@ -274,6 +274,29 @@ export class MissionService {
   }
 
   /**
+   * Troca o ciclo atual por missões novas (mesmo número de ciclo), sem precisar concluir.
+   * Usado pelo item de shop "Reroll de Missões".
+   */
+  static async rerollMissions(jogadorId: number, client?: any) {
+    const id = Number(jogadorId || 0);
+    if (id <= 0) throw new Error("Jogador inválido.");
+
+    const db = client || Database;
+    const active = await this.ensureActiveMissions(id, db);
+    const cycle = Number(active.cycle || 1);
+
+    await db.from(TABLE).where("jogador_id", id).where("ciclo", cycle).delete();
+    const rows = await this.createCycle(db, id, cycle);
+
+    return {
+      cycle,
+      missions: rows.map((row) => this.toSnapshot(row)),
+      reward_gold: MISSION_REWARD_GOLD,
+      reward_claimable: false,
+    };
+  }
+
+  /**
    * Resgata a recompensa do ciclo concluído: credita o gold e gera um novo ciclo.
    * Falha se o ciclo atual não estiver totalmente concluído.
    */
@@ -297,10 +320,10 @@ export class MissionService {
         throw new Error("Conclua todas as missões antes de resgatar.");
       }
 
-      await trx
-        .from("tb_jogadores")
-        .where("id", id)
-        .update({ gold: trx.raw("COALESCE(gold, 0) + ?", [MISSION_REWARD_GOLD]) });
+      await trx.rawQuery(
+        'UPDATE "tb_jogadores" SET "gold" = COALESCE("gold", 0) + ? WHERE "id" = ?',
+        [MISSION_REWARD_GOLD, id]
+      );
 
       const novoCiclo = cycle + 1;
       const novasRows = await this.createCycle(trx, id, novoCiclo);
