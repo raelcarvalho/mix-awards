@@ -237,8 +237,8 @@ export interface PlayerMission {
   completed_at: string | null
 }
 
-export const resgatarMissoes = async (jogadorId: number) => {
-  const data = await apiFetch<any>(`/api/missions/players/${jogadorId}/claim`, {
+export const resgatarMissoes = async (_jogadorId?: number) => {
+  const data = await apiFetch<any>('/api/missions/claim', {
     method: 'POST',
   })
   const payload = data?.resultados ?? data ?? {}
@@ -344,6 +344,21 @@ export const comprarBonusPontos = () =>
 
 export const listarPacotesFechados = () =>
   apiFetch<any>('/shop/listar-pacote-fechado')
+
+export const comprarBoostXp = () =>
+  apiFetch<any>('/shop/comprar-boost-xp', { method: 'POST' })
+
+export const rerollMissoes = () =>
+  apiFetch<any>('/shop/reroll-missoes', { method: 'POST' })
+
+export const listarCosmeticos = () =>
+  apiFetch<any>('/shop/cosmeticos')
+
+export const comprarCosmetico = (codigo: string) =>
+  apiFetch<any>('/shop/cosmeticos/comprar', { method: 'POST', body: JSON.stringify({ codigo }) })
+
+export const equiparCosmetico = (codigo: string) =>
+  apiFetch<any>('/shop/cosmeticos/equipar', { method: 'POST', body: JSON.stringify({ codigo }) })
 
 export const albumStatus = () =>
   apiFetch<any>('/shop/album-status')

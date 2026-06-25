@@ -36,18 +36,18 @@ export default class MissoesController {
     }
   }
 
-  public async resgatar({ params, response }: HttpContextContract) {
+  public async resgatar({ auth, response }: HttpContextContract) {
     try {
-      const jogadorId = Number(params.id || 0);
-      if (jogadorId <= 0) {
-        return this.customResponse.erro(response, "Jogador inválido.", {}, 400);
-      }
+      const user = await auth.authenticate();
+      const jogador = await Jogadores.query()
+        .where("usuario_adm_id", user.id)
+        .first();
 
-      const jogador = await Jogadores.find(jogadorId);
       if (!jogador) {
         return this.customResponse.erro(response, "Jogador não encontrado.", {}, 404);
       }
 
+      const jogadorId = jogador.id;
       const resultado = await MissionService.claimReward(jogadorId);
       return this.customResponse.sucesso(response, "Recompensa resgatada!", {
         jogador_id: jogadorId,
