@@ -3549,17 +3549,6 @@ export default function TirarTimePage() {
         />
       )}
 
-      {snapshot?.accept?.active && (
-        <AcceptMatchModal
-          accept={snapshot.accept}
-          isParticipant={snapshot.me.role !== 'fora'}
-          busy={busy === 'accept'}
-          onAccept={() =>
-            runAction('accept', () => api.mixAceitarPartida(snapshot.id), 'Você aceitou a partida.')
-          }
-        />
-      )}
-
       {error && (
         <div
           style={{
