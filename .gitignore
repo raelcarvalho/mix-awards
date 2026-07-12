@@ -25,3 +25,18 @@ web/backup web/
 .agents/
 skills-lock.json
 .playwright-mcp/
+
+# artefatos do deploy: bundle do Vite (web/dist) copiado para public/ na VPS.
+# A origem desses assets é web/public/, que continua versionada.
+public/assets/
+public/index.html
+public/copa/
+public/level-icons/
+public/logo/
+public/molduras/
+public/uploads/levels/
+public/file.svg
+public/globe.svg
+public/next.svg
+public/vercel.svg
+public/window.svg
