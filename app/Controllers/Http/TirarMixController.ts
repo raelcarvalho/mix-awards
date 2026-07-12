@@ -537,7 +537,7 @@ export default class TirarMixController {
       .update({
         map_stage: "veto",
         map_veto_turn: nextTurn,
-        map_veto_deadline: DateTime.now().plus({ seconds: 15 }).toSQL(),
+        map_veto_deadline: DateTime.now().plus({ seconds: 30 }).toSQL(),
         updated_at: this.nowSql(),
       });
   }
@@ -660,7 +660,7 @@ export default class TirarMixController {
         status: "draft_em_andamento",
         fase: "draft",
         pick_turn: nextTurn,
-        pick_deadline: DateTime.now().plus({ seconds: 15 }).toSQL(),
+        pick_deadline: DateTime.now().plus({ seconds: 30 }).toSQL(),
         updated_at: this.nowSql(),
       });
     });
@@ -819,7 +819,7 @@ export default class TirarMixController {
             dice_winner: winner,
             dice_turn: null,
             pick_turn: winner,
-            pick_deadline: DateTime.now().plus({ seconds: 15 }).toSQL(),
+            pick_deadline: DateTime.now().plus({ seconds: 30 }).toSQL(),
             iniciado_em: iniciadoEm ?? this.nowSql(),
             updated_at: this.nowSql(),
           });
@@ -914,7 +914,7 @@ export default class TirarMixController {
               map_dice_winner: winner,
               map_dice_turn: null,
               map_veto_turn: winner,
-              map_veto_deadline: DateTime.now().plus({ seconds: 15 }).toSQL(),
+              map_veto_deadline: DateTime.now().plus({ seconds: 30 }).toSQL(),
               updated_at: this.nowSql(),
             });
             sessao = await this.sessionById(sessao.id);
@@ -2470,7 +2470,7 @@ export default class TirarMixController {
           status: "draft_em_andamento",
           fase: "draft",
           pick_turn: last.time,
-          pick_deadline: DateTime.now().plus({ seconds: 15 }).toSQL(),
+          pick_deadline: DateTime.now().plus({ seconds: 30 }).toSQL(),
           finalizado_em: null,
           updated_at: this.nowSql(),
         });
