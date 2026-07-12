@@ -71,6 +71,7 @@ export type PlayerProfilePreviewProps = {
   online?: boolean
   className?: string
   style?: CSSProperties
+  molduraEquipada?: string | null
 }
 
 function clampLevel(value: number) {
@@ -223,6 +224,7 @@ export default function PlayerProfilePreview({
   online = true,
   className = '',
   style,
+  molduraEquipada,
 }: PlayerProfilePreviewProps) {
   const lv = clampLevel(level)
   const isMaxLevel = lv >= MAX_LEVEL
@@ -237,6 +239,7 @@ export default function PlayerProfilePreview({
     () =>
       Array.from(
         new Set([
+          ...(molduraEquipada ? [molduraEquipada] : []),
           `/molduras/moldura_${frameLevel}.png`,
           `/molduras/moldura-${frameLevel}.png`,
           `/molduras/level_${frameLevel}.png`,
@@ -249,7 +252,7 @@ export default function PlayerProfilePreview({
           `/uploads/levels/${frameLevel}.png`,
         ])
       ),
-    [frameLevel]
+    [frameLevel, molduraEquipada]
   )
   const [frameImageIndex, setFrameImageIndex] = useState(0)
   const frameImageSrc = frameImageCandidates[frameImageIndex] || ''
@@ -323,7 +326,7 @@ export default function PlayerProfilePreview({
   }, [lv, levelIconUrl])
   useEffect(() => {
     setFrameImageIndex(0)
-  }, [frameLevel])
+  }, [frameLevel, molduraEquipada])
 
   useEffect(() => {
     if (!frameEditorOpen) setDraftFrameAdjustment(savedFrameAdjustment)

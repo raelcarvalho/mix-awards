@@ -407,7 +407,7 @@ export default class MixAwardsController {
           nome: jogador.nome,
           imagem: jogador.imagem,
           moldura_equipada: jogador.moldura_equipada,
-          titulo_equipado: (jogador as any).titulo_equipado || null,
+          titulo_equipado: jogador.titulo_equipado || null,
         },
         resumo: this.buildDossieStats(me),
         derrotas: me.partidas - me.vitorias,
@@ -569,7 +569,7 @@ export default class MixAwardsController {
         );
       }
 
-      (jogador as any).titulo_equipado = valor;
+      jogador.titulo_equipado = valor;
       await jogador.save();
 
       return this.customResponse.sucesso(response, "Recompensa equipada!", {

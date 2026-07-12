@@ -92,6 +92,12 @@ export default class Jogadores extends BaseModel {
   @column()
   public level_pontos: number;
 
+  @column({ columnName: "moldura_equipada" })
+  public moldura_equipada?: string | null;
+
+  @column({ columnName: "titulo_equipado" })
+  public titulo_equipado?: string | null;
+
   @belongsTo(() => UsuarioAdm, { foreignKey: "usuario_adm_id" })
   public usuarioAdm: BelongsTo<typeof UsuarioAdm>;
 
