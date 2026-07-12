@@ -40,6 +40,7 @@ const spaRoutes = [
   "/shop",
   "/importar",
   "/copa-do-mundo",
+  "/mix-awards",
 ];
 
 spaRoutes.forEach((path) => {
@@ -384,6 +385,16 @@ Route.group(() => {
   // opcional (legacy)
   Route.get("tirar-mix/snapshot/:id", "TirarMixController.snapshot");
   Route.get("tirar-mix/snapshot", "TirarMixController.snapshot");
+})
+  .prefix("api")
+  .middleware("auth:api");
+
+// MIX AWARDS FINAL SEASON (cerimônia de encerramento)
+Route.group(() => {
+  Route.get("mixawards/final", "MixAwardsController.final");
+  Route.get("mixawards/retrospectiva", "MixAwardsController.retrospectiva");
+  Route.post("mixawards/resgatar", "MixAwardsController.resgatar");
+  Route.post("mixawards/equipar", "MixAwardsController.equipar");
 })
   .prefix("api")
   .middleware("auth:api");
