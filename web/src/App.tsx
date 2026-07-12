@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { AnimatePresence, motion } from 'framer-motion'
 import { AuthProvider } from '@/hooks/useAuth'
 import AppLayout from '@/components/layout/AppLayout'
 import HomePage from '@/pages/HomePage'
@@ -10,6 +11,7 @@ import AlbumStickersPage from '@/pages/AlbumStickersPage'
 import { PartidasPage, ImportarPage } from '@/pages/PartidasPage'
 import TirarTimePage from '@/pages/TirarTimePage'
 import CopaDoMundoPage from '@/pages/CopaDoMundoPage'
+import MixAwardsPage from '@/pages/MixAwardsPage'
 
 type Page =
   | 'home'
@@ -22,6 +24,7 @@ type Page =
   | 'shop'
   | 'importar'
   | 'copa-do-mundo'
+  | 'mix-awards'
 
 const PAGE_STORAGE_KEY = 'mixawards:last-page'
 
@@ -36,6 +39,7 @@ const PAGE_VALUES: Page[] = [
   'shop',
   'importar',
   'copa-do-mundo',
+  'mix-awards',
 ]
 
 const PAGE_TO_PATH: Record<Page, string> = {
@@ -49,6 +53,7 @@ const PAGE_TO_PATH: Record<Page, string> = {
   shop: '/shop',
   importar: '/importar',
   'copa-do-mundo': '/copa-do-mundo',
+  'mix-awards': '/mix-awards',
 }
 
 function isValidPage(value: unknown): value is Page {
@@ -89,15 +94,7 @@ function readInitialPage(): Page {
   return 'home'
 }
 
-function Router({
-  page,
-  setPage,
-  dashboardPlayerId,
-}: {
-  page: Page
-  setPage: (p: Page) => void
-  dashboardPlayerId: number | null
-}) {
+function renderPage(page: Page, setPage: (p: Page) => void, dashboardPlayerId: number | null) {
   switch (page) {
     case 'home':           return <HomePage setPage={setPage} />
     case 'dashboard':      return <DashboardPage setPage={setPage} dashboardPlayerId={dashboardPlayerId} />
@@ -109,8 +106,33 @@ function Router({
     case 'shop':           return <ShopPage setPage={setPage} />
     case 'importar':       return <ImportarPage />
     case 'copa-do-mundo':  return <CopaDoMundoPage setPage={setPage} />
+    case 'mix-awards':     return <MixAwardsPage />
     default:               return <HomePage setPage={setPage} />
   }
+}
+
+function Router({
+  page,
+  setPage,
+  dashboardPlayerId,
+}: {
+  page: Page
+  setPage: (p: Page) => void
+  dashboardPlayerId: number | null
+}) {
+  return (
+    <AnimatePresence mode="wait">
+      <motion.div
+        key={page}
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -8 }}
+        transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+      >
+        {renderPage(page, setPage, dashboardPlayerId)}
+      </motion.div>
+    </AnimatePresence>
+  )
 }
 
 export default function App() {

@@ -14,6 +14,7 @@ type Page =
   | 'shop'
   | 'importar'
   | 'copa-do-mundo'
+  | 'mix-awards'
 
 interface Props {
   page: Page
@@ -37,6 +38,7 @@ const NAV: { id: Page; icon: string; label: string; adminOnly?: boolean; neon?: 
   { id: 'tirar-time', icon: '🎲', label: 'Tirar Time' },
   { id: 'album', icon: '📋', label: 'Álbum' },
   { id: 'copa-do-mundo', icon: '🏆', label: 'Copa do Mundo', neon: true },
+  { id: 'mix-awards', icon: '🔐', label: 'Mix Awards', neon: true, adminOnly: true },
   { id: 'shop', icon: '🛒', label: 'Shop' },
   { id: 'ranking', icon: '🥇', label: 'Ranking' },
   { id: 'album-stickers', icon: '✨', label: 'Álbum Stickers' },
@@ -54,6 +56,7 @@ const PAGE_TITLES: Record<Page, string> = {
   shop: 'Shop',
   importar: 'Importar Partida',
   'copa-do-mundo': 'Copa do Mundo',
+  'mix-awards': 'Mix Awards 2° Season',
 }
 
 function normalizeAvatarMedia(raw?: string | null): string | null {

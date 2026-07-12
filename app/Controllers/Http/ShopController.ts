@@ -6,12 +6,17 @@ import CustomResponse from "App/Utils/CustomResponse";
 import Jogadores from "App/Models/Jogadores";
 import Pacotes from "App/Models/Pacotes";
 import PartidasJogadores from "App/Models/PartidasJogadores";
+import { LevelService } from "App/Systems/Level/LevelService";
+import { MissionService } from "App/Systems/Missions/MissionService";
 
 const PRECO_PACOTE = 20;
 const ITENS_POR_PACOTE = 4;
 const MAX_COMPRA_POR_VEZ = 50;
 const PRECO_BONUS_PONTOS = 100;
 const BONUS_PONTOS = 10;
+const PRECO_BOOST_XP = 80;
+const BOOST_XP = 50;
+const PRECO_REROLL_MISSOES = 30;
 
 export default class ShopController {
   protected customResponse = new CustomResponse();
@@ -232,6 +237,81 @@ export default class ShopController {
       return this.customResponse.erro(
         response,
         "Erro ao comprar bônus de pontos.",
+        error,
+        500
+      );
+    }
+  }
+
+  // ===== COMPRAR BOOST DE XP =====
+  public async comprarBoostXp({ auth, response }: HttpContextContract) {
+    const user = await auth.authenticate();
+    try {
+      const jogador = await Jogadores.query()
+        .where("usuario_adm_id", user.id)
+        .firstOrFail();
+
+      if ((jogador.gold || 0) < PRECO_BOOST_XP) {
+        return this.customResponse.erro(response, "Gold insuficiente.", {}, 400);
+      }
+
+      const novoLevelPontos = Number(jogador.level_pontos || 0) + BOOST_XP;
+      jogador.level_pontos = novoLevelPontos;
+      jogador.level = LevelService.getLevelPorPontos(novoLevelPontos).level;
+      jogador.gold = (jogador.gold || 0) - PRECO_BOOST_XP;
+      await jogador.save();
+
+      return this.customResponse.sucesso(
+        response,
+        `Boost de XP comprado! +${BOOST_XP} XP de level.`,
+        {
+          saldo_atual: jogador.gold,
+          level: jogador.level,
+          level_pontos: jogador.level_pontos,
+          xp_adicionado: BOOST_XP,
+          preco: PRECO_BOOST_XP,
+        }
+      );
+    } catch (error) {
+      return this.customResponse.erro(
+        response,
+        "Erro ao comprar boost de XP.",
+        error,
+        500
+      );
+    }
+  }
+
+  // ===== REROLL DE MISSÕES =====
+  public async rerollMissoes({ auth, response }: HttpContextContract) {
+    const user = await auth.authenticate();
+    try {
+      const jogador = await Jogadores.query()
+        .where("usuario_adm_id", user.id)
+        .firstOrFail();
+
+      if ((jogador.gold || 0) < PRECO_REROLL_MISSOES) {
+        return this.customResponse.erro(response, "Gold insuficiente.", {}, 400);
+      }
+
+      const novas = await MissionService.rerollMissions(jogador.id);
+      jogador.gold = (jogador.gold || 0) - PRECO_REROLL_MISSOES;
+      await jogador.save();
+
+      return this.customResponse.sucesso(
+        response,
+        "Missões trocadas com sucesso!",
+        {
+          saldo_atual: jogador.gold,
+          ciclo: novas.cycle,
+          missoes: novas.missions,
+          preco: PRECO_REROLL_MISSOES,
+        }
+      );
+    } catch (error) {
+      return this.customResponse.erro(
+        response,
+        "Erro ao trocar missões.",
         error,
         500
       );

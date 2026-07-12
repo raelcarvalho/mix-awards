@@ -4,9 +4,9 @@
   "description": "Projeto consiste em pegar as informações do termino de uma partida na gamersclub e atualizar em uma tabela de ranking para ver o desempenho de cada jogador",
   "main": "index.js",
   "scripts": {
-    "dev:api": "cross-env PORT=3399 node ace serve --watch",
+    "dev:api": "cross-env PORT=3400 node ace serve --watch",
     "dev:web": "cd web && yarn dev",
-    "dev": "concurrently -n API,WEB -c blue.bold,green.bold \"yarn dev:api\" \"wait-on tcp:3399 && yarn dev:web\"",
+    "dev": "concurrently -n API,WEB -c blue.bold,green.bold \"yarn dev:api\" \"wait-on tcp:3400 && yarn dev:web\"",
 
     "build": "node ace build --production --ignore-ts-errors",
     "start": "node build/server.js",

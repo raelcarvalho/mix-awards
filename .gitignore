@@ -20,3 +20,8 @@ logs
 .pnp.*
 .yarn-integrity
 web/backup web/
+
+# skill/agent tooling caches (re-fetched on demand, not project source)
+.agents/
+skills-lock.json
+.playwright-mcp/
