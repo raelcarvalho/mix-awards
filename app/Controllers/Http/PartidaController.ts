@@ -247,11 +247,17 @@ export default class PartidaController {
       if (scoreA > scoreB) timeVencedor = "A";
       else if (scoreB > scoreA) timeVencedor = "B";
 
-      const partidaDate = data?.data
-        ? DateTime.fromISO(String(data.data), { zone: "utc" }).isValid
-          ? DateTime.fromISO(String(data.data), { zone: "utc" })
-          : DateTime.now().toUTC()
-        : DateTime.now().toUTC();
+      const rawDate = String(data?.data || "").trim();
+      const parsedDate = rawDate
+        ? [
+            DateTime.fromISO(rawDate, { zone: "utc" }),
+            DateTime.fromSQL(rawDate, { zone: "utc" }),
+            DateTime.fromFormat(rawDate, "dd/MM/yyyy HH:mm:ss", { zone: "utc" }),
+            DateTime.fromFormat(rawDate, "dd/MM/yyyy HH:mm", { zone: "utc" }),
+            DateTime.fromFormat(rawDate, "dd/MM/yyyy", { zone: "utc" }),
+          ].find((d) => d.isValid)
+        : undefined;
+      const partidaDate = parsedDate || DateTime.now().toUTC();
       const seasonId = this.resolveSeasonIdFromDate(partidaDate);
       const partidaPayload: any = {
         mapa: String(data?.jogos?.map_name || ""),
@@ -838,7 +844,9 @@ export default class PartidaController {
         );
       }
       this.applyMonthFilter(partidasQuery, "tb_partidas", monthKey);
-      const partidas = await partidasQuery.orderBy("data", "desc");
+      const partidas = await partidasQuery
+        .orderBy("data", "desc")
+        .orderBy("id", "desc");
       return response.json(partidas);
     }
 
@@ -859,6 +867,7 @@ export default class PartidaController {
 
     const partidasFiltradas = await partidasQuery
       .orderBy("p.data", "desc")
+      .orderBy("p.id", "desc")
       .select(
         "p.id",
         "p.codigo",

@@ -43,7 +43,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const refreshGold = useCallback(async () => {
     if (!api.getUser()) return
     try {
-      const data = await api.meuGold(api.getUser()?.id)
+      const data = await api.meuGold()
       const resolvedNick = String(data.gc_nick || data.nome || '').trim()
       setGold(data.gold ?? 0)
       setUser((prev) =>

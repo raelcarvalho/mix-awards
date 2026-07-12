@@ -287,9 +287,9 @@ export default class JogadoresController {
    * Retorna o gold do jogador vinculado. Se não houver vínculo,
    * tenta localizar por nome_normalizado (case-insensitive) e já vincula.
    */
-  public async meuGold({ auth, request, response }: HttpContextContract) {
+  public async meuGold({ auth, response }: HttpContextContract) {
     const user = await auth.authenticate();
-    const usuarioId = Number(request.input("usuario_id") ?? user.id);
+    const usuarioId = Number(user.id);
 
     // 1) tenta por vínculo direto
     let jogador = await Jogadores.query()

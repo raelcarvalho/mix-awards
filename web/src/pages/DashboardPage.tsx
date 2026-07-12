@@ -3,10 +3,12 @@ import { Card } from '@/components/ui/Card'
 import { useAuth } from '@/hooks/useAuth'
 import * as api from '@/services/api'
 import PlayerProfilePreview from '@/components/profile/PlayerProfilePreview'
+import RetrospectivaModal from '@/components/retrospectiva/RetrospectivaModal'
 
 interface Jogador {
   id: number
   nome: string
+  gc_id?: number | string
   kills?: string
   adr?: string
   mortes?: string
@@ -687,6 +689,7 @@ export default function DashboardPage({ setPage, dashboardPlayerId }: DashboardP
   const [hoveredHistoryPointKey, setHoveredHistoryPointKey] = useState<string | null>(null)
   const [seasonId, setSeasonId] = useState<number>(DEFAULT_SEASON_ID)
   const [monthKey, setMonthKey] = useState<string>('all')
+  const [retrospectivaOpen, setRetrospectivaOpen] = useState(false)
 
   useEffect(() => {
     if (!isLogged) {
@@ -731,7 +734,14 @@ export default function DashboardPage({ setPage, dashboardPlayerId }: DashboardP
 
         const selectedJogadorId = toNumber(dashboardPlayerId)
         const authJogadorId = toNumber(jogadorId)
-        const userName = normalizeName(String(user?.nome || ''))
+        const authGcId = toNumber((user as { gc_id?: number | string } | null)?.gc_id)
+        const userNames = Array.from(
+          new Set(
+            [String(user?.gc_nick || ''), String(user?.nome || '')]
+              .map((value) => normalizeName(value))
+              .filter(Boolean)
+          )
+        )
 
         const meBySelectedId =
           selectedJogadorId > 0
@@ -743,12 +753,23 @@ export default function DashboardPage({ setPage, dashboardPlayerId }: DashboardP
             ? ranking.find((j) => toNumber(j.id) === authJogadorId)
             : null
 
+        const meByGcId =
+          authGcId > 0
+            ? ranking.find((j) => toNumber(j.gc_id) === authGcId)
+            : null
+
         const meByName = ranking.find(
-          (j) => normalizeName(String(j.nome || '')) === userName
+          (j) => userNames.includes(normalizeName(String(j.nome || '')))
         )
 
-        const me = meBySelectedId ?? meByAuthId ?? meByName ?? ranking[0] ?? null
+        const me = meBySelectedId ?? meByAuthId ?? meByGcId ?? meByName ?? null
         setJogador(me)
+
+        if (!me && selectedJogadorId <= 0) {
+          setLoadError('Nao foi possivel localizar o jogador vinculado ao usuario logado')
+          setPartidas([])
+          return
+        }
 
         let preferredParts = safeArray<Partida>(parts)
         if (me?.nome) {
@@ -1378,6 +1399,35 @@ export default function DashboardPage({ setPage, dashboardPlayerId }: DashboardP
           }
         }
       `}</style>
+
+      {/* Banner da Retrospectiva 2° Season (cerimônia Mix Awards) */}
+      <button
+        onClick={() => setRetrospectivaOpen(true)}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 12,
+          padding: '14px 20px',
+          borderRadius: 12,
+          border: '1px solid rgba(74,222,128,.4)',
+          background: 'linear-gradient(90deg, rgba(74,222,128,.12), rgba(34,211,238,.08))',
+          cursor: 'pointer',
+          textAlign: 'left',
+        }}
+      >
+        <div>
+          <div style={{ fontFamily: "'Rajdhani',sans-serif", fontWeight: 800, fontSize: 17, color: '#fff', letterSpacing: 0.5 }}>
+            📼 Sua Retrospectiva — 2° Season
+          </div>
+          <div style={{ fontSize: 12, color: 'rgba(255,255,255,.6)' }}>
+            Mapas, stats, parceiro de mix e sua posição final. Toque para reviver a temporada.
+          </div>
+        </div>
+        <span style={{ fontSize: 22, color: '#4ade80' }}>▶</span>
+      </button>
+      <RetrospectivaModal open={retrospectivaOpen} onClose={() => setRetrospectivaOpen(false)} />
+
       <div className="grid grid-cols-1 xl:grid-cols-[360px_420px_minmax(0,1fr)] 2xl:grid-cols-[380px_440px_minmax(0,1fr)] gap-3.5 items-stretch">
         <PlayerProfilePreview
           playerName={jogador.nome}

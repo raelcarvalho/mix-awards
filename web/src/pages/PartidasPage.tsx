@@ -30,6 +30,7 @@ interface Partida {
   scoreA: number | null
   scoreB: number | null
   data: string
+  ts: number
 }
 
 type SeasonDropdownOption = {
@@ -197,6 +198,10 @@ function normalizePartida(raw: PartidaRaw): Partida {
     scoreA,
     scoreB,
     data: normalizeDate(raw.data || raw.created_at),
+    ts: (() => {
+      const t = new Date(raw.data || raw.created_at || '').getTime()
+      return Number.isFinite(t) ? t : 0
+    })(),
   }
 }
 
@@ -966,9 +971,15 @@ function DetailModal({
                   { label: 'MAPA', value: String(detalhe.partida.mapa || '-') },
                   { label: 'TIPO', value: 'Competitivo' },
                   { label: 'STATUS', value: matchStatus },
-                  { label: 'FORMATO', value: 'MD1' },
+                  {
+                    label: 'PARTIDA NA GC',
+                    value: 'Abrir na GamersClub ↗',
+                    href: detalhe.partida.codigo
+                      ? `https://gamersclub.com.br/lobby/match/${detalhe.partida.codigo}`
+                      : undefined,
+                  },
                   { label: 'DOWNLOAD', value: 'Demo indisponível' },
-                ].map((item) => (
+                ].map((item: { label: string; value: string; href?: string }) => (
                   <div
                     key={item.label}
                     style={{
@@ -992,20 +1003,42 @@ function DetailModal({
                     >
                       {item.label}
                     </div>
-                    <div
-                      style={{
-                        color: '#fff',
-                        fontSize: 15,
-                        fontFamily: "'Rajdhani',sans-serif",
-                        fontWeight: 700,
-                        whiteSpace: 'nowrap',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                      }}
-                      title={item.value}
-                    >
-                      {item.value}
-                    </div>
+                    {item.href ? (
+                      <a
+                        href={item.href}
+                        target='_blank'
+                        rel='noopener noreferrer'
+                        style={{
+                          display: 'block',
+                          color: '#22d3ee',
+                          fontSize: 15,
+                          fontFamily: "'Rajdhani',sans-serif",
+                          fontWeight: 700,
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          textDecoration: 'none',
+                        }}
+                        title={item.href}
+                      >
+                        {item.value}
+                      </a>
+                    ) : (
+                      <div
+                        style={{
+                          color: '#fff',
+                          fontSize: 15,
+                          fontFamily: "'Rajdhani',sans-serif",
+                          fontWeight: 700,
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                        }}
+                        title={item.value}
+                      >
+                        {item.value}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -1235,15 +1268,30 @@ export function PartidasPage({ setPage }: { setPage: (p: any) => void }) {
 
   const filtered = useMemo(
     () =>
-      partidas.filter(
-        (p) =>
-          p.codigo.includes(search) ||
-          p.mapa.toLowerCase().includes(search.toLowerCase()) ||
-          p.timeA.toLowerCase().includes(search.toLowerCase()) ||
-          p.timeB.toLowerCase().includes(search.toLowerCase())
-      ),
+      partidas
+        .filter(
+          (p) =>
+            p.codigo.includes(search) ||
+            p.mapa.toLowerCase().includes(search.toLowerCase()) ||
+            p.timeA.toLowerCase().includes(search.toLowerCase()) ||
+            p.timeB.toLowerCase().includes(search.toLowerCase())
+        )
+        .sort((a, b) => b.ts - a.ts || b.id - a.id),
     [partidas, search]
   )
+
+  const PAGE_SIZE = 20
+  const [listPage, setListPage] = useState(1)
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
+  const currentPage = Math.min(listPage, totalPages)
+  const paginated = useMemo(
+    () => filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE),
+    [filtered, currentPage]
+  )
+
+  useEffect(() => {
+    setListPage(1)
+  }, [search, seasonId])
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
@@ -1413,7 +1461,7 @@ export function PartidasPage({ setPage }: { setPage: (p: any) => void }) {
                 ))}
               </div>
 
-              {filtered.map((p) => (
+              {paginated.map((p) => (
                 <div
                   key={p.id}
                   style={{
@@ -1539,6 +1587,67 @@ export function PartidasPage({ setPage }: { setPage: (p: any) => void }) {
               ))}
             </div>
           </div>
+
+          {totalPages > 1 && (
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                gap: 10,
+                padding: '14px 0 6px',
+              }}
+            >
+              <button
+                onClick={() => setListPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage <= 1}
+                style={{
+                  background: 'rgba(251,146,60,.1)',
+                  border: '1px solid rgba(251,146,60,.3)',
+                  color: '#fb923c',
+                  borderRadius: 7,
+                  padding: '6px 14px',
+                  fontSize: 11,
+                  fontWeight: 700,
+                  fontFamily: "'Rajdhani',sans-serif",
+                  letterSpacing: 1,
+                  cursor: currentPage <= 1 ? 'not-allowed' : 'pointer',
+                  opacity: currentPage <= 1 ? 0.4 : 1,
+                }}
+              >
+                ← ANTERIOR
+              </button>
+              <span
+                style={{
+                  fontSize: 12,
+                  color: 'rgba(255,255,255,.6)',
+                  fontFamily: "'Orbitron',monospace",
+                  fontWeight: 700,
+                }}
+              >
+                {currentPage} / {totalPages}
+              </span>
+              <button
+                onClick={() => setListPage((p) => Math.min(totalPages, p + 1))}
+                disabled={currentPage >= totalPages}
+                style={{
+                  background: 'rgba(251,146,60,.1)',
+                  border: '1px solid rgba(251,146,60,.3)',
+                  color: '#fb923c',
+                  borderRadius: 7,
+                  padding: '6px 14px',
+                  fontSize: 11,
+                  fontWeight: 700,
+                  fontFamily: "'Rajdhani',sans-serif",
+                  letterSpacing: 1,
+                  cursor: currentPage >= totalPages ? 'not-allowed' : 'pointer',
+                  opacity: currentPage >= totalPages ? 0.4 : 1,
+                }}
+              >
+                PRÓXIMA →
+              </button>
+            </div>
+          )}
         </Card>
       )}
 
@@ -1680,11 +1789,9 @@ export function ImportarPage() {
         <ol style={{ display: 'flex', flexDirection: 'column', gap: 3, paddingLeft: 10 }}>
           {[
             'Acesse a página da partida na GamersClub',
-            'Abra o DevTools (F12) na aba Network',
-            "Recarregue e filtre por 'partida' ou 'match'",
-            'Encontre a requisição com os dados completos',
-            'Abra a aba Response e copie todo o JSON',
-            'Cole no campo abaixo e clique em Importar',
+            'adicione o "/1" na frente da url da partida',
+            'Exemplo: https://gamersclub.com.br/lobby/match/12345678/1',
+            'Copie todos os dados e cole no campo abaixo, depois clique em Importar',
           ].map((step, i) => (
             <li
               key={i}
