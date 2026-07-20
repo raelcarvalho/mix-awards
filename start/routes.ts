@@ -286,9 +286,6 @@ Route.group(() => {
     "/shop/listar-pacote-fechado",
     "ShopController.listarPacotesFechados"
   );
-  Route.post("/shop/comprar-bonus-pontos", "ShopController.comprarBonusPontos");
-  // Route.post("/shop/comprar-boost-xp", "ShopController.comprarBoostXp");
-  // Route.post("/shop/reroll-missoes", "ShopController.rerollMissoes");
   // Route.get("/shop/cosmeticos", "ShopController.listarCosmeticos");
   // Route.post("/shop/cosmeticos/comprar", "ShopController.comprarCosmetico");
   // Route.post("/shop/cosmeticos/equipar", "ShopController.equiparCosmetico");

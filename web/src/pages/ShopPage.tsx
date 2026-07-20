@@ -441,7 +441,6 @@ export default function ShopPage({ setPage }: { setPage: (p: any) => void }) {
     type: '',
   })
   const [loading, setLoading] = useState(true)
-  const [busyItem, setBusyItem] = useState('')
 
   const showToast = (msg: string, type: 'ok' | 'err') => {
     setToast({ msg, type })
@@ -475,42 +474,6 @@ export default function ShopPage({ setPage }: { setPage: (p: any) => void }) {
     } catch (err: any) {
       showToast(err.message || 'Erro na compra', 'err')
       throw err
-    }
-  }
-
-  const buyBonus = async () => {
-    try {
-      await api.comprarBonusPontos()
-      await refreshGold()
-      showToast('✓ Bônus de pontos comprado com sucesso!', 'ok')
-    } catch (err: any) {
-      showToast(err.message || 'Erro ao comprar bônus', 'err')
-    }
-  }
-
-  const buyBoostXp = async () => {
-    setBusyItem('boost-xp')
-    try {
-      await api.comprarBoostXp()
-      await refreshGold()
-      showToast('✓ Boost de XP comprado! +50 XP', 'ok')
-    } catch (err: any) {
-      showToast(err.message || 'Erro ao comprar boost', 'err')
-    } finally {
-      setBusyItem('')
-    }
-  }
-
-  const buyReroll = async () => {
-    setBusyItem('reroll')
-    try {
-      await api.rerollMissoes()
-      await refreshGold()
-      showToast('✓ Missões trocadas com sucesso!', 'ok')
-    } catch (err: any) {
-      showToast(err.message || 'Erro ao trocar missões', 'err')
-    } finally {
-      setBusyItem('')
     }
   }
 
@@ -809,136 +772,6 @@ export default function ShopPage({ setPage }: { setPage: (p: any) => void }) {
                 </div>
               )}
             </div>
-          </div>
-        </div>
-      </Card>
-
-      <Card
-        title='Bônus de Pontos +10'
-        titleStyle={{ paddingLeft: 5, marginTop: 2 }}
-        badgeColor='#f5c842'
-      >
-        <div className='grid grid-cols-1 xl:grid-cols-[220px_minmax(0,1fr)] gap-5 items-start'>
-          <Pack3DCard
-            frontSrc='/uploads/shop/bonus.png'
-            label='Bônus de Pontos'
-            accent='#f5c842'
-            fallbackIcon='⭐'
-          />
-          <div>
-            <p
-              style={{
-                fontSize: 18,
-                color: 'rgba(255,255,255,.5)',
-                fontFamily: "'Rajdhani',sans-serif",
-                lineHeight: 1.6,
-                marginBottom: 16,
-              }}
-            >
-              Adiciona +10 pontos na última partida importada. Ideal para subir
-              no ranking.
-            </p>
-            {isLogged ? (
-              <Btn onClick={buyBonus} color='#f5c842' size='lg' className={SHOP_BUY_BTN_CLASS}>
-                Comprar · 100g
-              </Btn>
-            ) : (
-              <div
-                style={{
-                  fontSize: 12,
-                  color: 'rgba(255,255,255,.3)',
-                  fontFamily: "'Rajdhani',sans-serif",
-                }}
-              >
-                Faça login para comprar
-              </div>
-            )}
-          </div>
-        </div>
-      </Card>
-
-      <Card
-        title='Boost de XP +50'
-        titleStyle={{ paddingLeft: 5, marginTop: 2 }}
-        badgeColor='#22d3ee'
-      >
-        <div className='grid grid-cols-1 xl:grid-cols-[220px_minmax(0,1fr)] gap-5 items-start'>
-          <Pack3DCard
-            frontSrc='/uploads/shop/boost_xp.png'
-            label='Boost de XP'
-            accent='#22d3ee'
-            fallbackIcon='⚡'
-          />
-          <div>
-            <p
-              style={{
-                fontSize: 18,
-                color: 'rgba(255,255,255,.5)',
-                fontFamily: "'Rajdhani',sans-serif",
-                lineHeight: 1.6,
-                marginBottom: 16,
-              }}
-            >
-              Adiciona +50 XP de level instantaneamente. Suba de nível mais rápido e desbloqueie novas molduras.
-            </p>
-            {isLogged ? (
-              <Btn
-                onClick={buyBoostXp}
-                color='#22d3ee'
-                size='lg'
-                className={SHOP_BUY_BTN_CLASS}
-                disabled={busyItem === 'boost-xp'}
-              >
-                {busyItem === 'boost-xp' ? 'Comprando...' : 'Comprar · 80g'}
-              </Btn>
-            ) : (
-              <div style={{ fontSize: 12, color: 'rgba(255,255,255,.3)', fontFamily: "'Rajdhani',sans-serif" }}>
-                Faça login para comprar
-              </div>
-            )}
-          </div>
-        </div>
-      </Card>
-
-      <Card
-        title='Reroll de Missões'
-        titleStyle={{ paddingLeft: 5, marginTop: 2 }}
-        badgeColor='#f472b6'
-      >
-        <div className='grid grid-cols-1 xl:grid-cols-[220px_minmax(0,1fr)] gap-5 items-start'>
-          <Pack3DCard
-            frontSrc='/uploads/shop/reroll.png'
-            label='Reroll Missões'
-            accent='#f472b6'
-            fallbackIcon='🔄'
-          />
-          <div>
-            <p
-              style={{
-                fontSize: 18,
-                color: 'rgba(255,255,255,.5)',
-                fontFamily: "'Rajdhani',sans-serif",
-                lineHeight: 1.6,
-                marginBottom: 16,
-              }}
-            >
-              Troque suas missões atuais por novas aleatórias. Útil quando uma missão é muito difícil ou demorada.
-            </p>
-            {isLogged ? (
-              <Btn
-                onClick={buyReroll}
-                color='#f472b6'
-                size='lg'
-                className={SHOP_BUY_BTN_CLASS}
-                disabled={busyItem === 'reroll'}
-              >
-                {busyItem === 'reroll' ? 'Trocando...' : 'Trocar · 30g'}
-              </Btn>
-            ) : (
-              <div style={{ fontSize: 12, color: 'rgba(255,255,255,.3)', fontFamily: "'Rajdhani',sans-serif" }}>
-                Faça login para comprar
-              </div>
-            )}
           </div>
         </div>
       </Card>
