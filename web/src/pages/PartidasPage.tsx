@@ -1,4 +1,5 @@
 ﻿import { useEffect, useMemo, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { Card, Btn } from '@/components/ui/Card'
 import { useRef } from 'react'
 import { LEVEL_COLOR_BY_ID } from '@/components/profile/PlayerProfilePreview'
@@ -1191,8 +1192,6 @@ function DetailModal({
 export function PartidasPage({ setPage }: { setPage: (p: any) => void }) {
   const { isAdmin } = useAuth()
   const [seasonId, setSeasonId] = useState<number>(2)
-  const [partidas, setPartidas] = useState<Partida[]>([])
-  const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [deleting, setDeleting] = useState<number | null>(null)
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null)
@@ -1205,21 +1204,22 @@ export function PartidasPage({ setPage }: { setPage: (p: any) => void }) {
     setTimeout(() => setToast(null), 2500)
   }
 
-  const load = async () => {
-    setLoading(true)
-    try {
-      const data = await api.listarPartidas(undefined, { seasonId })
-      const list = Array.isArray(data) ? data : []
-      setPartidas(list.map((p) => normalizePartida(p as PartidaRaw)))
-    } catch {
-      setPartidas([])
-    }
-    setLoading(false)
-  }
-
-  useEffect(() => {
-    load()
-  }, [seasonId])
+  const {
+    data: partidas = [],
+    isPending: loading,
+    refetch: load,
+  } = useQuery({
+    queryKey: ['partidas', seasonId],
+    queryFn: async () => {
+      try {
+        const data = await api.listarPartidas(undefined, { seasonId })
+        const list = Array.isArray(data) ? data : []
+        return list.map((p) => normalizePartida(p as PartidaRaw))
+      } catch {
+        return [] as Partida[]
+      }
+    },
+  })
 
   const del = async (id: number) => {
     if (!confirm('Excluir esta partida e recalcular o ranking?')) return

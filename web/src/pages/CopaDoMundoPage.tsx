@@ -1,4 +1,5 @@
 import { type MouseEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { Card, Btn } from '@/components/ui/Card'
 import { useAuth } from '@/hooks/useAuth'
@@ -241,8 +242,8 @@ function normalizeAlbumCopa(raw: any): Figurinha[] {
 
 export default function CopaDoMundoPage({ setPage }: { setPage: (p: any) => void }) {
   const { isLogged, refreshGold } = useAuth()
-  const [figurinhas, setFigurinhas] = useState<Figurinha[]>([])
-  const [loading, setLoading] = useState(true)
+  const queryClient = useQueryClient()
+  const copaQueryKey = useMemo(() => ['copa-album', isLogged] as const, [isLogged])
   const [currentPage, setCurrentPage] = useState(1)
   const [selected, setSelected] = useState<SlotView | null>(null)
   const [revealingId, setRevealingId] = useState<number | null>(null)
@@ -265,20 +266,17 @@ export default function CopaDoMundoPage({ setPage }: { setPage: (p: any) => void
     toastTimerRef.current = window.setTimeout(() => setToast(''), 2600)
   }, [])
 
-  const loadAlbum = useCallback(async () => {
-    setLoading(true)
-    try {
-      const data = await api.meuAlbumCopa()
-      setFigurinhas(normalizeAlbumCopa(data))
-    } catch {
-      setFigurinhas([])
-    }
-    setLoading(false)
-  }, [])
-
-  useEffect(() => {
-    loadAlbum()
-  }, [loadAlbum])
+  const { data: figurinhas = [], isPending: loading, refetch: loadAlbum } = useQuery({
+    queryKey: copaQueryKey,
+    queryFn: async () => {
+      try {
+        const data = await api.meuAlbumCopa()
+        return normalizeAlbumCopa(data)
+      } catch {
+        return [] as Figurinha[]
+      }
+    },
+  })
 
   const revealCard = useCallback(
     async (figurinhaId: number | undefined) => {
@@ -291,8 +289,8 @@ export default function CopaDoMundoPage({ setPage }: { setPage: (p: any) => void
       setRevealingId(figurinhaId)
       try {
         await api.revelarCartaCopa(figurinhaId)
-        setFigurinhas((prev) =>
-          prev.map((f) => (f.id === figurinhaId ? { ...f, revelada: true } : f))
+        queryClient.setQueryData(copaQueryKey, (prev: Figurinha[] | undefined) =>
+          prev?.map((f) => (f.id === figurinhaId ? { ...f, revelada: true } : f))
         )
         await refreshGold()
         showToast('✓ Carta revelada!')

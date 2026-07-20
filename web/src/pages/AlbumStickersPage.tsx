@@ -1,4 +1,5 @@
 ﻿import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Card, Btn } from '@/components/ui/Card'
 import { useAuth } from '@/hooks/useAuth'
 import * as api from '@/services/api'
@@ -233,12 +234,9 @@ function SlotCard({
 
 export default function AlbumStickersPage({ setPage }: { setPage: (p: any) => void }) {
   const { isLogged, refreshGold } = useAuth()
-  const [stickers, setStickers] = useState<Sticker[]>([])
-  const [revealedSlots, setRevealedSlots] = useState<Set<number>>(new Set())
-  const [total, setTotal] = useState(FALLBACK_TOTAL)
-  const [obtidas, setObtidas] = useState(0)
+  const queryClient = useQueryClient()
+  const stickersQueryKey = useMemo(() => ['album-stickers', isLogged] as const, [isLogged])
   const [page, setAlbumPage] = useState(1)
-  const [loading, setLoading] = useState(true)
   const [revealingSlot, setRevealingSlot] = useState<number | null>(null)
   const [selected, setSelected] = useState<StickerPreview | null>(null)
   const [toast, setToast] = useState('')
@@ -260,44 +258,44 @@ export default function AlbumStickersPage({ setPage }: { setPage: (p: any) => vo
     toastTimerRef.current = window.setTimeout(() => setToast(''), 2600)
   }, [])
 
-  const load = useCallback(async () => {
-    setLoading(true)
-    try {
-      const data = await api.meuAlbumStickers()
-      const normalized = normalizeStickers(data)
-      setStickers(normalized.stickers)
-      setTotal(normalized.total)
-      setObtidas(normalized.obtidas)
-      setRevealedSlots((prev) => {
-        const next = new Set(prev)
-        normalized.revealed.forEach((slot) => next.add(slot))
-        return next
-      })
-
+  const { data: stickersData, isPending: loading, refetch: load } = useQuery({
+    queryKey: stickersQueryKey,
+    queryFn: async () => {
       try {
-        const rev = await api.stickersRevelados()
-        const payload = rev?.resultados ?? rev ?? {}
-        const list = Array.isArray(payload?.slots) ? payload.slots : []
-        setRevealedSlots((prev) => {
-          const next = new Set(prev)
-          for (const slot of list) next.add(Number(slot))
-          return next
-        })
-      } catch {
-        // endpoint opcional
-      }
-    } catch {
-      setStickers([])
-      setTotal(FALLBACK_TOTAL)
-      setObtidas(0)
-      setRevealedSlots(new Set())
-    }
-    setLoading(false)
-  }, [])
+        const data = await api.meuAlbumStickers()
+        const normalized = normalizeStickers(data)
+        const revealedSlots = new Set(normalized.revealed)
 
-  useEffect(() => {
-    load()
-  }, [load])
+        try {
+          const rev = await api.stickersRevelados()
+          const payload = rev?.resultados ?? rev ?? {}
+          const list = Array.isArray(payload?.slots) ? payload.slots : []
+          for (const slot of list) revealedSlots.add(Number(slot))
+        } catch {
+          // endpoint opcional
+        }
+
+        return {
+          stickers: normalized.stickers,
+          total: normalized.total,
+          obtidas: normalized.obtidas,
+          revealedSlots,
+        }
+      } catch {
+        return {
+          stickers: [] as Sticker[],
+          total: FALLBACK_TOTAL,
+          obtidas: 0,
+          revealedSlots: new Set<number>(),
+        }
+      }
+    },
+  })
+
+  const stickers = stickersData?.stickers ?? []
+  const revealedSlots = stickersData?.revealedSlots ?? new Set<number>()
+  const total = stickersData?.total ?? FALLBACK_TOTAL
+  const obtidas = stickersData?.obtidas ?? 0
 
   const reveal = async (slot: number) => {
     if (!isLogged) {
@@ -308,11 +306,9 @@ export default function AlbumStickersPage({ setPage }: { setPage: (p: any) => vo
     setRevealingSlot(slot)
     try {
       await api.revelarSticker(slot)
-      setRevealedSlots((prev) => {
-        const next = new Set(prev)
-        next.add(slot)
-        return next
-      })
+      queryClient.setQueryData(stickersQueryKey, (prev: typeof stickersData) =>
+        prev ? { ...prev, revealedSlots: new Set(prev.revealedSlots).add(slot) } : prev
+      )
       await refreshGold()
       await load()
       showToast(`✓ Sticker do slot #${slot} revelado!`)

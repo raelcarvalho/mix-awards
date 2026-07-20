@@ -989,13 +989,31 @@ export default function TirarTimePage() {
 
   useEffect(() => {
     if (!isLogged || !snapshot?.id) return
-    const pollId = window.setInterval(() => refreshSnapshot(snapshot.id), 1200)
+    const sessionId = snapshot.id
+    // Pausa o poll quando a aba está em segundo plano: ninguém está vendo o
+    // draft, então não há motivo para continuar batendo no servidor a cada
+    // 1.2s. Ao voltar o foco, refaz o snapshot na hora para não ficar
+    // desatualizado.
+    const poll = () => {
+      if (document.hidden) return
+      refreshSnapshot(sessionId)
+    }
+    const pollId = window.setInterval(poll, 1200)
     const hbId = window.setInterval(() => {
+      if (document.hidden) return
       api.mixHeartbeat().catch(() => {})
     }, 25000)
+    const onVisibilityChange = () => {
+      if (!document.hidden) {
+        refreshSnapshot(sessionId)
+        api.mixHeartbeat().catch(() => {})
+      }
+    }
+    document.addEventListener('visibilitychange', onVisibilityChange)
     return () => {
       window.clearInterval(pollId)
       window.clearInterval(hbId)
+      document.removeEventListener('visibilitychange', onVisibilityChange)
     }
   }, [isLogged, refreshSnapshot, snapshot?.id])
 
@@ -2451,6 +2469,24 @@ export default function TirarTimePage() {
                 }
               >
                 {busy === 'new-session' ? 'RESETANDO...' : 'Nova sessão'}
+              </Btn>
+            )}
+            {isAdmin && (
+              <Btn
+                color='#4ade80'
+                variant='outline'
+                size='lg'
+                className='tmx-action-btn'
+                disabled={loading || !!busy}
+                onClick={() =>
+                  runAction(
+                    'mock-flow',
+                    () => api.mixMockFluxoCompleto(),
+                    'Mock aplicado: capitães, 8 jogadores, dados, picks e dados do mapa. Veto liberado!'
+                  )
+                }
+              >
+                {busy === 'mock-flow' ? 'SIMULANDO...' : '⚡ Mock: fluxo completo'}
               </Btn>
             )}
             <Btn

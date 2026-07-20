@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { AnimatePresence, motion } from 'framer-motion'
 import * as mixApi from '@/api/mixawards'
 import type { AwardFile, AwardJogador, FinalReport } from '@/api/mixawards'
@@ -325,36 +326,22 @@ function AwardEnvelopeCard({
 }
 
 export default function MixAwardsPage() {
-  const [report, setReport] = useState<FinalReport | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [erro, setErro] = useState('')
   const [reveals, setReveals] = useState<RevealState>(() => loadReveals())
 
-  useEffect(() => {
-    let cancel = false
-    setLoading(true)
-    setErro('')
-    mixApi
-      .getFinalReport()
-      .then((data) => {
-        if (!cancel) setReport(data)
-      })
-      .catch((error: any) => {
-        if (!cancel) {
-          setErro(
-            error?.status === 401
-              ? 'Faça login para acessar a cerimônia do Mix Awards.'
-              : error?.message || 'Erro ao carregar a cerimônia.'
-          )
-        }
-      })
-      .finally(() => {
-        if (!cancel) setLoading(false)
-      })
-    return () => {
-      cancel = true
-    }
-  }, [])
+  const {
+    data: report = null,
+    isPending: loading,
+    error: reportError,
+  } = useQuery({
+    queryKey: ['mix-awards-final-report'],
+    queryFn: () => mixApi.getFinalReport(),
+  })
+
+  const erro = reportError
+    ? (reportError as any)?.status === 401
+      ? 'Faça login para acessar a cerimônia do Mix Awards.'
+      : (reportError as any)?.message || 'Erro ao carregar a cerimônia.'
+    : ''
 
   const countdown = useCountdown(report && !report.liberado ? report.reveal_at : null)
   const liberado = !!report && (report.liberado || report.preview_admin)

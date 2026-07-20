@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Card } from '@/components/ui/Card'
 import { useAuth } from '@/hooks/useAuth'
 import * as api from '@/services/api'
@@ -676,14 +677,9 @@ type DashboardPageProps = {
 
 export default function DashboardPage({ setPage, dashboardPlayerId }: DashboardPageProps) {
   const { user, jogadorId, isLogged, refreshGold } = useAuth()
-  const [jogador, setJogador] = useState<Jogador | null>(null)
+  const queryClient = useQueryClient()
   const [claimingMissions, setClaimingMissions] = useState(false)
   const [claimToast, setClaimToast] = useState('')
-  const [allJogadores, setAllJogadores] = useState<Jogador[]>([])
-  const [partidas, setPartidas] = useState<Partida[]>([])
-  const [missions, setMissions] = useState<api.PlayerMission[]>([])
-  const [loading, setLoading] = useState(true)
-  const [loadError, setLoadError] = useState('')
   const [animated, setAnimated] = useState(false)
   const [historyPage, setHistoryPage] = useState(0)
   const [hoveredHistoryPointKey, setHoveredHistoryPointKey] = useState<string | null>(null)
@@ -691,140 +687,127 @@ export default function DashboardPage({ setPage, dashboardPlayerId }: DashboardP
   const [monthKey, setMonthKey] = useState<string>('all')
   const [retrospectivaOpen, setRetrospectivaOpen] = useState(false)
 
-  useEffect(() => {
-    if (!isLogged) {
-      setJogador(null)
-      setAllJogadores([])
-      setPartidas([])
-      setMissions([])
-      setLoadError('')
-      setLoading(false)
-      return
-    }
+  const {
+    data: dashData,
+    isPending: loading,
+    error: dashQueryError,
+  } = useQuery({
+    queryKey: [
+      'dashboard-me',
+      isLogged,
+      user?.id,
+      user?.nome,
+      jogadorId,
+      dashboardPlayerId,
+      seasonId,
+      monthKey,
+    ],
+    queryFn: async () => {
+      const filters: api.SeasonFilters =
+        monthKey === 'all'
+          ? { seasonId }
+          : {
+              month: monthKey,
+            }
 
-    let alive = true
-    setLoading(true)
-    setLoadError('')
-    const filters: api.SeasonFilters =
-      monthKey === 'all'
-        ? { seasonId }
-        : {
-            month: monthKey,
-          }
+      let loadError = ''
 
-    Promise.all([
-      api.listarJogadores(filters).catch((err: any) => {
-        if (alive) setLoadError(err?.message || 'Erro ao carregar ranking')
-        return []
-      }),
-      api.listarPartidas(undefined, filters).catch((err: any) => {
-        if (alive) setLoadError(err?.message || 'Erro ao carregar partidas')
-        return []
-      }),
-    ])
-      .then(async ([jogs, parts]) => {
-        if (!alive) return
+      const [jogs, parts] = await Promise.all([
+        api.listarJogadores(filters).catch((err: any) => {
+          loadError = err?.message || 'Erro ao carregar ranking'
+          return []
+        }),
+        api.listarPartidas(undefined, filters).catch((err: any) => {
+          loadError = err?.message || 'Erro ao carregar partidas'
+          return []
+        }),
+      ])
 
-        const ranking = safeArray<Jogador>(jogs).sort(
-          (a, b) =>
-            toNumber(b.level_pontos ?? b.pontos) -
-            toNumber(a.level_pontos ?? a.pontos)
+      const ranking = safeArray<Jogador>(jogs).sort(
+        (a, b) => toNumber(b.level_pontos ?? b.pontos) - toNumber(a.level_pontos ?? a.pontos)
+      )
+
+      const selectedJogadorId = toNumber(dashboardPlayerId)
+      const authJogadorId = toNumber(jogadorId)
+      const authGcId = toNumber((user as { gc_id?: number | string } | null)?.gc_id)
+      const userNames = Array.from(
+        new Set(
+          [String(user?.gc_nick || ''), String(user?.nome || '')]
+            .map((value) => normalizeName(value))
+            .filter(Boolean)
         )
-        setAllJogadores(ranking)
+      )
 
-        const selectedJogadorId = toNumber(dashboardPlayerId)
-        const authJogadorId = toNumber(jogadorId)
-        const authGcId = toNumber((user as { gc_id?: number | string } | null)?.gc_id)
-        const userNames = Array.from(
-          new Set(
-            [String(user?.gc_nick || ''), String(user?.nome || '')]
-              .map((value) => normalizeName(value))
-              .filter(Boolean)
-          )
-        )
+      const meBySelectedId =
+        selectedJogadorId > 0 ? ranking.find((j) => toNumber(j.id) === selectedJogadorId) : null
 
-        const meBySelectedId =
-          selectedJogadorId > 0
-            ? ranking.find((j) => toNumber(j.id) === selectedJogadorId)
-            : null
+      const meByAuthId =
+        authJogadorId > 0 ? ranking.find((j) => toNumber(j.id) === authJogadorId) : null
 
-        const meByAuthId =
-          authJogadorId > 0
-            ? ranking.find((j) => toNumber(j.id) === authJogadorId)
-            : null
+      const meByGcId =
+        authGcId > 0 ? ranking.find((j) => toNumber(j.gc_id) === authGcId) : null
 
-        const meByGcId =
-          authGcId > 0
-            ? ranking.find((j) => toNumber(j.gc_id) === authGcId)
-            : null
+      const meByName = ranking.find((j) => userNames.includes(normalizeName(String(j.nome || ''))))
 
-        const meByName = ranking.find(
-          (j) => userNames.includes(normalizeName(String(j.nome || '')))
-        )
+      const me = meBySelectedId ?? meByAuthId ?? meByGcId ?? meByName ?? null
 
-        const me = meBySelectedId ?? meByAuthId ?? meByGcId ?? meByName ?? null
-        setJogador(me)
-
-        if (!me && selectedJogadorId <= 0) {
-          setLoadError('Nao foi possivel localizar o jogador vinculado ao usuario logado')
-          setPartidas([])
-          return
+      if (!me && selectedJogadorId <= 0) {
+        return {
+          allJogadores: ranking,
+          jogador: me,
+          partidas: [] as Partida[],
+          loadError: loadError || 'Nao foi possivel localizar o jogador vinculado ao usuario logado',
         }
+      }
 
-        let preferredParts = safeArray<Partida>(parts)
-        if (me?.nome) {
-          try {
-            const filtered = safeArray<Partida>(await api.listarPartidas(me.nome, filters))
-            if (filtered.length > 0) preferredParts = filtered
-          } catch {}
-        }
+      let preferredParts = safeArray<Partida>(parts)
+      if (me?.nome) {
+        try {
+          const filtered = safeArray<Partida>(await api.listarPartidas(me.nome, filters))
+          if (filtered.length > 0) preferredParts = filtered
+        } catch {}
+      }
 
-        const sortedParts = preferredParts.sort((a, b) => {
-          const ta = readMatchDate(a) ? new Date(readMatchDate(a)).getTime() : 0
-          const tb = readMatchDate(b) ? new Date(readMatchDate(b)).getTime() : 0
-          return tb - ta
-        })
-        setPartidas(sortedParts)
-      })
-      .finally(() => {
-        if (!alive) return
-        setLoading(false)
-        setTimeout(() => setAnimated(true), 200)
+      const sortedParts = preferredParts.sort((a, b) => {
+        const ta = readMatchDate(a) ? new Date(readMatchDate(a)).getTime() : 0
+        const tb = readMatchDate(b) ? new Date(readMatchDate(b)).getTime() : 0
+        return tb - ta
       })
 
-    return () => {
-      alive = false
-    }
-  }, [isLogged, user?.id, user?.nome, jogadorId, dashboardPlayerId, seasonId, monthKey])
+      return { allJogadores: ranking, jogador: me, partidas: sortedParts, loadError }
+    },
+    enabled: isLogged,
+  })
+
+  const jogador = isLogged ? dashData?.jogador ?? null : null
+  const allJogadores = isLogged ? dashData?.allJogadores ?? [] : []
+  const partidas = isLogged ? dashData?.partidas ?? [] : []
+  const loadError = isLogged
+    ? dashData?.loadError || (dashQueryError ? (dashQueryError as any)?.message || 'Erro ao carregar dashboard' : '')
+    : ''
 
   useEffect(() => {
-    if (!isLogged) {
-      setMissions([])
-      return
+    if (!loading) {
+      const t = setTimeout(() => setAnimated(true), 200)
+      return () => clearTimeout(t)
     }
+  }, [loading])
 
-    const selectedId = toNumber(jogador?.id)
-    if (selectedId <= 0) {
-      setMissions([])
-      return
-    }
-
-    let alive = true
-    api
-      .listarMissoesJogador(selectedId)
-      .then((rows) => {
-        if (!alive) return
-        setMissions(safeArray<api.PlayerMission>(rows))
-      })
-      .catch(() => {
-        if (!alive) return
-        setMissions([])
-      })
-
-    return () => {
-      alive = false
-    }
-  }, [isLogged, jogador?.id])
+  const missionsQueryKey = ['dashboard-missions', jogador?.id] as const
+  const { data: missions = [] } = useQuery({
+    queryKey: missionsQueryKey,
+    queryFn: async () => {
+      const selectedId = toNumber(jogador?.id)
+      if (selectedId <= 0) return [] as api.PlayerMission[]
+      try {
+        const rows = await api.listarMissoesJogador(selectedId)
+        return safeArray<api.PlayerMission>(rows)
+      } catch {
+        return [] as api.PlayerMission[]
+      }
+    },
+    enabled: isLogged && toNumber(jogador?.id) > 0,
+  })
 
   useEffect(() => {
     setHistoryPage(0)
@@ -1369,7 +1352,7 @@ export default function DashboardPage({ setPage, dashboardPlayerId }: DashboardP
     setClaimingMissions(true)
     try {
       const result = await api.resgatarMissoes(playerId)
-      setMissions(safeArray<api.PlayerMission>(result.missoes))
+      queryClient.setQueryData(missionsQueryKey, safeArray<api.PlayerMission>(result.missoes))
       await refreshGold()
       setClaimToast(`✓ +${result.gold_creditado || 40} gold resgatado! Novas missões liberadas.`)
       window.setTimeout(() => setClaimToast(''), 2800)

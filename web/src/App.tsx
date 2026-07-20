@@ -12,6 +12,9 @@ import { PartidasPage, ImportarPage } from '@/pages/PartidasPage'
 import TirarTimePage from '@/pages/TirarTimePage'
 import CopaDoMundoPage from '@/pages/CopaDoMundoPage'
 import MixAwardsPage from '@/pages/MixAwardsPage'
+// Mix Bet: feature desativada por enquanto (não está em uso). Para reativar,
+// descomente esta importação e todos os trechos marcados "Mix Bet" abaixo.
+// import BetPage from '@/pages/BetPage'
 
 type Page =
   | 'home'
@@ -25,6 +28,7 @@ type Page =
   | 'importar'
   | 'copa-do-mundo'
   | 'mix-awards'
+  // | 'bet' // Mix Bet desativado
 
 const PAGE_STORAGE_KEY = 'mixawards:last-page'
 
@@ -40,6 +44,7 @@ const PAGE_VALUES: Page[] = [
   'importar',
   'copa-do-mundo',
   'mix-awards',
+  // 'bet', // Mix Bet desativado
 ]
 
 const PAGE_TO_PATH: Record<Page, string> = {
@@ -54,6 +59,7 @@ const PAGE_TO_PATH: Record<Page, string> = {
   importar: '/importar',
   'copa-do-mundo': '/copa-do-mundo',
   'mix-awards': '/mix-awards',
+  // bet: '/bet', // Mix Bet desativado
 }
 
 function isValidPage(value: unknown): value is Page {
@@ -107,6 +113,7 @@ function renderPage(page: Page, setPage: (p: Page) => void, dashboardPlayerId: n
     case 'importar':       return <ImportarPage />
     case 'copa-do-mundo':  return <CopaDoMundoPage setPage={setPage} />
     case 'mix-awards':     return <MixAwardsPage />
+    // case 'bet':            return <BetPage /> // Mix Bet desativado
     default:               return <HomePage setPage={setPage} />
   }
 }
@@ -121,17 +128,21 @@ function Router({
   dashboardPlayerId: number | null
 }) {
   return (
-    <AnimatePresence mode="wait">
-      <motion.div
-        key={page}
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -8 }}
-        transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
-      >
-        {renderPage(page, setPage, dashboardPlayerId)}
-      </motion.div>
-    </AnimatePresence>
+    // position: relative é necessário para o mode="popLayout" posicionar
+    // corretamente a página que está saindo (ver docs do Framer Motion).
+    <div style={{ position: 'relative' }}>
+      <AnimatePresence mode="popLayout" initial={false}>
+        <motion.div
+          key={page}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -6 }}
+          transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+        >
+          {renderPage(page, setPage, dashboardPlayerId)}
+        </motion.div>
+      </AnimatePresence>
+    </div>
   )
 }
 

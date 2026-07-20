@@ -15,6 +15,7 @@ type Page =
   | 'importar'
   | 'copa-do-mundo'
   | 'mix-awards'
+  // | 'bet' // Mix Bet desativado
 
 interface Props {
   page: Page
@@ -36,6 +37,7 @@ const NAV: { id: Page; icon: string; label: string; adminOnly?: boolean; neon?: 
   { id: 'dashboard', icon: '◈', label: 'Meu Dashboard' },
   { id: 'partidas', icon: '⚔', label: 'Partidas' },
   { id: 'tirar-time', icon: '🎲', label: 'Tirar Time' },
+  // { id: 'bet', icon: '💰', label: 'Mix Bet', neon: true }, // Mix Bet desativado
   { id: 'album', icon: '📋', label: 'Álbum' },
   { id: 'copa-do-mundo', icon: '🏆', label: 'Copa do Mundo', neon: true },
   { id: 'mix-awards', icon: '🔐', label: 'Mix Awards', neon: true, adminOnly: true },
@@ -57,6 +59,7 @@ const PAGE_TITLES: Record<Page, string> = {
   importar: 'Importar Partida',
   'copa-do-mundo': 'Copa do Mundo',
   'mix-awards': 'Mix Awards 2° Season',
+  // bet: 'Mix Bet', // Mix Bet desativado
 }
 
 function normalizeAvatarMedia(raw?: string | null): string | null {

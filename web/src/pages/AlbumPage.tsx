@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Card, Btn } from '@/components/ui/Card'
 import { useAuth } from '@/hooks/useAuth'
 import * as api from '@/services/api'
@@ -20,13 +21,10 @@ const ALBUM_ACTION_BTN_CLASS =
 
 export default function AlbumPage({ setPage }: { setPage: (p: any) => void }) {
   const { isLogged } = useAuth()
-  const [figurinhas, setFigurinhas] = useState<Figurinha[]>([])
-  const [total, setTotal] = useState(FALLBACK_TOTAL)
-  const [obtidas, setObtidas] = useState(0)
-  const [packCount, setPackCount] = useState(0)
+  const queryClient = useQueryClient()
+  const albumQueryKey = useMemo(() => ['album', isLogged] as const, [isLogged])
   const [page, setAlbumPage] = useState(1)
   const [selected, setSelected] = useState<SlotView | null>(null)
-  const [loading, setLoading] = useState(true)
   const [opening, setOpening] = useState(false)
   const [packFxOpen, setPackFxOpen] = useState(false)
   const [packFxCards, setPackFxCards] = useState<OpenedPackCard[]>([])
@@ -50,44 +48,56 @@ export default function AlbumPage({ setPage }: { setPage: (p: any) => void }) {
     toastTimerRef.current = window.setTimeout(() => setToast(''), 2500)
   }, [])
 
-  const loadAlbum = useCallback(async () => {
-    setLoading(true)
+  const { data: albumData, isPending: loading, refetch: loadAlbum } = useQuery({
+    queryKey: albumQueryKey,
+    queryFn: async () => {
+      let figurinhas: Figurinha[] = []
+      let total = FALLBACK_TOTAL
+      let obtidas = 0
+      try {
+        const data = await api.meuAlbum()
+        const album = normalizeAlbum(data)
+        figurinhas = album.figurinhas
+        total = album.total
+        obtidas = album.obtidas
+      } catch {}
 
-    try {
-      const data = await api.meuAlbum()
-      const album = normalizeAlbum(data)
-      setFigurinhas(album.figurinhas)
-      setTotal(album.total)
-      setObtidas(album.obtidas)
-    } catch {
-      setFigurinhas([])
-      setTotal(FALLBACK_TOTAL)
-      setObtidas(0)
-    }
+      let packCount = 0
+      try {
+        const pacs = await api.listarPacotesFechados()
+        const arr = pacs?.resultados?.pacotes ?? pacs?.pacotes ?? []
+        packCount = Array.isArray(arr) ? arr.length : 0
+      } catch {}
 
-    try {
-      const pacs = await api.listarPacotesFechados()
-      const arr = pacs?.resultados?.pacotes ?? pacs?.pacotes ?? []
-      setPackCount(Array.isArray(arr) ? arr.length : 0)
-    } catch {
-      setPackCount(0)
-    }
+      return { figurinhas, total, obtidas, packCount }
+    },
+  })
 
-    setLoading(false)
-  }, [])
+  const figurinhas = albumData?.figurinhas ?? []
+  const total = albumData?.total ?? FALLBACK_TOTAL
+  const obtidas = albumData?.obtidas ?? 0
+  const packCount = albumData?.packCount ?? 0
 
-  useEffect(() => {
-    loadAlbum()
-  }, [loadAlbum])
-
-  const acknowledgeNew = useCallback(async (figurinhaId: number) => {
-    setFigurinhas((prev) => prev.map((f) => (f.id === figurinhaId ? { ...f, nova: false } : f)))
-    try {
-      await api.ackFigurinhasNovas([figurinhaId])
-    } catch {
-      // sem bloqueio de UI
-    }
-  }, [])
+  const acknowledgeNew = useCallback(
+    async (figurinhaId: number) => {
+      queryClient.setQueryData(albumQueryKey, (prev: typeof albumData) =>
+        prev
+          ? {
+              ...prev,
+              figurinhas: prev.figurinhas.map((f) =>
+                f.id === figurinhaId ? { ...f, nova: false } : f
+              ),
+            }
+          : prev
+      )
+      try {
+        await api.ackFigurinhasNovas([figurinhaId])
+      } catch {
+        // sem bloqueio de UI
+      }
+    },
+    [albumQueryKey, queryClient]
+  )
 
   const openPack = async () => {
     setOpening(true)
@@ -108,7 +118,9 @@ export default function AlbumPage({ setPage }: { setPage: (p: any) => void }) {
       setPackFxCards(openedCards)
       setPackFxOpen(true)
       setPendingReloadAfterFx(true)
-      setPackCount((prev) => Math.max(0, prev - 1))
+      queryClient.setQueryData(albumQueryKey, (prev: typeof albumData) =>
+        prev ? { ...prev, packCount: Math.max(0, prev.packCount - 1) } : prev
+      )
       showToast('✓ Pacote aberto! Revele as cartas.')
     } catch (err: any) {
       showToast(err.message || 'Erro ao abrir pacote')

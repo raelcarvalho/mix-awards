@@ -4,6 +4,8 @@ import { DateTime } from "luxon";
 
 import CustomResponse from "App/Utils/CustomResponse";
 import Jogadores from "App/Models/Jogadores";
+// Mix Bet desativado por enquanto — ver comentário em startMapVetoStage.
+// import BetService from "App/Service/Bet/BetService";
 
 type Team = "A" | "B";
 
@@ -94,6 +96,18 @@ type SessaoMapaRow = {
   ordem_ban: number | null;
   banido_em: string | Date | null;
 };
+
+// Cache do histórico de mapa/vitórias usado no snapshot (buildMapStats).
+// A tela "Tirar Time" faz poll a cada ~1.2s por cliente conectado; sem cache,
+// cada poll refazia o join tb_partidas_jogadores x tb_partidas para todos os
+// jogadores da sessão. Esse histórico só muda quando uma partida nova é
+// registrada, então um TTL curto elimina a maior parte da carga sem deixar
+// os números visivelmente desatualizados.
+const MAP_STATS_CACHE_TTL_MS = 15_000;
+const mapStatsCache = new Map<
+  string,
+  { at: number; data: Map<string, { partidas: number; vitorias: number }> }
+>();
 
 export default class TirarMixController {
   protected customResponse = new CustomResponse();
@@ -469,6 +483,15 @@ export default class TirarMixController {
         finalizado_em: this.nowSql(),
         updated_at: this.nowSql(),
       });
+
+    // Mix Bet: desativado por enquanto (feature não está em uso). Para
+    // reativar, descomente o bloco abaixo e o import de BetService no topo
+    // deste arquivo.
+    // try {
+    //   await BetService.criarParaSessao(sessaoId, mapaEscolhido, trx);
+    // } catch (error) {
+    //   console.error("Erro ao criar bet da sessão:", error);
+    // }
   }
 
   private async setFinalizado(sessaoId: number, trx?: any) {
@@ -953,37 +976,55 @@ export default class TirarMixController {
     const mapSet = new Set(mapas.map((m) => this.normalizeMapName(m)));
     const aIds = teamA.map((p) => Number(p.jogador_id)).filter((v) => v > 0);
     const bIds = teamB.map((p) => Number(p.jogador_id)).filter((v) => v > 0);
-    const allIds = Array.from(new Set([...aIds, ...bIds]));
+    const allIds = Array.from(new Set([...aIds, ...bIds])).sort((a, b) => a - b);
 
-    const base = new Map<string, { partidas: number; vitorias: number }>();
-    if (mapSet.size && allIds.length) {
-      try {
-        let rows: any[] = [];
+    // Chave de cache: mesmo conjunto de mapas + mesmo conjunto de jogadores
+    // sempre produz o mesmo resultado (histórico de partidas já jogadas), então
+    // reutiliza entre polls consecutivos do snapshot em vez de reconsultar.
+    const cacheKey = `${Array.from(mapSet).sort().join(",")}|${allIds.join(",")}`;
+    const cached = mapStatsCache.get(cacheKey);
+    let base: Map<string, { partidas: number; vitorias: number }>;
+
+    if (cached && Date.now() - cached.at < MAP_STATS_CACHE_TTL_MS) {
+      base = cached.data;
+    } else {
+      base = new Map<string, { partidas: number; vitorias: number }>();
+      if (mapSet.size && allIds.length) {
         try {
-          rows = (await Database.from("tb_partidas_jogadores as pj")
-            .innerJoin("tb_partidas as p", "p.id", "pj.partidas_id")
-            .whereIn("pj.jogadores_id", allIds)
-            .select("pj.jogadores_id", "p.mapa", "pj.partida_ganha")) as any[];
-        } catch {
-          rows = (await Database.from("tb_partidas_jogadores as pj")
-            .innerJoin("tb_partidas as p", "p.id", "pj.partida_id")
-            .whereIn("pj.jogadores_id", allIds)
-            .select("pj.jogadores_id", "p.mapa", "pj.partida_ganha")) as any[];
-        }
+          let rows: any[] = [];
+          try {
+            rows = (await Database.from("tb_partidas_jogadores as pj")
+              .innerJoin("tb_partidas as p", "p.id", "pj.partidas_id")
+              .whereIn("pj.jogadores_id", allIds)
+              .select("pj.jogadores_id", "p.mapa", "pj.partida_ganha")) as any[];
+          } catch {
+            rows = (await Database.from("tb_partidas_jogadores as pj")
+              .innerJoin("tb_partidas as p", "p.id", "pj.partida_id")
+              .whereIn("pj.jogadores_id", allIds)
+              .select("pj.jogadores_id", "p.mapa", "pj.partida_ganha")) as any[];
+          }
 
-        for (const row of rows) {
-          const mapa = this.normalizeMapName(row.mapa);
-          if (!mapSet.has(mapa)) continue;
-          const jogadorId = Number(row.jogadores_id);
-          if (!jogadorId) continue;
-          const key = `${mapa}|${jogadorId}`;
-          const curr = base.get(key) || { partidas: 0, vitorias: 0 };
-          curr.partidas += 1;
-          if (row.partida_ganha) curr.vitorias += 1;
-          base.set(key, curr);
+          for (const row of rows) {
+            const mapa = this.normalizeMapName(row.mapa);
+            if (!mapSet.has(mapa)) continue;
+            const jogadorId = Number(row.jogadores_id);
+            if (!jogadorId) continue;
+            const key = `${mapa}|${jogadorId}`;
+            const curr = base.get(key) || { partidas: 0, vitorias: 0 };
+            curr.partidas += 1;
+            if (row.partida_ganha) curr.vitorias += 1;
+            base.set(key, curr);
+          }
+
+          mapStatsCache.set(cacheKey, { at: Date.now(), data: base });
+          // Evita crescimento indefinido do cache em processos de longa duração.
+          if (mapStatsCache.size > 200) {
+            const oldestKey = mapStatsCache.keys().next().value;
+            if (oldestKey !== undefined) mapStatsCache.delete(oldestKey);
+          }
+        } catch {
+          // Fallback seguro: mantém estatísticas zeradas sem quebrar snapshot.
         }
-      } catch {
-        // Fallback seguro: mantém estatísticas zeradas sem quebrar snapshot.
       }
     }
 
@@ -2093,6 +2134,278 @@ export default class TirarMixController {
       );
     } catch (error) {
       return this.customResponse.erro(response, "Erro ao aplicar mock de pick aleatório.", error, 500);
+    }
+  }
+
+  /**
+   * Mock de fluxo completo: promove o usuário a capitão, cria o capitão
+   * oponente, completa o pool com 8 jogadores, rola os dados dos times,
+   * faz todos os picks aleatórios e rola os dados do veto de mapa.
+   * A sessão termina pronta na fase de VETO DE MAPAS (capitão vencedor na vez).
+   */
+  public async mockFluxoCompleto({ auth, request, response }: HttpContextContract) {
+    try {
+      const user = await auth.authenticate();
+      const jogador = await this.jogadorDoUsuarioOrFail(user.id);
+      const sessaoIdInput = Number(request.input("sessao_id"));
+
+      let sessao = sessaoIdInput
+        ? await this.sessionById(sessaoIdInput)
+        : await this.sessionAtiva(user.id);
+      if (!sessao) throw new Error("Sessão não encontrada.");
+      sessao = await this.reconcile(sessao.id);
+      if (!sessao) throw new Error("Sessão inválida.");
+
+      if (sessao.fase === "finalizado") {
+        return this.customResponse.erro(
+          response,
+          "Sessão já finalizada. Crie uma nova sessão antes de usar o mock.",
+          {},
+          409
+        );
+      }
+
+      const rollDistinct = () => {
+        // Rola 2d6 para cada time até desempatar
+        while (true) {
+          const a1 = Math.floor(Math.random() * 6) + 1;
+          const a2 = Math.floor(Math.random() * 6) + 1;
+          const b1 = Math.floor(Math.random() * 6) + 1;
+          const b2 = Math.floor(Math.random() * 6) + 1;
+          if (a1 + a2 !== b1 + b2) return { a1, a2, b1, b2 };
+        }
+      };
+
+      // ── 1. Capitães ──────────────────────────────────────────────────
+      let myTeam = this.teamByCaptain(sessao, jogador.id);
+      if (!myTeam) {
+        myTeam = !sessao.time_a_capitao_id ? "A" : "B";
+        const meRow = await Database.from("tb_tirar_mix_players")
+          .where("sessao_id", sessao.id)
+          .where("jogador_id", jogador.id)
+          .first();
+        if (meRow) {
+          await Database.from("tb_tirar_mix_players").where("id", meRow.id).update({
+            is_capitao: true,
+            is_selecionado: true,
+            time: myTeam,
+            ordem_pick: null,
+            pool_slot: null,
+            updated_at: this.nowSql(),
+          });
+        } else {
+          await Database.table("tb_tirar_mix_players").insert({
+            sessao_id: sessao.id,
+            jogador_id: jogador.id,
+            is_capitao: true,
+            is_selecionado: true,
+            time: myTeam,
+            pool_slot: null,
+            created_at: this.nowSql(),
+            updated_at: this.nowSql(),
+          });
+        }
+        const patch: any = { updated_at: this.nowSql() };
+        if (myTeam === "A") patch.time_a_capitao_id = jogador.id;
+        else patch.time_b_capitao_id = jogador.id;
+        await Database.from("tb_tirar_mix_sessoes").where("id", sessao.id).update(patch);
+        sessao = (await this.sessionById(sessao.id))!;
+      }
+
+      const opponentTeam: Team = myTeam === "A" ? "B" : "A";
+      let opponentCaptainId =
+        opponentTeam === "A" ? sessao.time_a_capitao_id : sessao.time_b_capitao_id;
+
+      const blockedIds = new Set<number>([jogador.id]);
+      const sessaoPlayers = await Database.from("tb_tirar_mix_players")
+        .where("sessao_id", sessao.id)
+        .select("jogador_id");
+      for (const p of sessaoPlayers) blockedIds.add(Number(p.jogador_id));
+      if (sessao.time_a_capitao_id) blockedIds.add(Number(sessao.time_a_capitao_id));
+      if (sessao.time_b_capitao_id) blockedIds.add(Number(sessao.time_b_capitao_id));
+
+      const criarBots = async (qtd: number) => {
+        const stamp = DateTime.now().toFormat("yyyyLLddHHmmss");
+        const rand = Math.floor(Math.random() * 1000);
+        const bots = Array.from({ length: qtd }, (_, idx) => {
+          const nick = `BOT_FLOW_${stamp}_${rand}_${idx + 1}`;
+          return {
+            nome: nick,
+            nome_normalizado: nick.toUpperCase(),
+            imagem: "",
+            gold: 0,
+            adr: "0",
+            kills: "0",
+            assistencias: "0",
+            mortes: "0",
+            kda_player: "0.00",
+            kast: 0,
+            flash_assist: "0",
+            first_kill: "0",
+            multi_kill: "0",
+            vitorias: "0",
+            qtd_partidas: "0",
+            pontos: "0",
+            created_at: this.nowSql(),
+            updated_at: this.nowSql(),
+          };
+        });
+        const inserted = await Database.table("tb_jogadores").insert(bots).returning("id");
+        const rows = Array.isArray(inserted) ? inserted : [inserted];
+        return rows.map((r: any) => Number(r?.id ?? r));
+      };
+
+      const pegarCandidatos = async (qtd: number) => {
+        if (qtd <= 0) return [] as number[];
+        const candidatos = await Database.from("tb_jogadores")
+          .whereNotIn("id", Array.from(blockedIds))
+          .select("id")
+          .orderByRaw("RANDOM()")
+          .limit(qtd);
+        const ids = candidatos.map((c: any) => Number(c.id));
+        const faltam = qtd - ids.length;
+        if (faltam > 0) ids.push(...(await criarBots(faltam)));
+        for (const id of ids) blockedIds.add(id);
+        return ids;
+      };
+
+      if (!opponentCaptainId) {
+        const [capId] = await pegarCandidatos(1);
+        if (!capId) throw new Error("Não foi possível criar capitão oponente.");
+        await Database.table("tb_tirar_mix_players").insert({
+          sessao_id: sessao.id,
+          jogador_id: capId,
+          is_capitao: true,
+          is_selecionado: true,
+          time: opponentTeam,
+          pool_slot: null,
+          created_at: this.nowSql(),
+          updated_at: this.nowSql(),
+        });
+        const patch: any = { updated_at: this.nowSql() };
+        if (opponentTeam === "A") patch.time_a_capitao_id = capId;
+        else patch.time_b_capitao_id = capId;
+        await Database.from("tb_tirar_mix_sessoes").where("id", sessao.id).update(patch);
+        opponentCaptainId = capId;
+        sessao = (await this.sessionById(sessao.id))!;
+      }
+
+      // ── 2. Pool com 8 jogadores ──────────────────────────────────────
+      const poolRow = await Database.from("tb_tirar_mix_players")
+        .where("sessao_id", sessao.id)
+        .where("is_capitao", false)
+        .where("is_selecionado", false)
+        .count("* as c")
+        .first();
+      const precisa = Math.max(0, 8 - Number(poolRow?.c || 0));
+      if (precisa > 0) {
+        const novosIds = await pegarCandidatos(precisa);
+        const occupiedRows = await Database.from("tb_tirar_mix_players")
+          .where("sessao_id", sessao.id)
+          .where("is_capitao", false)
+          .where("is_selecionado", false)
+          .whereNotNull("pool_slot")
+          .select("pool_slot");
+        const usedSlots = new Set<number>(
+          occupiedRows.map((r: any) => Number(r.pool_slot)).filter((n: number) => n > 0)
+        );
+        const nextSlot = () => {
+          for (let i = 1; i <= this.MAX_POOL_SLOTS; i += 1) {
+            if (!usedSlots.has(i)) {
+              usedSlots.add(i);
+              return i;
+            }
+          }
+          return null;
+        };
+        await Database.table("tb_tirar_mix_players").insert(
+          novosIds.map((id) => ({
+            sessao_id: sessao!.id,
+            jogador_id: id,
+            is_capitao: false,
+            is_selecionado: false,
+            pool_slot: nextSlot(),
+            created_at: this.nowSql(),
+            updated_at: this.nowSql(),
+          }))
+        );
+      }
+
+      // ── 3. Dados dos times → direto para o draft ─────────────────────
+      if (sessao.fase !== "draft") {
+        const d = rollDistinct();
+        const winner: Team = d.a1 + d.a2 > d.b1 + d.b2 ? "A" : "B";
+        await Database.from("tb_tirar_mix_sessoes").where("id", sessao.id).update({
+          status: "draft_em_andamento",
+          fase: "draft",
+          start_ready_a: true,
+          start_ready_b: true,
+          start_countdown_started_at: null,
+          start_countdown_ends_at: null,
+          dice_first_turn: "A",
+          dice_turn: null,
+          dice_winner: winner,
+          dice_a_d1: d.a1,
+          dice_a_d2: d.a2,
+          dice_a_total: d.a1 + d.a2,
+          dice_b_d1: d.b1,
+          dice_b_d2: d.b2,
+          dice_b_total: d.b1 + d.b2,
+          pick_turn: winner,
+          pick_deadline: DateTime.now().plus({ seconds: 30 }).toSQL(),
+          iniciado_em: sessao.iniciado_em || this.nowSql(),
+          updated_at: this.nowSql(),
+        });
+        sessao = (await this.sessionById(sessao.id))!;
+      }
+
+      // ── 4. Picks aleatórios até completar os times ───────────────────
+      for (let i = 0; i < 10; i += 1) {
+        sessao = (await this.sessionById(sessao.id))!;
+        if (!sessao || sessao.fase !== "draft" || !sessao.pick_turn) break;
+        const pool = await this.remainingPool(sessao.id);
+        if (!pool.length) break;
+        const turn = sessao.pick_turn;
+        const captainId = turn === "A" ? sessao.time_a_capitao_id : sessao.time_b_capitao_id;
+        if (!captainId) break;
+        const pick = pool[Math.floor(Math.random() * pool.length)];
+        await this.applyPick(sessao.id, turn, Number(captainId), Number(pick.jogador_id));
+      }
+
+      // ── 5. Dados do mapa → direto para o veto ────────────────────────
+      sessao = (await this.sessionById(sessao.id))!;
+      if (sessao && sessao.map_stage && sessao.map_stage !== "veto" && sessao.map_stage !== "done") {
+        await this.ensureMapPool(sessao.id);
+        const d = rollDistinct();
+        const winner: Team = d.a1 + d.a2 > d.b1 + d.b2 ? "A" : "B";
+        await Database.from("tb_tirar_mix_sessoes").where("id", sessao.id).update({
+          map_stage: "veto",
+          map_countdown_ends_at: null,
+          map_dice_first_turn: "A",
+          map_dice_turn: null,
+          map_dice_winner: winner,
+          map_dice_a_d1: d.a1,
+          map_dice_a_d2: d.a2,
+          map_dice_a_total: d.a1 + d.a2,
+          map_dice_b_d1: d.b1,
+          map_dice_b_d2: d.b2,
+          map_dice_b_total: d.b1 + d.b2,
+          map_veto_turn: winner,
+          map_veto_deadline: DateTime.now().plus({ seconds: 30 }).toSQL(),
+          updated_at: this.nowSql(),
+        });
+      }
+
+      const next = await this.reconcile(sessao.id);
+      if (!next) throw new Error("Sessão inválida após mock de fluxo completo.");
+      const snap = await this.snapshotFromSessao(next, jogador.id);
+      return this.customResponse.sucesso(
+        response,
+        "Mock de fluxo completo aplicado: times formados e veto de mapas iniciado.",
+        snap
+      );
+    } catch (error) {
+      return this.customResponse.erro(response, "Erro ao aplicar mock de fluxo completo.", error, 500);
     }
   }
 

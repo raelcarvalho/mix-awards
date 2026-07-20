@@ -1,4 +1,5 @@
-﻿import { useEffect, useMemo, useState } from 'react'
+﻿import { useMemo } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { Card } from '@/components/ui/Card'
 import { PlayerAvatar } from '@/components/ui/PlayerAvatar'
 import { useAuth } from '@/hooks/useAuth'
@@ -694,129 +695,100 @@ function OnlinePlayersPanel({ players }: { players: OnlinePlayer[] }) {
 
 export default function HomePage({ setPage }: { setPage: (p: any) => void }) {
   const { isAdmin, isLogged, user, jogadorId } = useAuth()
-  const [jogadores, setJogadores] = useState<Jogador[]>([])
-  const [onlinePlayers, setOnlinePlayers] = useState<OnlinePlayer[]>([])
-  const [partidas, setPartidas] = useState<Partida[]>([])
-  const [loading, setLoading] = useState(true)
-  const [fetchError, setFetchError] = useState('')
-  const [album, setAlbum] = useState({
-    obtidas: 0,
-    total: 0,
-    lendarias: 0,
-    pacotesAbertos: 0,
-  })
 
-  useEffect(() => {
-    let alive = true
-    setLoading(true)
-    setFetchError('')
+  const { data: homeData, isPending: loading, error: homeError } = useQuery({
+    queryKey: ['home-dashboard', isLogged, user?.nome, jogadorId],
+    queryFn: async () => {
+      const onlinePromise = isLogged
+        ? api
+            .mixHeartbeat()
+            .catch(() => null)
+            .then(() => api.mixOnline().catch(() => []))
+        : Promise.resolve([])
 
-    const onlinePromise = isLogged
-      ? api
-          .mixHeartbeat()
-          .catch(() => null)
-          .then(() => api.mixOnline().catch(() => []))
-      : Promise.resolve([])
+      const [jogs, parts, albumRaw, onlineRaw] = await Promise.all([
+        api.listarJogadores({ seasonId: 2 }).catch((e: any) => {
+          throw new Error(e?.message || 'Erro ao carregar ranking')
+        }),
+        api.listarPartidas(undefined, { seasonId: 2 }).catch((e: any) => {
+          throw new Error(e?.message || 'Erro ao carregar partidas')
+        }),
+        isLogged ? api.meuAlbum().catch(() => null) : Promise.resolve(null),
+        onlinePromise,
+      ])
 
-    Promise.all([
-      api.listarJogadores({ seasonId: 2 }).catch((e: any) => {
-        throw new Error(e?.message || 'Erro ao carregar ranking')
-      }),
-      api.listarPartidas(undefined, { seasonId: 2 }).catch((e: any) => {
-        throw new Error(e?.message || 'Erro ao carregar partidas')
-      }),
-      isLogged ? api.meuAlbum().catch(() => null) : Promise.resolve(null),
-      onlinePromise,
-    ])
-      .then(([jogs, parts, albumRaw, onlineRaw]) => {
-        if (!alive) return
+      const ranking = [...(Array.isArray(jogs) ? jogs : [])].sort(
+        (a, b) => Number(b.pontos || 0) - Number(a.pontos || 0)
+      )
 
-        const ranking = [...(Array.isArray(jogs) ? jogs : [])].sort(
-          (a, b) => Number(b.pontos || 0) - Number(a.pontos || 0)
-        )
+      const recents = [...(Array.isArray(parts) ? parts : [])].sort((a, b) => {
+        const ta = parseMatchTs(String(a?.created_at || a?.data || ''))
+        const tb = parseMatchTs(String(b?.created_at || b?.data || ''))
+        return tb - ta
+      })
 
-        const recents = [...(Array.isArray(parts) ? parts : [])].sort((a, b) => {
-          const ta = parseMatchTs(String(a?.created_at || a?.data || ''))
-          const tb = parseMatchTs(String(b?.created_at || b?.data || ''))
-          return tb - ta
+      const onlineList = (Array.isArray(onlineRaw) ? onlineRaw : [])
+        .map((o: any, idx: number) => ({
+          id: Number(o?.jogador_id || o?.id || idx + 1),
+          nome: String(o?.nome || '').trim(),
+          imagem:
+            String(o?.imagem || o?.jogador_imagem || o?.avatar || '').trim() || undefined,
+          lastSeen: String(o?.last_seen || '').trim() || undefined,
+        }))
+        .filter((o) => !!o.nome)
+
+      if (isLogged && user?.nome) {
+        const myName = String(user.nome).trim().toLowerCase()
+        const myJogadorId = Number(jogadorId || (user as any)?.jogador_id || 0)
+        const alreadyExists = onlineList.some((o) => {
+          const sameId = myJogadorId > 0 && Number(o.id) === myJogadorId
+          const sameName = String(o.nome || '').trim().toLowerCase() === myName
+          return sameId || sameName
         })
 
-        setJogadores(ranking)
-        setPartidas(recents)
-        const onlineList = (Array.isArray(onlineRaw) ? onlineRaw : [])
-          .map((o: any, idx: number) => ({
-            id: Number(o?.jogador_id || o?.id || idx + 1),
-            nome: String(o?.nome || '').trim(),
+        if (!alreadyExists) {
+          onlineList.unshift({
+            id: myJogadorId > 0 ? myJogadorId : Number((user as any)?.id || Date.now()),
+            nome: String(user.nome),
             imagem:
-              String(o?.imagem || o?.jogador_imagem || o?.avatar || '').trim() || undefined,
-            lastSeen: String(o?.last_seen || '').trim() || undefined,
-          }))
-          .filter((o) => !!o.nome)
-
-        if (isLogged && user?.nome) {
-          const myName = String(user.nome).trim().toLowerCase()
-          const myJogadorId = Number(jogadorId || (user as any)?.jogador_id || 0)
-          const alreadyExists = onlineList.some((o) => {
-            const sameId = myJogadorId > 0 && Number(o.id) === myJogadorId
-            const sameName = String(o.nome || '').trim().toLowerCase() === myName
-            return sameId || sameName
+              String(
+                (user as any)?.imagem ||
+                  (user as any)?.jogador_imagem ||
+                  (user as any)?.avatar ||
+                  ''
+              ).trim() || undefined,
+            lastSeen: new Date().toISOString(),
           })
-
-          if (!alreadyExists) {
-            onlineList.unshift({
-              id: myJogadorId > 0 ? myJogadorId : Number((user as any)?.id || Date.now()),
-              nome: String(user.nome),
-              imagem:
-                String(
-                  (user as any)?.imagem ||
-                    (user as any)?.jogador_imagem ||
-                    (user as any)?.avatar ||
-                    ''
-                ).trim() || undefined,
-              lastSeen: new Date().toISOString(),
-            })
-          }
         }
+      }
 
-        setOnlinePlayers(onlineList)
+      let album = { obtidas: 0, total: 0, lendarias: 0, pacotesAbertos: 0 }
+      if (albumRaw) {
+        const payload = (albumRaw as any)?.resultados ?? albumRaw
+        const figurinhas: AlbumFigurinha[] = Array.isArray(payload?.figurinhas)
+          ? payload.figurinhas
+          : []
+        const obtidas =
+          Number(payload?.progresso?.obtidas ?? 0) ||
+          figurinhas.filter((f) => !!f.possui).length
+        const total = Number(payload?.progresso?.total ?? figurinhas.length)
+        const lendarias = figurinhas.filter((f) => {
+          const raridade = String(f?.raridade || '').toLowerCase()
+          return !!f.possui && ['lendaria', 'mitica', 'god'].includes(raridade)
+        }).length
 
-        if (albumRaw) {
-          const payload = albumRaw?.resultados ?? albumRaw
-          const figurinhas: AlbumFigurinha[] = Array.isArray(payload?.figurinhas)
-            ? payload.figurinhas
-            : []
-          const obtidas =
-            Number(payload?.progresso?.obtidas ?? 0) ||
-            figurinhas.filter((f) => !!f.possui).length
-          const total = Number(payload?.progresso?.total ?? figurinhas.length)
-          const lendarias = figurinhas.filter((f) => {
-            const raridade = String(f?.raridade || '').toLowerCase()
-            return !!f.possui && ['lendaria', 'mitica', 'god'].includes(raridade)
-          }).length
+        album = { obtidas, total, lendarias, pacotesAbertos: Math.floor(obtidas / 4) }
+      }
 
-          setAlbum({
-            obtidas,
-            total,
-            lendarias,
-            pacotesAbertos: Math.floor(obtidas / 4),
-          })
-        } else {
-          setAlbum({ obtidas: 0, total: 0, lendarias: 0, pacotesAbertos: 0 })
-        }
-      })
-      .catch((err: any) => {
-        if (!alive) return
-        setFetchError(err?.message || 'Falha ao carregar dashboard')
-        setOnlinePlayers([])
-      })
-      .finally(() => {
-        if (alive) setLoading(false)
-      })
+      return { jogadores: ranking, partidas: recents, onlinePlayers: onlineList, album }
+    },
+  })
 
-    return () => {
-      alive = false
-    }
-  }, [isLogged, user, jogadorId])
+  const jogadores = homeData?.jogadores ?? []
+  const partidas = homeData?.partidas ?? []
+  const onlinePlayers = homeData?.onlinePlayers ?? []
+  const album = homeData?.album ?? { obtidas: 0, total: 0, lendarias: 0, pacotesAbertos: 0 }
+  const fetchError = homeError ? (homeError as any)?.message || 'Falha ao carregar dashboard' : ''
 
   const totalPartidas = partidas.length
   const totalGold = jogadores.reduce((sum, j) => sum + Number(j.gold || 0), 0)

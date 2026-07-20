@@ -339,17 +339,8 @@ export const comprarPacotes = (quantidade: number) =>
 export const comprarCapsulas = (quantidade: number) =>
   apiFetch<any>('/shop/comprar-capsulas', { method: 'POST', body: JSON.stringify({ quantidade }) })
 
-export const comprarBonusPontos = () =>
-  apiFetch<any>('/shop/comprar-bonus-pontos', { method: 'POST' })
-
 export const listarPacotesFechados = () =>
   apiFetch<any>('/shop/listar-pacote-fechado')
-
-export const comprarBoostXp = () =>
-  apiFetch<any>('/shop/comprar-boost-xp', { method: 'POST' })
-
-export const rerollMissoes = () =>
-  apiFetch<any>('/shop/reroll-missoes', { method: 'POST' })
 
 export const listarCosmeticos = () =>
   apiFetch<any>('/shop/cosmeticos')
@@ -691,3 +682,108 @@ export const mixSnapshot = async (sessaoId?: number) => {
     })
   )
 }
+
+// ─── Mix Bet ─────────────────────────────────────────────────────────────────
+// Feature desativada por enquanto (não está em uso). Para reativar, descomente
+// este bloco inteiro (também usado por web/src/pages/BetPage.tsx, que precisa
+// ser reativado junto — ver comentários "Mix Bet" em App.tsx e AppLayout.tsx).
+/*
+export type BetFaixa = { faixa: string; min: number; max: number | null; odd: number }
+
+export interface BetPlayerOdds {
+  jogador_id: number
+  nome: string
+  imagem: string | null
+  time: 'A' | 'B'
+  media_kills: number
+  media_mortes: number
+  media_assistencias: number
+  media_multi_kills: number
+  media_first_kills: number
+  partidas: number
+  kills: BetFaixa[]
+  mortes: BetFaixa[]
+  assistencias: BetFaixa[]
+  multi_kills: BetFaixa[]
+  first_kills: BetFaixa[]
+}
+
+export interface BetAtiva {
+  bet: {
+    id: number
+    codigo: string
+    sessao_id: number
+    mapa: string
+    nome_time_a: string
+    nome_time_b: string
+    status: 'aberta' | 'fechada' | 'liquidada' | 'cancelada'
+    fecha_em: string
+    segundos_restantes: number
+    sou_participante: boolean
+    odds: {
+      jogadores: BetPlayerOdds[]
+      rounds: BetFaixa[]
+      vitoria: Array<{ time: 'A' | 'B'; nome: string; capitao_id: number | null; odd: number }>
+    } | null
+  } | null
+  minhas_apostas: BetAposta[]
+  meu_gold?: number
+}
+
+export interface BetSelecao {
+  categoria: string
+  jogador_id: number | null
+  jogador_nome: string | null
+  time: 'A' | 'B' | null
+  faixa: string
+  odd: number
+  acertou?: boolean
+  valor_real?: number | null
+}
+
+export interface BetAposta {
+  id: number
+  bet_partida_id: number
+  selecoes: BetSelecao[]
+  resultado: BetSelecao[] | null
+  multiplicador: number
+  valor: number
+  retorno_potencial: number
+  status: 'pendente' | 'ganha' | 'perdida' | 'cancelada'
+  resgatada: boolean
+  created_at?: string
+  bet?: { codigo: string; mapa: string; nome_time_a: string; nome_time_b: string; status: string }
+}
+
+export const betAtiva = async () =>
+  unwrapResult<BetAtiva>(await apiFetch<any>('/api/bet/ativa'))
+
+export const betApostar = async (
+  betId: number,
+  valor: number,
+  selecoes: Array<{ categoria: string; jogador_id?: number | null; faixa: string }>
+) =>
+  unwrapResult<{ aposta_id: number; multiplicador: number; retorno_potencial: number; saldo_atual: number }>(
+    await apiFetch<any>('/api/bet/apostar', {
+      method: 'POST',
+      body: JSON.stringify({ bet_id: betId, valor, selecoes }),
+    })
+  )
+
+export const betMinhas = async () =>
+  unwrapResult<{ apostas: BetAposta[] }>(await apiFetch<any>('/api/bet/minhas'))
+
+export const betResgatar = async (apostaId: number) =>
+  unwrapResult<{ premio: number; saldo_atual: number }>(
+    await apiFetch<any>(`/api/bet/resgatar/${apostaId}`, { method: 'POST' })
+  )
+*/
+
+export const mixMockFluxoCompleto = async (sessaoId?: number) =>
+  unwrapResult<TirarMixSnapshot>(
+    await apiFetch<any>('/api/tirar-mix/mock/fluxo-completo', {
+      method: 'POST',
+      headers: mixHeaders(),
+      body: JSON.stringify(sessaoId ? { sessao_id: sessaoId } : {}),
+    })
+  )

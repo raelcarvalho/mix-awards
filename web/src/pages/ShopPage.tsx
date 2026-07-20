@@ -1,4 +1,5 @@
-﻿import { useEffect, useRef, useState, type MouseEvent } from 'react'
+﻿import { useRef, useState, type MouseEvent } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Card, Btn } from '@/components/ui/Card'
 import { useAuth } from '@/hooks/useAuth'
 import * as api from '@/services/api'
@@ -434,42 +435,36 @@ function Pack3DCard({
 
 export default function ShopPage({ setPage }: { setPage: (p: any) => void }) {
   const { gold, refreshGold, isLogged } = useAuth()
-  const [pacotesFechados, setPacotesFechados] = useState(0)
+  const queryClient = useQueryClient()
   const [buyModalOpen, setBuyModalOpen] = useState(false)
   const [toast, setToast] = useState<{ msg: string; type: 'ok' | 'err' | '' }>({
     msg: '',
     type: '',
   })
-  const [loading, setLoading] = useState(true)
+
+  const { data: pacotesFechados = 0, isLoading: loading } = useQuery({
+    queryKey: ['shop-pacotes-fechados', isLogged],
+    queryFn: async () => {
+      try {
+        const pacs = await api.listarPacotesFechados()
+        const arr = pacs?.resultados?.pacotes ?? pacs?.pacotes ?? []
+        return Array.isArray(arr) ? arr.length : pacs?.quantidade ?? 0
+      } catch {
+        return 0
+      }
+    },
+  })
 
   const showToast = (msg: string, type: 'ok' | 'err') => {
     setToast({ msg, type })
     setTimeout(() => setToast({ msg: '', type: '' }), 2600)
   }
 
-  const loadCounts = async () => {
-    setLoading(true)
-
-    try {
-      const pacs = await api.listarPacotesFechados()
-      const arr = pacs?.resultados?.pacotes ?? pacs?.pacotes ?? []
-      setPacotesFechados(Array.isArray(arr) ? arr.length : pacs?.quantidade ?? 0)
-    } catch {
-      setPacotesFechados(0)
-    }
-
-    setLoading(false)
-  }
-
-  useEffect(() => {
-    loadCounts()
-  }, [isLogged])
-
   const handleBuy = async (qty: number) => {
     try {
       await api.comprarPacotes(qty)
       await refreshGold()
-      await loadCounts()
+      await queryClient.invalidateQueries({ queryKey: ['shop-pacotes-fechados'] })
       showToast(`✓ ${qty} pacote(s) comprado(s)!`, 'ok')
     } catch (err: any) {
       showToast(err.message || 'Erro na compra', 'err')

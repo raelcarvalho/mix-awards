@@ -42,6 +42,12 @@ const databaseConfig: DatabaseConfig = {
         password: Env.get('PG_PASSWORD', ''),
         database: Env.get('PG_DB_NAME'),
       },
+      pool: {
+        min: Env.get('DB_POOL_MIN', 2),
+        max: Env.get('DB_POOL_MAX', 20),
+        // Falha rápido se o pool saturar, em vez de enfileirar por 60s
+        acquireTimeoutMillis: 10_000,
+      },
       migrations: {
         naturalSort: true,
       },

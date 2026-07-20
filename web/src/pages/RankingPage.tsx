@@ -1,4 +1,5 @@
-﻿import { useEffect, useMemo, useState } from 'react'
+﻿import { useMemo, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { Card } from '@/components/ui/Card'
 import * as api from '@/services/api'
 import { LEVEL_COLOR_BY_ID, LEVEL_NAME_BY_ID } from '@/components/profile/PlayerProfilePreview'
@@ -64,11 +65,17 @@ function levelAccentColor(level: number) {
 }
 
 export default function RankingPage() {
-  const [jogadores, setJogadores] = useState<Jogador[]>([])
   const [sortKey, setSortKey] = useState<SortKey>('pontos')
   const [seasonId, setSeasonId] = useState<number>(2)
-  const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
+
+  const { data: jogadores = [], isLoading: loading } = useQuery({
+    queryKey: ['ranking-jogadores', seasonId],
+    queryFn: async () => {
+      const d = await api.listarJogadores({ seasonId })
+      return Array.isArray(d) ? d : []
+    },
+  })
 
   const metricValue = (j: Jogador, key: SortKey) => {
     switch (key) {
@@ -94,15 +101,6 @@ export default function RankingPage() {
         return 0
     }
   }
-
-  useEffect(() => {
-    setLoading(true)
-    api
-      .listarJogadores({ seasonId })
-      .then((d) => setJogadores(Array.isArray(d) ? d : []))
-      .catch(() => {})
-      .finally(() => setLoading(false))
-  }, [seasonId])
 
   const sorted = useMemo(
     () =>
