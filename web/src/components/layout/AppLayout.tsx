@@ -9,6 +9,7 @@ type Page =
   | 'partidas'
   | 'tirar-time'
   | 'ranking'
+  | 'confrontos'
   | 'album'
   | 'album-stickers'
   | 'shop'
@@ -43,6 +44,7 @@ const NAV: { id: Page; icon: string; label: string; adminOnly?: boolean; neon?: 
   { id: 'mix-awards', icon: '🔐', label: 'Mix Awards', neon: true, adminOnly: true },
   { id: 'shop', icon: '🛒', label: 'Shop' },
   { id: 'ranking', icon: '🥇', label: 'Ranking' },
+  { id: 'confrontos', icon: '⚔️', label: 'Confrontos' },
   { id: 'album-stickers', icon: '✨', label: 'Álbum Stickers' },
   { id: 'importar', icon: '⬆', label: 'Importar', adminOnly: true },
 ]
@@ -53,6 +55,7 @@ const PAGE_TITLES: Record<Page, string> = {
   partidas: 'Partidas',
   'tirar-time': 'Tirar Time',
   ranking: 'Ranking',
+  confrontos: 'Confrontos',
   album: 'Álbum',
   'album-stickers': 'Álbum Stickers',
   shop: 'Shop',

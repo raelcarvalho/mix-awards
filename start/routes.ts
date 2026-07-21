@@ -41,6 +41,7 @@ const spaRoutes = [
   "/importar",
   "/copa-do-mundo",
   "/mix-awards",
+  "/confrontos",
 ];
 
 spaRoutes.forEach((path) => {
@@ -419,6 +420,12 @@ Route.group(() => {
   Route.get("/detalhes/:codigo", "PartidaController.detalhesPartida");
   Route.get("/ranking", "JogadoresController.listar");
 }).prefix("api/partida");
+
+// CONFRONTOS (head-to-head) — público, como o ranking
+Route.group(() => {
+  Route.get("/jogadores", "ConfrontosController.jogadores");
+  Route.get("/", "ConfrontosController.comparar");
+}).prefix("api/confrontos");
 
 // PLAYERS (REST)
 Route.group(() => {

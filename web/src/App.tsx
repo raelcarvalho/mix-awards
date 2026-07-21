@@ -12,6 +12,7 @@ import { PartidasPage, ImportarPage } from '@/pages/PartidasPage'
 import TirarTimePage from '@/pages/TirarTimePage'
 import CopaDoMundoPage from '@/pages/CopaDoMundoPage'
 import MixAwardsPage from '@/pages/MixAwardsPage'
+import ConfrontosPage from '@/pages/ConfrontosPage'
 // Mix Bet: feature desativada por enquanto (não está em uso). Para reativar,
 // descomente esta importação e todos os trechos marcados "Mix Bet" abaixo.
 // import BetPage from '@/pages/BetPage'
@@ -22,6 +23,7 @@ type Page =
   | 'partidas'
   | 'tirar-time'
   | 'ranking'
+  | 'confrontos'
   | 'album'
   | 'album-stickers'
   | 'shop'
@@ -38,6 +40,7 @@ const PAGE_VALUES: Page[] = [
   'partidas',
   'tirar-time',
   'ranking',
+  'confrontos',
   'album',
   'album-stickers',
   'shop',
@@ -53,6 +56,7 @@ const PAGE_TO_PATH: Record<Page, string> = {
   partidas: '/partidas',
   'tirar-time': '/tirar-time',
   ranking: '/ranking',
+  confrontos: '/confrontos',
   album: '/album',
   'album-stickers': '/album-stickers',
   shop: '/shop',
@@ -105,6 +109,7 @@ function renderPage(page: Page, setPage: (p: Page) => void, dashboardPlayerId: n
     case 'home':           return <HomePage setPage={setPage} />
     case 'dashboard':      return <DashboardPage setPage={setPage} dashboardPlayerId={dashboardPlayerId} />
     case 'ranking':        return <RankingPage />
+    case 'confrontos':     return <ConfrontosPage />
     case 'partidas':       return <PartidasPage setPage={setPage} />
     case 'tirar-time':     return <TirarTimePage />
     case 'album':          return <AlbumPage setPage={setPage} />

@@ -285,6 +285,64 @@ export const deletarPartida = (id: number) =>
     apiFetch<any>(`/api/partida/deletar/${id}`, { method: 'DELETE' })
   )
 
+// ─── Confrontos (head-to-head) ──────────────────────────────────────────────
+export interface ConfrontoJogador {
+  id: number
+  nome: string
+  imagem?: string | null
+  qtd_partidas: number
+}
+
+export interface ConfrontoLadoStats {
+  id: number
+  vitorias: number
+  kills: number
+  mortes: number
+  adr: number
+}
+
+export interface ConfrontoPartida {
+  partida_id: number
+  codigo: string
+  mapa: string
+  data: string
+  kills_a: number | null
+  kills_b: number | null
+  venceu_a: boolean | null
+  venceu_b: boolean | null
+}
+
+export interface ConfrontoResultado {
+  season_id: number
+  confrontos: number
+  empates: number
+  jogador_a: ConfrontoLadoStats
+  jogador_b: ConfrontoLadoStats
+  partidas: ConfrontoPartida[]
+}
+
+export const listarJogadoresDaTemporada = async (
+  seasonId: number
+): Promise<ConfrontoJogador[]> => {
+  const data = await apiFetch<any>(`/api/confrontos/jogadores?season_id=${seasonId}`)
+  const lista = data?.resultados?.jogadores
+  return Array.isArray(lista) ? (lista as ConfrontoJogador[]) : []
+}
+
+export const compararJogadores = async (params: {
+  seasonId: number
+  jogadorA: number
+  jogadorB: number
+}): Promise<ConfrontoResultado> => {
+  const q = new URLSearchParams({
+    season_id: String(params.seasonId),
+    jogador_a: String(params.jogadorA),
+    jogador_b: String(params.jogadorB),
+  })
+  const data = await apiFetch<any>(`/api/confrontos?${q.toString()}`)
+  return data?.resultados as ConfrontoResultado
+}
+
 // ─── Levels ─────────────────────────────────────────────────────────────────
 export interface LevelInfo {
   level: number
