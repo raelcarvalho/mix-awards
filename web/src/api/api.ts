@@ -343,6 +343,61 @@ export const compararJogadores = async (params: {
   return data?.resultados as ConfrontoResultado
 }
 
+// ─── Duplas mais vitoriosas ─────────────────────────────────────────────────
+export interface DuplaRanking {
+  jogador_a: number
+  jogador_b: number
+  partidas: number
+  vitorias: number
+  derrotas: number
+  aproveitamento: number
+}
+
+export interface DuplaAdversaria {
+  jogador_a: number
+  jogador_b: number
+  partidas: number
+  vitorias: number
+  derrotas: number
+}
+
+export interface DuplaDetalhe {
+  season_id: number
+  jogador_a: number
+  jogador_b: number
+  partidas: number
+  vitorias: number
+  derrotas: number
+  aproveitamento: number
+  mais_vence: DuplaAdversaria[]
+  mais_perde: DuplaAdversaria[]
+}
+
+export const listarDuplasVitoriosas = async (
+  seasonId: number,
+  min = 2
+): Promise<DuplaRanking[]> => {
+  const data = await apiFetch<any>(
+    `/api/confrontos/duplas?season_id=${seasonId}&min=${min}`
+  )
+  const lista = data?.resultados?.duplas
+  return Array.isArray(lista) ? (lista as DuplaRanking[]) : []
+}
+
+export const detalharDupla = async (params: {
+  seasonId: number
+  jogadorA: number
+  jogadorB: number
+}): Promise<DuplaDetalhe> => {
+  const q = new URLSearchParams({
+    season_id: String(params.seasonId),
+    jogador_a: String(params.jogadorA),
+    jogador_b: String(params.jogadorB),
+  })
+  const data = await apiFetch<any>(`/api/confrontos/duplas/detalhe?${q.toString()}`)
+  return data?.resultados as DuplaDetalhe
+}
+
 // ─── Levels ─────────────────────────────────────────────────────────────────
 export interface LevelInfo {
   level: number

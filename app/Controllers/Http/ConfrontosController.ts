@@ -202,4 +202,180 @@ export default class ConfrontosController {
       return this.customResponse.exception(response, "Erro ao calcular confronto.", erro);
     }
   }
+
+  /**
+   * GET /api/confrontos/duplas?season_id=2&min=2
+   * Ranking das duplas mais vitoriosas: dois jogadores que atuaram no MESMO
+   * time numa partida. Retorna vitórias, derrotas e aproveitamento (%).
+   * Uma única query com self-join — sem N+1.
+   */
+  public async duplas({ request, response }: HttpContextContract) {
+    try {
+      const seasonId = this.parseSeasonId(request.input("season_id"));
+      const minRaw = Number(request.input("min"));
+      const minPartidas = Number.isInteger(minRaw) && minRaw > 0 ? minRaw : 2;
+      const hasSeasonColumn = await this.hasSeasonColumn();
+
+      const query = Database.from("tb_partidas_jogadores as pa")
+        .innerJoin("tb_partidas_jogadores as pb", (join) => {
+          join
+            .on("pb.partidas_id", "=", "pa.partidas_id")
+            .andOn("pb.time", "=", "pa.time")
+            .andOn("pb.jogadores_id", ">", "pa.jogadores_id");
+        })
+        .innerJoin("tb_partidas as p", "p.id", "pa.partidas_id")
+        .whereNotNull("pa.time")
+        .groupBy("pa.jogadores_id", "pb.jogadores_id")
+        .havingRaw("COUNT(*) >= ?", [minPartidas])
+        .select(
+          "pa.jogadores_id as jogador_a",
+          "pb.jogadores_id as jogador_b",
+          Database.raw("COUNT(*)::int as partidas"),
+          Database.raw(
+            "COALESCE(SUM(CASE WHEN pa.partida_ganha = TRUE THEN 1 ELSE 0 END),0)::int as vitorias"
+          ),
+          Database.raw(
+            "COALESCE(SUM(CASE WHEN pa.partida_ganha = FALSE THEN 1 ELSE 0 END),0)::int as derrotas"
+          )
+        )
+        .orderByRaw(
+          "SUM(CASE WHEN pa.partida_ganha = TRUE THEN 1 ELSE 0 END)::float / COUNT(*) DESC, COUNT(*) DESC"
+        );
+
+      this.applySeasonFilter(query, "p", seasonId, hasSeasonColumn);
+
+      const linhas = await query;
+      const duplas = linhas.map((d: any) => {
+        const partidas = Number(d.partidas || 0);
+        const vitorias = Number(d.vitorias || 0);
+        return {
+          jogador_a: Number(d.jogador_a),
+          jogador_b: Number(d.jogador_b),
+          partidas,
+          vitorias,
+          derrotas: Number(d.derrotas || 0),
+          aproveitamento: partidas > 0 ? (vitorias / partidas) * 100 : 0,
+        };
+      });
+
+      return this.customResponse.sucesso(response, "Duplas mais vitoriosas.", {
+        season_id: seasonId,
+        min: minPartidas,
+        duplas,
+      });
+    } catch (erro) {
+      return this.customResponse.exception(response, "Erro ao listar duplas.", erro);
+    }
+  }
+
+  /**
+   * GET /api/confrontos/duplas/detalhe?season_id=2&jogador_a=1&jogador_b=2
+   * Detalhe de uma dupla: resumo (vitórias/derrotas/%) + as duplas adversárias
+   * contra quem mais vence e contra quem mais perde. Uma dupla adversária é um
+   * par de jogadores do time OPOSTO na mesma partida.
+   */
+  public async duplaDetalhe({ request, response }: HttpContextContract) {
+    try {
+      const seasonId = this.parseSeasonId(request.input("season_id"));
+      const jogadorA = this.parsePlayerId(request.input("jogador_a"));
+      const jogadorB = this.parsePlayerId(request.input("jogador_b"));
+
+      if (!jogadorA || !jogadorB || jogadorA === jogadorB) {
+        return this.customResponse.erro(
+          response,
+          "Informe dois jogadores diferentes.",
+          null,
+          400
+        );
+      }
+
+      const hasSeasonColumn = await this.hasSeasonColumn();
+      const [menor, maior] = jogadorA < jogadorB ? [jogadorA, jogadorB] : [jogadorB, jogadorA];
+
+      // Partidas em que a dupla atuou no mesmo time.
+      const partidasQuery = Database.from("tb_partidas_jogadores as pa")
+        .innerJoin("tb_partidas_jogadores as pb", (join) => {
+          join
+            .on("pb.partidas_id", "=", "pa.partidas_id")
+            .andOn("pb.time", "=", "pa.time")
+            .andOnVal("pb.jogadores_id", maior);
+        })
+        .innerJoin("tb_partidas as p", "p.id", "pa.partidas_id")
+        .where("pa.jogadores_id", menor)
+        .whereNotNull("pa.time")
+        .select(
+          "pa.partidas_id",
+          "pa.time as time_dupla",
+          "pa.partida_ganha as venceu"
+        );
+      this.applySeasonFilter(partidasQuery, "p", seasonId, hasSeasonColumn);
+
+      // Duplas adversárias (par de jogadores do time oposto) agregadas.
+      const adversariosQuery = Database.from(
+        Database.raw("(" + partidasQuery.clone().toQuery() + ") as cp") as any
+      )
+        .innerJoin("tb_partidas_jogadores as o1", "o1.partidas_id", "cp.partidas_id")
+        .whereRaw("o1.time <> cp.time_dupla")
+        .whereNotNull("o1.time")
+        .innerJoin("tb_partidas_jogadores as o2", (join) => {
+          join
+            .on("o2.partidas_id", "=", "cp.partidas_id")
+            .andOn("o2.time", "=", "o1.time")
+            .andOn("o2.jogadores_id", ">", "o1.jogadores_id");
+        })
+        .groupBy("o1.jogadores_id", "o2.jogadores_id")
+        .select(
+          "o1.jogadores_id as jogador_a",
+          "o2.jogadores_id as jogador_b",
+          Database.raw("COUNT(*)::int as partidas"),
+          Database.raw(
+            "COALESCE(SUM(CASE WHEN cp.venceu = TRUE THEN 1 ELSE 0 END),0)::int as vitorias"
+          ),
+          Database.raw(
+            "COALESCE(SUM(CASE WHEN cp.venceu = FALSE THEN 1 ELSE 0 END),0)::int as derrotas"
+          )
+        );
+
+      const [partidas, adversarios] = await Promise.all([
+        partidasQuery,
+        adversariosQuery,
+      ]);
+
+      const total = partidas.length;
+      const vitorias = partidas.filter((p: any) => p.venceu === true).length;
+      const derrotas = partidas.filter((p: any) => p.venceu === false).length;
+
+      const adversariosMap = adversarios.map((a: any) => ({
+        jogador_a: Number(a.jogador_a),
+        jogador_b: Number(a.jogador_b),
+        partidas: Number(a.partidas || 0),
+        vitorias: Number(a.vitorias || 0),
+        derrotas: Number(a.derrotas || 0),
+      }));
+
+      const maisVence = [...adversariosMap]
+        .filter((a) => a.vitorias > 0)
+        .sort((x, y) => y.vitorias - x.vitorias || x.derrotas - y.derrotas)
+        .slice(0, 5);
+
+      const maisPerde = [...adversariosMap]
+        .filter((a) => a.derrotas > 0)
+        .sort((x, y) => y.derrotas - x.derrotas || x.vitorias - y.vitorias)
+        .slice(0, 5);
+
+      return this.customResponse.sucesso(response, "Detalhe da dupla.", {
+        season_id: seasonId,
+        jogador_a: menor,
+        jogador_b: maior,
+        partidas: total,
+        vitorias,
+        derrotas,
+        aproveitamento: total > 0 ? (vitorias / total) * 100 : 0,
+        mais_vence: maisVence,
+        mais_perde: maisPerde,
+      });
+    } catch (erro) {
+      return this.customResponse.exception(response, "Erro ao detalhar dupla.", erro);
+    }
+  }
 }

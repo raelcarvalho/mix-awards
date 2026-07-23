@@ -424,6 +424,8 @@ Route.group(() => {
 // CONFRONTOS (head-to-head) — público, como o ranking
 Route.group(() => {
   Route.get("/jogadores", "ConfrontosController.jogadores");
+  Route.get("/duplas", "ConfrontosController.duplas");
+  Route.get("/duplas/detalhe", "ConfrontosController.duplaDetalhe");
   Route.get("/", "ConfrontosController.comparar");
 }).prefix("api/confrontos");
 
