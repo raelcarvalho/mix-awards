@@ -202,59 +202,120 @@ function AproveitamentoBar({ pct }: { pct: number }) {
   )
 }
 
-/** Lista de duplas adversárias (contra quem mais vence / mais perde). */
-function AdversariosList({
-  titulo,
-  cor,
-  itens,
+/** Chips com os jogadores do time adversário de um jogo. */
+function TimeAdversario({
+  adversarios,
   jogadorPorId,
-  destaque,
 }: {
-  titulo: string
-  cor: string
-  itens: api.DuplaAdversaria[]
+  adversarios: api.DuplaAdversarioJogador[]
   jogadorPorId: Map<number, api.ConfrontoJogador>
-  destaque: 'vitorias' | 'derrotas'
 }) {
+  if (adversarios.length === 0) {
+    return <span className="font-rajdhani text-[11px] text-white/25">—</span>
+  }
   return (
-    <div className="flex flex-col gap-2.5">
-      <span
-        className="font-rajdhani text-[11px] font-bold uppercase tracking-[0.18em]"
-        style={{ color: cor }}
-      >
-        {titulo}
-      </span>
-      {itens.length === 0 ? (
-        <span className="font-rajdhani text-xs text-white/30">
-          Sem dados suficientes.
-        </span>
-      ) : (
-        <div className="flex flex-col gap-2">
-          {itens.map((it) => (
-            <div
-              key={`${it.jogador_a}-${it.jogador_b}`}
-              className="flex items-center justify-between gap-3 rounded-lg border border-white/[0.06] bg-white/[0.025]"
-              style={{ padding: '8px 12px' }}
-            >
-              <DuplaLabel
-                a={jogadorPorId.get(it.jogador_a)}
-                b={jogadorPorId.get(it.jogador_b)}
-                compact
+    <div className="flex flex-wrap gap-1.5">
+      {adversarios.map((adv) => {
+        const j = jogadorPorId.get(adv.jogador_id)
+        return (
+          <span
+            key={adv.jogador_id}
+            className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/[0.04]"
+            style={{ padding: '2px 8px 2px 2px' }}
+            title={`${j?.nome || `#${adv.jogador_id}`} — ${adv.kills}K / ${adv.mortes}M`}
+          >
+            {j?.imagem ? (
+              <img
+                src={j.imagem}
+                alt={j.nome}
+                className="w-4 h-4 rounded-full object-cover"
+                onError={(e) => {
+                  ;(e.target as HTMLImageElement).style.visibility = 'hidden'
+                }}
               />
+            ) : (
+              <span className="w-4 h-4 rounded-full bg-white/15 flex items-center justify-center text-[8px] font-bold text-white/70">
+                {j?.nome?.[0]?.toUpperCase() || '?'}
+              </span>
+            )}
+            <span className="font-rajdhani text-[11px] font-medium text-white/70">
+              {j?.nome || `#${adv.jogador_id}`}
+            </span>
+          </span>
+        )
+      })}
+    </div>
+  )
+}
+
+/** Histórico jogo a jogo da dupla — cada partida real, explícita. */
+function HistoricoJogos({
+  jogos,
+  jogadorPorId,
+}: {
+  jogos: api.DuplaJogo[]
+  jogadorPorId: Map<number, api.ConfrontoJogador>
+}) {
+  if (jogos.length === 0) {
+    return (
+      <span className="font-rajdhani text-xs text-white/30">
+        Sem partidas registradas.
+      </span>
+    )
+  }
+  return (
+    <div className="flex flex-col gap-2">
+      {jogos.map((j) => {
+        const resultado = j.empate
+          ? { txt: 'EMPATE', cor: 'rgba(255,255,255,.45)', bg: 'rgba(255,255,255,.04)' }
+          : j.venceu
+          ? { txt: 'VITÓRIA', cor: '#4ade80', bg: 'rgba(74,222,128,.08)' }
+          : { txt: 'DERROTA', cor: '#fb7185', bg: 'rgba(251,113,133,.08)' }
+        const temPlacar = j.placar_dupla != null && j.placar_adversario != null
+        return (
+          <div
+            key={j.partida_id}
+            className="rounded-xl border"
+            style={{
+              padding: '10px 12px',
+              background: resultado.bg,
+              borderColor: `${resultado.cor}33`,
+            }}
+          >
+            <div className="flex items-center gap-3 flex-wrap">
               <span
-                className="font-orbitron text-sm font-bold tabular-nums whitespace-nowrap"
-                style={{ color: cor }}
+                className="font-rajdhani text-[10px] font-black uppercase tracking-[0.12em] rounded px-2 py-0.5 shrink-0"
+                style={{ color: resultado.cor, background: `${resultado.cor}1f` }}
               >
-                {destaque === 'vitorias' ? it.vitorias : it.derrotas}
-                <span className="text-white/30 font-rajdhani text-[11px]">
-                  {' '}
-                  {destaque === 'vitorias' ? 'V' : 'D'} / {it.partidas}
+                {resultado.txt}
+              </span>
+
+              {temPlacar && (
+                <span className="font-orbitron text-sm font-bold tabular-nums shrink-0">
+                  <span style={{ color: resultado.cor }}>{j.placar_dupla}</span>
+                  <span className="text-white/25"> × </span>
+                  <span className="text-white/60">{j.placar_adversario}</span>
                 </span>
+              )}
+
+              <span className="font-rajdhani text-xs text-white/60 truncate">
+                {j.mapa}
+              </span>
+
+              <span className="font-rajdhani text-[11px] text-white/30 ml-auto shrink-0">
+                {formatarData(j.data)}
               </span>
             </div>
-          ))}
-        </div>
-      )}
+
+            <div className="flex items-center gap-2 mt-2.5">
+              <span className="font-rajdhani text-[10px] font-bold uppercase tracking-[0.12em] text-white/30 shrink-0">
+                vs
+              </span>
+              <TimeAdversario adversarios={j.adversarios} jogadorPorId={jogadorPorId} />
+            </div>
+          </div>
+        )
+      })}
     </div>
   )
 }
@@ -294,22 +355,22 @@ function DuplaDetalheBox({
   }
 
   return (
-    <div className="flex flex-col gap-5" style={{ paddingTop: 14 }}>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-        <AdversariosList
-          titulo="Vence mais contra"
-          cor="#4ade80"
-          itens={data.mais_vence}
-          jogadorPorId={jogadorPorId}
-          destaque="vitorias"
-        />
-        <AdversariosList
-          titulo="Perde mais contra"
-          cor="#fb7185"
-          itens={data.mais_perde}
-          jogadorPorId={jogadorPorId}
-          destaque="derrotas"
-        />
+    <div
+      className="flex flex-col gap-5 border-t border-white/[0.06]"
+      style={{ paddingTop: 14, marginTop: 12 }}
+    >
+      <p className="font-rajdhani text-xs text-white/45">
+        Juntos:{' '}
+        <span className="font-bold text-emerald-400">{data.vitorias} vitórias</span> e{' '}
+        <span className="font-bold text-rose-400">{data.derrotas} derrotas</span> em{' '}
+        {data.partidas} {data.partidas === 1 ? 'jogo' : 'jogos'}.
+      </p>
+
+      <div className="flex flex-col gap-2.5">
+        <span className="font-rajdhani text-[11px] font-bold uppercase tracking-[0.18em] text-white/45">
+          Histórico jogo a jogo
+        </span>
+        <HistoricoJogos jogos={data.jogos} jogadorPorId={jogadorPorId} />
       </div>
     </div>
   )
@@ -365,7 +426,7 @@ function DuplasView({
             Duplas mais vitoriosas
           </h2>
           <span className="font-rajdhani text-[11px] text-white/30">
-            mín. 2 partidas juntos
+            top 20 · mín. 3 jogos juntos
           </span>
         </div>
 

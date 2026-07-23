@@ -353,12 +353,23 @@ export interface DuplaRanking {
   aproveitamento: number
 }
 
-export interface DuplaAdversaria {
-  jogador_a: number
-  jogador_b: number
-  partidas: number
-  vitorias: number
-  derrotas: number
+export interface DuplaAdversarioJogador {
+  jogador_id: number
+  kills: number
+  mortes: number
+}
+
+export interface DuplaJogo {
+  partida_id: number
+  codigo: number | string
+  mapa: string
+  data: string
+  placar_dupla: number | null
+  placar_adversario: number | null
+  nome_time_adversario: string | null
+  venceu: boolean
+  empate: boolean
+  adversarios: DuplaAdversarioJogador[]
 }
 
 export interface DuplaDetalhe {
@@ -369,16 +380,16 @@ export interface DuplaDetalhe {
   vitorias: number
   derrotas: number
   aproveitamento: number
-  mais_vence: DuplaAdversaria[]
-  mais_perde: DuplaAdversaria[]
+  jogos: DuplaJogo[]
 }
 
 export const listarDuplasVitoriosas = async (
   seasonId: number,
-  min = 2
+  min = 3,
+  limit = 20
 ): Promise<DuplaRanking[]> => {
   const data = await apiFetch<any>(
-    `/api/confrontos/duplas?season_id=${seasonId}&min=${min}`
+    `/api/confrontos/duplas?season_id=${seasonId}&min=${min}&limit=${limit}`
   )
   const lista = data?.resultados?.duplas
   return Array.isArray(lista) ? (lista as DuplaRanking[]) : []

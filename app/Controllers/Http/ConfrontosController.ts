@@ -213,7 +213,9 @@ export default class ConfrontosController {
     try {
       const seasonId = this.parseSeasonId(request.input("season_id"));
       const minRaw = Number(request.input("min"));
-      const minPartidas = Number.isInteger(minRaw) && minRaw > 0 ? minRaw : 2;
+      const minPartidas = Number.isInteger(minRaw) && minRaw > 0 ? minRaw : 3;
+      const limitRaw = Number(request.input("limit"));
+      const limite = Number.isInteger(limitRaw) && limitRaw > 0 ? Math.min(limitRaw, 100) : 20;
       const hasSeasonColumn = await this.hasSeasonColumn();
 
       const query = Database.from("tb_partidas_jogadores as pa")
@@ -240,7 +242,8 @@ export default class ConfrontosController {
         )
         .orderByRaw(
           "SUM(CASE WHEN pa.partida_ganha = TRUE THEN 1 ELSE 0 END)::float / COUNT(*) DESC, COUNT(*) DESC"
-        );
+        )
+        .limit(limite);
 
       this.applySeasonFilter(query, "p", seasonId, hasSeasonColumn);
 
@@ -261,6 +264,7 @@ export default class ConfrontosController {
       return this.customResponse.sucesso(response, "Duplas mais vitoriosas.", {
         season_id: seasonId,
         min: minPartidas,
+        limite,
         duplas,
       });
     } catch (erro) {
@@ -270,9 +274,9 @@ export default class ConfrontosController {
 
   /**
    * GET /api/confrontos/duplas/detalhe?season_id=2&jogador_a=1&jogador_b=2
-   * Detalhe de uma dupla: resumo (vitórias/derrotas/%) + as duplas adversárias
-   * contra quem mais vence e contra quem mais perde. Uma dupla adversária é um
-   * par de jogadores do time OPOSTO na mesma partida.
+   * Detalhe de uma dupla: resumo (vitórias/derrotas/%) + histórico jogo a jogo.
+   * Cada jogo traz mapa, data, placar, se a dupla venceu e o TIME ADVERSÁRIO
+   * completo (todos os jogadores do time oposto). Duas queries fixas.
    */
   public async duplaDetalhe({ request, response }: HttpContextContract) {
     try {
@@ -292,7 +296,7 @@ export default class ConfrontosController {
       const hasSeasonColumn = await this.hasSeasonColumn();
       const [menor, maior] = jogadorA < jogadorB ? [jogadorA, jogadorB] : [jogadorB, jogadorA];
 
-      // Partidas em que a dupla atuou no mesmo time.
+      // Partidas em que a dupla atuou no MESMO time.
       const partidasQuery = Database.from("tb_partidas_jogadores as pa")
         .innerJoin("tb_partidas_jogadores as pb", (join) => {
           join
@@ -306,62 +310,73 @@ export default class ConfrontosController {
         .select(
           "pa.partidas_id",
           "pa.time as time_dupla",
-          "pa.partida_ganha as venceu"
-        );
+          "pa.partida_ganha as venceu",
+          "p.codigo",
+          "p.mapa",
+          "p.data",
+          "p.resultado_time1",
+          "p.resultado_time2",
+          "p.nome_time1",
+          "p.nome_time2"
+        )
+        .orderBy("p.data", "desc");
       this.applySeasonFilter(partidasQuery, "p", seasonId, hasSeasonColumn);
 
-      // Duplas adversárias (par de jogadores do time oposto) agregadas.
-      const adversariosQuery = Database.from(
-        Database.raw("(" + partidasQuery.clone().toQuery() + ") as cp") as any
-      )
-        .innerJoin("tb_partidas_jogadores as o1", "o1.partidas_id", "cp.partidas_id")
-        .whereRaw("o1.time <> cp.time_dupla")
-        .whereNotNull("o1.time")
-        .innerJoin("tb_partidas_jogadores as o2", (join) => {
-          join
-            .on("o2.partidas_id", "=", "cp.partidas_id")
-            .andOn("o2.time", "=", "o1.time")
-            .andOn("o2.jogadores_id", ">", "o1.jogadores_id");
-        })
-        .groupBy("o1.jogadores_id", "o2.jogadores_id")
-        .select(
-          "o1.jogadores_id as jogador_a",
-          "o2.jogadores_id as jogador_b",
-          Database.raw("COUNT(*)::int as partidas"),
-          Database.raw(
-            "COALESCE(SUM(CASE WHEN cp.venceu = TRUE THEN 1 ELSE 0 END),0)::int as vitorias"
-          ),
-          Database.raw(
-            "COALESCE(SUM(CASE WHEN cp.venceu = FALSE THEN 1 ELSE 0 END),0)::int as derrotas"
-          )
-        );
+      const partidasRaw = await partidasQuery;
 
-      const [partidas, adversarios] = await Promise.all([
-        partidasQuery,
-        adversariosQuery,
-      ]);
+      // Lado (time) da dupla em cada partida — usado para achar o time oposto.
+      const partidaIds = partidasRaw.map((p: any) => Number(p.partidas_id));
+      const timeDuplaPorPartida = new Map<number, string>();
+      for (const p of partidasRaw) {
+        timeDuplaPorPartida.set(Number(p.partidas_id), String(p.time_dupla));
+      }
 
-      const total = partidas.length;
-      const vitorias = partidas.filter((p: any) => p.venceu === true).length;
-      const derrotas = partidas.filter((p: any) => p.venceu === false).length;
+      // Todos os jogadores dessas partidas; filtramos o time oposto em memória.
+      let jogadoresRaw: any[] = [];
+      if (partidaIds.length > 0) {
+        jogadoresRaw = await Database.from("tb_partidas_jogadores as o")
+          .whereIn("o.partidas_id", partidaIds)
+          .whereNotNull("o.time")
+          .select("o.partidas_id", "o.jogadores_id", "o.time", "o.kills", "o.mortes");
+      }
 
-      const adversariosMap = adversarios.map((a: any) => ({
-        jogador_a: Number(a.jogador_a),
-        jogador_b: Number(a.jogador_b),
-        partidas: Number(a.partidas || 0),
-        vitorias: Number(a.vitorias || 0),
-        derrotas: Number(a.derrotas || 0),
-      }));
+      // Agrupa adversários (time diferente do da dupla) por partida.
+      const adversariosPorPartida = new Map<number, any[]>();
+      for (const a of jogadoresRaw) {
+        const pid = Number(a.partidas_id);
+        const timeDupla = timeDuplaPorPartida.get(pid);
+        if (timeDupla == null || String(a.time) === timeDupla) continue;
+        if (!adversariosPorPartida.has(pid)) adversariosPorPartida.set(pid, []);
+        adversariosPorPartida.get(pid)!.push({
+          jogador_id: Number(a.jogadores_id),
+          kills: Number(a.kills || 0),
+          mortes: Number(a.mortes || 0),
+        });
+      }
 
-      const maisVence = [...adversariosMap]
-        .filter((a) => a.vitorias > 0)
-        .sort((x, y) => y.vitorias - x.vitorias || x.derrotas - y.derrotas)
-        .slice(0, 5);
+      const jogos = partidasRaw.map((p: any) => {
+        // `time` é "A"/"B": A → resultado_time1/nome_time1, B → resultado_time2.
+        const duplaEhA = String(p.time_dupla).toUpperCase() === "A";
+        const placarDupla = duplaEhA ? p.resultado_time1 : p.resultado_time2;
+        const placarAdv = duplaEhA ? p.resultado_time2 : p.resultado_time1;
+        const nomeAdv = duplaEhA ? p.nome_time2 : p.nome_time1;
+        return {
+          partida_id: Number(p.partidas_id),
+          codigo: p.codigo,
+          mapa: p.mapa,
+          data: p.data,
+          placar_dupla: placarDupla != null ? Number(placarDupla) : null,
+          placar_adversario: placarAdv != null ? Number(placarAdv) : null,
+          nome_time_adversario: nomeAdv ?? null,
+          venceu: p.venceu === true,
+          empate: p.venceu !== true && p.venceu !== false,
+          adversarios: adversariosPorPartida.get(Number(p.partidas_id)) || [],
+        };
+      });
 
-      const maisPerde = [...adversariosMap]
-        .filter((a) => a.derrotas > 0)
-        .sort((x, y) => y.derrotas - x.derrotas || x.vitorias - y.vitorias)
-        .slice(0, 5);
+      const total = jogos.length;
+      const vitorias = jogos.filter((j) => j.venceu).length;
+      const derrotas = jogos.filter((j) => !j.venceu && !j.empate).length;
 
       return this.customResponse.sucesso(response, "Detalhe da dupla.", {
         season_id: seasonId,
@@ -371,8 +386,7 @@ export default class ConfrontosController {
         vitorias,
         derrotas,
         aproveitamento: total > 0 ? (vitorias / total) * 100 : 0,
-        mais_vence: maisVence,
-        mais_perde: maisPerde,
+        jogos,
       });
     } catch (erro) {
       return this.customResponse.exception(response, "Erro ao detalhar dupla.", erro);
