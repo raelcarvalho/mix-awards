@@ -109,7 +109,7 @@ function renderPage(page: Page, setPage: (p: Page) => void, dashboardPlayerId: n
     case 'home':           return <HomePage setPage={setPage} />
     case 'dashboard':      return <DashboardPage setPage={setPage} dashboardPlayerId={dashboardPlayerId} />
     case 'ranking':        return <RankingPage />
-    case 'confrontos':     return <ConfrontosPage />
+    case 'confrontos':     return <ConfrontosPage setPage={setPage} />
     case 'partidas':       return <PartidasPage setPage={setPage} />
     case 'tirar-time':     return <TirarTimePage />
     case 'album':          return <AlbumPage setPage={setPage} />

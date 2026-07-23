@@ -17,6 +17,11 @@ const COLOR_SEASON = '#f5c842'
 
 const CARD_PAD = { padding: 22 }
 
+// Mesmo mecanismo usado pelo Dashboard: grava o código e navega para a página
+// de Partidas, que abre o detalhe automaticamente.
+const OPEN_PARTIDA_CODE_KEY = 'dashboard_open_partida_codigo'
+const DUPLAS_POR_PAGINA = 20
+
 interface ComparacaoSelecionada {
   seasonId: number
   jogadorA: number
@@ -252,9 +257,11 @@ function TimeAdversario({
 function HistoricoJogos({
   jogos,
   jogadorPorId,
+  onVerPartida,
 }: {
   jogos: api.DuplaJogo[]
   jogadorPorId: Map<number, api.ConfrontoJogador>
+  onVerPartida: (codigo: number | string) => void
 }) {
   if (jogos.length === 0) {
     return (
@@ -307,11 +314,29 @@ function HistoricoJogos({
               </span>
             </div>
 
-            <div className="flex items-center gap-2 mt-2.5">
-              <span className="font-rajdhani text-[10px] font-bold uppercase tracking-[0.12em] text-white/30 shrink-0">
-                vs
-              </span>
-              <TimeAdversario adversarios={j.adversarios} jogadorPorId={jogadorPorId} />
+            <div className="flex items-end justify-between gap-3 mt-2.5">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="font-rajdhani text-[10px] font-bold uppercase tracking-[0.12em] text-white/30 shrink-0">
+                  vs
+                </span>
+                <TimeAdversario adversarios={j.adversarios} jogadorPorId={jogadorPorId} />
+              </div>
+
+              {j.codigo && String(j.codigo) !== '-' && (
+                <button
+                  type="button"
+                  onClick={() => onVerPartida(j.codigo)}
+                  className="shrink-0 font-rajdhani text-[11px] font-bold uppercase tracking-[0.1em] rounded-lg border transition-all hover:brightness-125 cursor-pointer"
+                  style={{
+                    padding: '5px 12px',
+                    color: COLOR_A,
+                    borderColor: `${COLOR_A}55`,
+                    background: `${COLOR_A}14`,
+                  }}
+                >
+                  Ver partida
+                </button>
+              )}
             </div>
           </div>
         )
@@ -324,10 +349,12 @@ function DuplaDetalheBox({
   seasonId,
   dupla,
   jogadorPorId,
+  onVerPartida,
 }: {
   seasonId: number
   dupla: api.DuplaRanking
   jogadorPorId: Map<number, api.ConfrontoJogador>
+  onVerPartida: (codigo: number | string) => void
 }) {
   const { data, isFetching, isError } = useQuery({
     queryKey: ['dupla-detalhe', seasonId, dupla.jogador_a, dupla.jogador_b],
@@ -370,7 +397,92 @@ function DuplaDetalheBox({
         <span className="font-rajdhani text-[11px] font-bold uppercase tracking-[0.18em] text-white/45">
           Histórico jogo a jogo
         </span>
-        <HistoricoJogos jogos={data.jogos} jogadorPorId={jogadorPorId} />
+        <HistoricoJogos
+          jogos={data.jogos}
+          jogadorPorId={jogadorPorId}
+          onVerPartida={onVerPartida}
+        />
+      </div>
+    </div>
+  )
+}
+
+/** Resultado da dupla formada pelos dois selects — aproveitamento + histórico. */
+function DuplaSelecionadaResult({
+  seasonId,
+  jogadorA,
+  jogadorB,
+  jogadorPorId,
+  onVerPartida,
+}: {
+  seasonId: number
+  jogadorA: number
+  jogadorB: number
+  jogadorPorId: Map<number, api.ConfrontoJogador>
+  onVerPartida: (codigo: number | string) => void
+}) {
+  const { data, isFetching, isError } = useQuery({
+    queryKey: ['dupla-selecionada', seasonId, jogadorA, jogadorB],
+    queryFn: () => api.detalharDupla({ seasonId, jogadorA, jogadorB }),
+  })
+
+  if (isFetching) {
+    return (
+      <p className="text-center font-rajdhani text-sm text-white/35" style={{ padding: '20px 0' }}>
+        Calculando dupla…
+      </p>
+    )
+  }
+  if (isError || !data) {
+    return (
+      <p className="text-center font-rajdhani text-sm text-red-400" style={{ padding: '20px 0' }}>
+        Não foi possível calcular a dupla.
+      </p>
+    )
+  }
+  if (data.partidas === 0) {
+    return (
+      <p className="text-center font-rajdhani text-sm text-white/35" style={{ padding: '20px 0' }}>
+        Esses jogadores nunca atuaram no mesmo time na Temporada {data.season_id}.
+      </p>
+    )
+  }
+
+  const cor =
+    data.aproveitamento >= 60 ? '#4ade80' : data.aproveitamento >= 45 ? COLOR_SEASON : '#fb7185'
+
+  return (
+    <div className="flex flex-col gap-5">
+      <div className="flex flex-col items-center gap-2 text-center">
+        <DuplaLabel
+          a={jogadorPorId.get(data.jogador_a)}
+          b={jogadorPorId.get(data.jogador_b)}
+        />
+        <span
+          className="font-orbitron text-5xl font-black leading-none tabular-nums"
+          style={{ color: cor }}
+        >
+          {fmt(data.aproveitamento, 1)}%
+        </span>
+        <span className="font-rajdhani text-[11px] uppercase tracking-[0.2em] text-white/35">
+          de aproveitamento
+        </span>
+        <p className="font-rajdhani text-xs text-white/45">
+          <span className="font-bold text-emerald-400">{data.vitorias} vitórias</span> e{' '}
+          <span className="font-bold text-rose-400">{data.derrotas} derrotas</span> em{' '}
+          {data.partidas} {data.partidas === 1 ? 'jogo' : 'jogos'} juntos.
+        </p>
+      </div>
+
+      <div className="flex flex-col gap-2.5">
+        <span className="font-rajdhani text-[11px] font-bold uppercase tracking-[0.18em] text-white/45">
+          Histórico jogo a jogo
+        </span>
+        <HistoricoJogos
+          jogos={data.jogos}
+          jogadorPorId={jogadorPorId}
+          onVerPartida={onVerPartida}
+        />
       </div>
     </div>
   )
@@ -378,117 +490,339 @@ function DuplaDetalheBox({
 
 function DuplasView({
   seasonId,
+  jogadores,
   jogadorPorId,
+  carregandoJogadores,
+  onVerPartida,
 }: {
   seasonId: number
+  jogadores: api.ConfrontoJogador[]
   jogadorPorId: Map<number, api.ConfrontoJogador>
+  carregandoJogadores: boolean
+  onVerPartida: (codigo: number | string) => void
 }) {
   const [expandida, setExpandida] = useState<string | null>(null)
+  const [busca, setBusca] = useState('')
+  const [pagina, setPagina] = useState(1)
+  // Dupla formada pelos dois selects.
+  const [selA, setSelA] = useState<number | null>(null)
+  const [selB, setSelB] = useState<number | null>(null)
+  const [duplaFormada, setDuplaFormada] = useState<{ a: number; b: number } | null>(null)
+
+  const opcoesA = useMemo(
+    () => (selB === null ? jogadores : jogadores.filter((j) => j.id !== selB)),
+    [jogadores, selB]
+  )
+  const opcoesB = useMemo(
+    () => (selA === null ? jogadores : jogadores.filter((j) => j.id !== selA)),
+    [jogadores, selA]
+  )
+  const podeVerDupla = selA !== null && selB !== null && selA !== selB
+
+  const handleVerDupla = useCallback(() => {
+    if (selA === null || selB === null || selA === selB) return
+    setDuplaFormada({ a: selA, b: selB })
+  }, [selA, selB])
 
   const { data: duplas = [], isFetching, isError } = useQuery({
+    // limite alto: trazemos todas as duplas e paginamos/filtramos no cliente.
     queryKey: ['duplas-vitoriosas', seasonId],
-    queryFn: () => api.listarDuplasVitoriosas(seasonId),
+    queryFn: () => api.listarDuplasVitoriosas(seasonId, 3, 500),
   })
 
-  if (isFetching) {
-    return (
-      <Card style={CARD_PAD}>
-        <p className="text-center font-rajdhani text-sm text-white/35">
-          Carregando duplas…
-        </p>
-      </Card>
-    )
-  }
-  if (isError) {
-    return (
-      <Card style={CARD_PAD}>
-        <p className="text-center font-rajdhani text-sm text-red-400">
-          Não foi possível carregar as duplas.
-        </p>
-      </Card>
-    )
-  }
-  if (duplas.length === 0) {
-    return (
-      <Card style={CARD_PAD}>
-        <p className="text-center font-rajdhani text-sm text-white/35">
-          Nenhuma dupla com partidas suficientes nesta temporada.
-        </p>
-      </Card>
-    )
-  }
+  // Filtro por nome de qualquer um dos dois jogadores da dupla.
+  const filtradas = useMemo(() => {
+    const termo = busca.trim().toLowerCase()
+    if (!termo) return duplas
+    return duplas.filter((d) => {
+      const na = jogadorPorId.get(d.jogador_a)?.nome?.toLowerCase() || ''
+      const nb = jogadorPorId.get(d.jogador_b)?.nome?.toLowerCase() || ''
+      return na.includes(termo) || nb.includes(termo)
+    })
+  }, [duplas, busca, jogadorPorId])
+
+  const totalPaginas = Math.max(1, Math.ceil(filtradas.length / DUPLAS_POR_PAGINA))
+  const paginaAtual = Math.min(pagina, totalPaginas)
+  const inicio = (paginaAtual - 1) * DUPLAS_POR_PAGINA
+  const visiveis = filtradas.slice(inicio, inicio + DUPLAS_POR_PAGINA)
+
+  // Ao mudar a busca, volta para a primeira página.
+  const handleBusca = useCallback((v: string) => {
+    setBusca(v)
+    setPagina(1)
+    setExpandida(null)
+  }, [])
 
   return (
+    <div className="flex flex-col gap-5">
+      {/* ── Formar dupla via dois selects ─────────────────────────── */}
+      <Card style={CARD_PAD}>
+        <div className="flex flex-col gap-4">
+          <div
+            className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] gap-5 md:gap-7 items-start"
+            style={{ padding: '0 5px' }}
+          >
+            <PlayerSelect
+              label="Jogador 1"
+              color={COLOR_A}
+              options={opcoesA}
+              value={selA}
+              onChange={setSelA}
+              disabled={carregandoJogadores}
+            />
+
+            <div
+              className="w-full flex flex-col gap-1.5 justify-self-center"
+              style={{ maxWidth: 190, padding: '0 5px' }}
+            >
+              <span
+                className="font-rajdhani text-[10px] font-bold uppercase tracking-[0.2em] leading-4 text-center text-white/40"
+                style={{ marginBottom: 1 }}
+              >
+                Mesmo time
+              </span>
+              <button
+                type="button"
+                onClick={handleVerDupla}
+                disabled={!podeVerDupla}
+                className={`w-full h-11 rounded-xl border font-rajdhani text-sm font-extrabold uppercase tracking-[0.12em] transition-all ${
+                  podeVerDupla ? 'cursor-pointer hover:brightness-110' : 'cursor-not-allowed'
+                }`}
+                style={
+                  podeVerDupla
+                    ? {
+                        background: `linear-gradient(135deg, ${COLOR_SEASON}, ${COLOR_SEASON}aa)`,
+                        borderColor: `${COLOR_SEASON}88`,
+                        color: '#12121a',
+                      }
+                    : {
+                        background: 'rgba(255,255,255,.05)',
+                        borderColor: 'rgba(255,255,255,.1)',
+                        color: 'rgba(255,255,255,.3)',
+                      }
+                }
+              >
+                Ver dupla
+              </button>
+            </div>
+
+            <PlayerSelect
+              label="Jogador 2"
+              color={COLOR_B}
+              options={opcoesB}
+              value={selB}
+              onChange={setSelB}
+              disabled={carregandoJogadores}
+            />
+          </div>
+
+          {duplaFormada && (
+            <div className="border-t border-white/[0.06]" style={{ paddingTop: 18 }}>
+              <DuplaSelecionadaResult
+                seasonId={seasonId}
+                jogadorA={duplaFormada.a}
+                jogadorB={duplaFormada.b}
+                jogadorPorId={jogadorPorId}
+                onVerPartida={onVerPartida}
+              />
+            </div>
+          )}
+        </div>
+      </Card>
+
+      {/* ── Ranking das duplas ────────────────────────────────────── */}
+      {isFetching ? (
+        <Card style={CARD_PAD}>
+          <p className="text-center font-rajdhani text-sm text-white/35">
+            Carregando ranking de duplas…
+          </p>
+        </Card>
+      ) : isError ? (
+        <Card style={CARD_PAD}>
+          <p className="text-center font-rajdhani text-sm text-red-400">
+            Não foi possível carregar as duplas.
+          </p>
+        </Card>
+      ) : duplas.length === 0 ? (
+        <Card style={CARD_PAD}>
+          <p className="text-center font-rajdhani text-sm text-white/35">
+            Nenhuma dupla com partidas suficientes nesta temporada.
+          </p>
+        </Card>
+      ) : (
     <Card style={CARD_PAD}>
       <div className="flex flex-col gap-4">
-        <div className="flex items-baseline justify-between gap-3">
+        <div className="flex items-baseline justify-between gap-3 flex-wrap">
           <h2 className="font-rajdhani text-lg font-bold text-white">
             Duplas mais vitoriosas
           </h2>
           <span className="font-rajdhani text-[11px] text-white/30">
-            top 20 · mín. 3 jogos juntos
+            {filtradas.length} {filtradas.length === 1 ? 'dupla' : 'duplas'} · mín. 3 jogos juntos
           </span>
         </div>
 
-        <div className="flex flex-col gap-2">
-          {duplas.map((d, i) => {
-            const key = `${d.jogador_a}-${d.jogador_b}`
-            const aberta = expandida === key
-            return (
-              <div
-                key={key}
-                className="rounded-xl border border-white/[0.06] bg-white/[0.025]"
-                style={{ padding: '12px 14px' }}
-              >
-                <button
-                  type="button"
-                  onClick={() => setExpandida(aberta ? null : key)}
-                  className="w-full flex items-center gap-3 sm:gap-4 text-left cursor-pointer"
-                >
-                  <span className="font-orbitron text-xs font-bold text-white/25 w-5 shrink-0">
-                    {i + 1}
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <DuplaLabel
-                      a={jogadorPorId.get(d.jogador_a)}
-                      b={jogadorPorId.get(d.jogador_b)}
-                    />
-                  </div>
-                  <div className="w-[130px] sm:w-[170px] shrink-0">
-                    <AproveitamentoBar pct={d.aproveitamento} />
-                  </div>
-                  <span className="hidden sm:inline font-rajdhani text-xs text-white/45 w-16 text-right shrink-0 tabular-nums">
-                    {d.vitorias}V {d.derrotas}D
-                  </span>
-                  <span
-                    className="text-white/30 text-xs shrink-0 transition-transform"
-                    style={{ transform: aberta ? 'rotate(180deg)' : 'none' }}
-                  >
-                    ▾
-                  </span>
-                </button>
-
-                {aberta && (
-                  <DuplaDetalheBox
-                    seasonId={seasonId}
-                    dupla={d}
-                    jogadorPorId={jogadorPorId}
-                  />
-                )}
-              </div>
-            )
-          })}
+        {/* Busca por jogador */}
+        <div className="relative">
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30 text-sm pointer-events-none">
+            🔍
+          </span>
+          <input
+            type="text"
+            value={busca}
+            onChange={(e) => handleBusca(e.target.value)}
+            placeholder="Buscar dupla por nome do jogador…"
+            className="w-full h-11 rounded-xl border text-sm text-white font-rajdhani outline-none"
+            style={{
+              padding: '0 12px 0 36px',
+              background: 'rgba(255,255,255,.04)',
+              borderColor: 'rgba(255,255,255,.1)',
+            }}
+          />
+          {busca && (
+            <button
+              type="button"
+              onClick={() => handleBusca('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 text-sm cursor-pointer"
+            >
+              ✕
+            </button>
+          )}
         </div>
+
+        {visiveis.length === 0 ? (
+          <p className="text-center font-rajdhani text-sm text-white/35" style={{ padding: '20px 0' }}>
+            Nenhuma dupla encontrada para “{busca}”.
+          </p>
+        ) : (
+          <div className="flex flex-col gap-2">
+            {visiveis.map((d, i) => {
+              const key = `${d.jogador_a}-${d.jogador_b}`
+              const aberta = expandida === key
+              const posicao = inicio + i + 1
+              return (
+                <div
+                  key={key}
+                  className="rounded-xl border border-white/[0.06] bg-white/[0.025]"
+                  style={{ padding: '12px 14px' }}
+                >
+                  <button
+                    type="button"
+                    onClick={() => setExpandida(aberta ? null : key)}
+                    className="w-full flex items-center gap-3 sm:gap-4 text-left cursor-pointer"
+                  >
+                    <span className="font-orbitron text-xs font-bold text-white/25 w-6 shrink-0">
+                      {posicao}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <DuplaLabel
+                        a={jogadorPorId.get(d.jogador_a)}
+                        b={jogadorPorId.get(d.jogador_b)}
+                      />
+                    </div>
+                    <div className="w-[130px] sm:w-[170px] shrink-0">
+                      <AproveitamentoBar pct={d.aproveitamento} />
+                    </div>
+                    <span className="hidden sm:inline font-rajdhani text-xs text-white/45 w-16 text-right shrink-0 tabular-nums">
+                      {d.vitorias}V {d.derrotas}D
+                    </span>
+                    <span
+                      className="text-white/30 text-xs shrink-0 transition-transform"
+                      style={{ transform: aberta ? 'rotate(180deg)' : 'none' }}
+                    >
+                      ▾
+                    </span>
+                  </button>
+
+                  {aberta && (
+                    <DuplaDetalheBox
+                      seasonId={seasonId}
+                      dupla={d}
+                      jogadorPorId={jogadorPorId}
+                      onVerPartida={onVerPartida}
+                    />
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        )}
+
+        {/* Paginação */}
+        {totalPaginas > 1 && (
+          <div className="flex items-center justify-center gap-3" style={{ paddingTop: 4 }}>
+            <button
+              type="button"
+              onClick={() => {
+                setPagina((p) => Math.max(1, p - 1))
+                setExpandida(null)
+              }}
+              disabled={paginaAtual <= 1}
+              className={`font-rajdhani text-xs font-bold uppercase tracking-[0.1em] rounded-lg border px-3 py-2 transition-all ${
+                paginaAtual <= 1
+                  ? 'opacity-30 cursor-not-allowed'
+                  : 'cursor-pointer hover:brightness-125'
+              }`}
+              style={{
+                color: 'white',
+                borderColor: 'rgba(255,255,255,.12)',
+                background: 'rgba(255,255,255,.04)',
+              }}
+            >
+              ← Anterior
+            </button>
+            <span className="font-rajdhani text-xs text-white/45 tabular-nums">
+              Página {paginaAtual} de {totalPaginas}
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                setPagina((p) => Math.min(totalPaginas, p + 1))
+                setExpandida(null)
+              }}
+              disabled={paginaAtual >= totalPaginas}
+              className={`font-rajdhani text-xs font-bold uppercase tracking-[0.1em] rounded-lg border px-3 py-2 transition-all ${
+                paginaAtual >= totalPaginas
+                  ? 'opacity-30 cursor-not-allowed'
+                  : 'cursor-pointer hover:brightness-125'
+              }`}
+              style={{
+                color: 'white',
+                borderColor: 'rgba(255,255,255,.12)',
+                background: 'rgba(255,255,255,.04)',
+              }}
+            >
+              Próxima →
+            </button>
+          </div>
+        )}
       </div>
     </Card>
+      )}
+    </div>
   )
 }
 
 type Modo = 'h2h' | 'duplas'
 
-export default function ConfrontosPage() {
+export default function ConfrontosPage({
+  setPage,
+}: {
+  setPage?: (page: 'partidas') => void
+}) {
   const [modo, setModo] = useState<Modo>('h2h')
   const [seasonId, setSeasonId] = useState<number>(2)
+
+  const handleVerPartida = useCallback(
+    (codigo: number | string) => {
+      const code = String(codigo ?? '').trim()
+      if (!code || code === '-') return
+      try {
+        localStorage.setItem(OPEN_PARTIDA_CODE_KEY, code)
+      } catch {}
+      setPage?.('partidas')
+    },
+    [setPage]
+  )
   const [jogadorA, setJogadorA] = useState<number | null>(null)
   const [jogadorB, setJogadorB] = useState<number | null>(null)
   // A comparação só dispara ao clicar em "Comparar": guardamos os parâmetros
@@ -623,7 +957,13 @@ export default function ConfrontosPage() {
         </div>
 
         {modo === 'duplas' && (
-          <DuplasView seasonId={seasonId} jogadorPorId={jogadorPorId} />
+          <DuplasView
+            seasonId={seasonId}
+            jogadores={jogadores}
+            jogadorPorId={jogadorPorId}
+            carregandoJogadores={carregandoJogadores}
+            onVerPartida={handleVerPartida}
+          />
         )}
 
         {modo === 'h2h' && (

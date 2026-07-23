@@ -215,7 +215,7 @@ export default class ConfrontosController {
       const minRaw = Number(request.input("min"));
       const minPartidas = Number.isInteger(minRaw) && minRaw > 0 ? minRaw : 3;
       const limitRaw = Number(request.input("limit"));
-      const limite = Number.isInteger(limitRaw) && limitRaw > 0 ? Math.min(limitRaw, 100) : 20;
+      const limite = Number.isInteger(limitRaw) && limitRaw > 0 ? Math.min(limitRaw, 500) : 20;
       const hasSeasonColumn = await this.hasSeasonColumn();
 
       const query = Database.from("tb_partidas_jogadores as pa")
