@@ -30,18 +30,6 @@ export default class JogadoresController {
     return this.DEFAULT_SEASON_ID;
   }
 
-  /**
-   * Bônus de marco por nº de partidas, acumulado e POR TEMPORADA. Cada marco
-   * alcançado dentro da temporada credita uma vez no total daquela temporada.
-   */
-  private seasonMilestoneBonus(qtdPartidas: number): number {
-    let bonus = 0;
-    if (qtdPartidas >= 15) bonus += 20;
-    if (qtdPartidas >= 20) bonus += 30;
-    if (qtdPartidas >= 30) bonus += 40;
-    if (qtdPartidas >= 40) bonus += 50;
-    return bonus;
-  }
 
   private parseMonthKey(raw: any): string | null {
     const month = String(raw || "")
@@ -190,8 +178,7 @@ export default class JogadoresController {
       const mortes = Number(agg?.mortes || 0);
       const kda = mortes > 0 ? kills / mortes : kills;
       const qtdPartidas = Number(agg?.qtd_partidas || 0);
-      // total da temporada = soma dos pontos das partidas + bônus de marco da temporada
-      const pontos = Number(agg?.pontos || 0) + this.seasonMilestoneBonus(qtdPartidas);
+      const pontos = Number(agg?.pontos || 0);
       return {
         ...j.toJSON(),
         kills,
