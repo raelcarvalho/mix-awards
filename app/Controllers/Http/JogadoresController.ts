@@ -42,6 +42,7 @@ export default class JogadoresController {
     if (qtdPartidas >= 40) bonus += 50;
     if (qtdPartidas >= 50) bonus += 60;
     if (qtdPartidas >= 60) bonus += 70;
+    if (qtdPartidas >= 70) bonus += 80;
     return bonus;
   }
 
