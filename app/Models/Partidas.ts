@@ -34,6 +34,9 @@ export default class Partidas extends BaseModel {
   @column()
   public nome_time2: string;
 
+  @column()
+  public season_id?: number;
+
   @manyToMany(() => Jogadores, {
     pivotTable: "tb_partidas_jogadores",
     localKey: "id",
@@ -54,6 +57,9 @@ export default class Partidas extends BaseModel {
       "adr",
       "qtd_partidas",
       "pontos",
+      "level_antes",
+      "level_depois",
+      "level_delta",
       "partida_ganha",
     ],
   })

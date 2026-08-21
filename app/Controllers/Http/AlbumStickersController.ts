@@ -28,33 +28,6 @@ export default class AlbumStickersController {
     return criado.id;
   }
 
-  private async addIfMissingStickers(
-    albumAssinaturasId: number,
-    stickerId: number
-  ): Promise<boolean> {
-    const existe = await AlbumStickers.query()
-      .where("album_assinaturas_id", albumAssinaturasId)
-      .andWhere("sticker_id", stickerId)
-      .first();
-
-    if (existe) return false; // Retorna false se o sticker já existe (é uma duplicata)
-
-    await AlbumStickers.create({
-      album_assinaturas_id: albumAssinaturasId,
-      sticker_id: stickerId,
-      obtida_via: "capsulas",
-    });
-    return true; // Retorna true se o sticker era novo e foi adicionado
-  }
-
-  private pickNUnique<T>(arr: T[], n: number): T[] {
-    const a = arr.slice();
-    for (let i = a.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [a[i], a[j]] = [a[j], a[i]];
-    }
-    return a.slice(0, n);
-  }
 
   // ... (seus outros métodos como criarAlbumSticker e meuAlbum permanecem iguais) ...
   public async criarAlbumSticker({ auth, response }: HttpContextContract) {
@@ -240,6 +213,12 @@ export default class AlbumStickersController {
         .where("usuario_adm_id", usuario.id)
         .firstOrFail();
       const albumAssinaturasId = await this.ensureAlbumStickers(jogador.id);
+      const revealedSlots = await this.getRevealedSlots(albumAssinaturasId);
+      const revealedSet = new Set<number>(
+        (revealedSlots || [])
+          .map((slot) => Number(slot))
+          .filter((slot) => Number.isFinite(slot) && slot > 0)
+      );
 
       const [todasAtivas, obtidas] = await Promise.all([
         Stickers.query()
@@ -252,10 +231,17 @@ export default class AlbumStickersController {
       ]);
 
       const setObtidas = new Set<number>(obtidas.map((r) => r.sticker_id));
+      const possuiByStickerId = new Set<number>();
+      for (const s of todasAtivas) {
+        const slot = Number(s.slot ?? s.id);
+        if (setObtidas.has(Number(s.id)) || revealedSet.has(slot)) {
+          possuiByStickerId.add(Number(s.id));
+        }
+      }
 
       const payload = {
         progresso: {
-          obtidas: setObtidas.size,
+          obtidas: possuiByStickerId.size,
           total: todasAtivas.length,
         },
         stickers: todasAtivas.map((s) => ({
@@ -264,7 +250,7 @@ export default class AlbumStickersController {
           ordem: s.ordem ?? s.id,
           nome: s.nome,
           imagem: s.imagem,
-          possui: setObtidas.has(s.id),
+          possui: possuiByStickerId.has(Number(s.id)),
         })),
       };
 

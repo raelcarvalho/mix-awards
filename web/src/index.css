@@ -1,0 +1,68 @@
+@import "tailwindcss";
+
+/* ── Tema MixAwards ────────────────────────────────────────── */
+@theme {
+  --color-navy:    #09091a;
+  --color-panel:   rgba(255,255,255,0.025);
+  --color-border:  rgba(255,255,255,0.07);
+
+  --color-accent:  #c084fc;
+  --color-cyan:    #22d3ee;
+  --color-gold:    #f5c842;
+  --color-green:   #4ade80;
+  --color-orange:  #fb923c;
+  --color-red:     #f87171;
+
+  --font-orbitron: 'Orbitron', monospace;
+  --font-rajdhani: 'Rajdhani', system-ui, sans-serif;
+}
+
+/* ── Reset base ────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body, #root {
+  height: 100%;
+}
+
+body {
+  background-color: #09091a;
+  color: #ffffff;
+  font-family: 'Rajdhani', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Scrollbar customizada ─────────────────────────────────── */
+::-webkit-scrollbar        { width: 4px; height: 4px; }
+::-webkit-scrollbar-track  { background: transparent; }
+::-webkit-scrollbar-thumb  { background: rgba(192,132,252,0.3); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(192,132,252,0.5); }
+
+/* ── Utilitários específicos do projeto ────────────────────── */
+.font-orbitron { font-family: 'Orbitron', monospace; }
+.font-rajdhani { font-family: 'Rajdhani', system-ui, sans-serif; }
+
+/* ── Animações ─────────────────────────────────────────────── */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes Iniciante-glow {
+  0%, 100% { opacity: 0.4; }
+  50%       { opacity: 0.8; }
+}
+@keyframes spin-slow {
+  to { transform: rotate(360deg); }
+}
+@keyframes sidebar-neon-flow {
+  0%   { background-position: 0% 0%; }
+  50%  { background-position: 0% 100%; }
+  100% { background-position: 0% 0%; }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.4s ease both;
+}

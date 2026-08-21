@@ -21,6 +21,33 @@ export default class UsuarioAdm extends BaseModel {
   @column()
   public email: string;
 
+  @column()
+  public steam_id?: string | null;
+
+  @column()
+  public steam_profile_url?: string | null;
+
+  @column()
+  public steam_persona?: string | null;
+
+  @column()
+  public steam_avatar?: string | null;
+
+  @column()
+  public gc_id?: number | null;
+
+  @column()
+  public gc_profile_url?: string | null;
+
+  @column()
+  public gc_nick?: string | null;
+
+  @column()
+  public gc_nick_normalizado?: string | null;
+
+  @column.dateTime()
+  public gc_verified_at?: DateTime | null;
+
   @column({ serializeAs: null, columnName: "senha" })
   public password: string;
 

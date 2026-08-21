@@ -1,4 +1,3 @@
-import Application from '@ioc:Adonis/Core/Application'
 /**
  * Config source: https://git.io/JesV9
  *
@@ -38,10 +37,16 @@ const databaseConfig: DatabaseConfig = {
       client: 'pg',
       connection: {
         host: Env.get('PG_HOST'),
-        port: Env.get('PG_PORT'),
+        port: Number(Env.get('PG_PORT')),
         user: Env.get('PG_USER'),
         password: Env.get('PG_PASSWORD', ''),
         database: Env.get('PG_DB_NAME'),
+      },
+      pool: {
+        min: Env.get('DB_POOL_MIN', 2),
+        max: Env.get('DB_POOL_MAX', 20),
+        // Falha rápido se o pool saturar, em vez de enfileirar por 60s
+        acquireTimeoutMillis: 10_000,
       },
       migrations: {
         naturalSort: true,

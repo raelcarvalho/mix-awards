@@ -1,0 +1,1171 @@
+﻿/* Album + Stickers legacy FX migrated to React */
+
+/* ---------- Shared modal ---------- */
+.ma-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.78);
+  backdrop-filter: blur(6px);
+}
+
+.ma-modal-shell {
+  position: relative;
+  width: min(92vw, 520px);
+  border-radius: 16px;
+  border: 1px solid rgba(93, 154, 255, 0.42);
+  background: linear-gradient(180deg, rgba(14, 24, 40, 0.98), rgba(9, 17, 31, 0.98));
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.55);
+  padding: 16px;
+  overflow: hidden;
+}
+
+.ma-modal-shell::before {
+  content: '';
+  position: absolute;
+  top: -55%;
+  left: -65%;
+  width: 220%;
+  height: 220%;
+  transform: rotate(26deg);
+  background: linear-gradient(
+    45deg,
+    transparent 35%,
+    rgba(80, 146, 255, 0.12) 50%,
+    transparent 65%
+  );
+  animation: maModalSweep 6s linear infinite;
+  pointer-events: none;
+}
+
+.ma-modal-shell > * {
+  position: relative;
+  z-index: 1;
+}
+
+@keyframes maModalSweep {
+  0% {
+    transform: rotate(26deg) translateX(-50%);
+  }
+
+  100% {
+    transform: rotate(26deg) translateX(50%);
+  }
+}
+
+.ma-modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.ma-modal-title {
+  margin: 0;
+  font-weight: 900;
+  font-family: 'Orbitron', monospace;
+  color: #ffffff;
+  letter-spacing: 0.4px;
+}
+
+.ma-modal-close {
+  width: 36px;
+  height: 36px;
+  border-radius: 11px;
+  border: 1px solid rgba(98, 157, 255, 0.45);
+  background: linear-gradient(180deg, rgba(18, 30, 52, 0.98), rgba(12, 22, 40, 0.98));
+  color: rgba(235, 247, 255, 0.96);
+  font-size: 22px;
+  font-weight: 900;
+  line-height: 1;
+  cursor: pointer;
+  transition: transform 0.16s ease, border-color 0.16s ease;
+}
+
+.ma-modal-close:hover {
+  transform: translateY(-1px);
+  border-color: rgba(156, 200, 255, 0.9);
+}
+
+/* ---------- Album cards ---------- */
+.ma-album-slot {
+  --mouse-x: 50%;
+  --mouse-y: 50%;
+  position: relative;
+  aspect-ratio: 2 / 3;
+  border-radius: 14px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px;
+  color: #e6f1f8;
+  cursor: pointer;
+  transition: transform 0.16s ease, box-shadow 0.16s ease;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+.ma-album-slot:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.35), inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+.ma-album-slot img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: 12px;
+  padding: 6px;
+  filter: drop-shadow(0 8px 14px rgba(0, 0, 0, 0.45));
+}
+
+.ma-album-slot .rarity {
+  position: absolute;
+  top: 6px;
+  left: 8px;
+  z-index: 7;
+  border-radius: 7px;
+  padding: 3px 7px;
+  text-transform: capitalize;
+  letter-spacing: 0.3px;
+  font-weight: 800;
+  font-size: 0.72rem;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(15, 35, 53, 0.9);
+  color: #e6f1f8;
+}
+
+.ma-album-slot .num {
+  position: absolute;
+  bottom: 8px;
+  right: 10px;
+  z-index: 7;
+  font-weight: 800;
+  opacity: 0.74;
+  font-size: 0.86rem;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.35);
+}
+
+.ma-album-slot-empty {
+  text-align: center;
+  font-size: 14px;
+  opacity: 0.72;
+  line-height: 1.25;
+  font-weight: 700;
+}
+
+.ma-album-slot-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ma-album-img-container {
+  width: 100%;
+  height: 100%;
+}
+
+.ma-album-img-container.dimmed img {
+  filter: brightness(0.08) contrast(1.1) saturate(0.7);
+}
+
+.ma-album-slot img.ma-album-img-pandemonium,
+.ma-card-preview img.ma-album-img-pandemonium {
+  transform: scale(1.084);
+  transform-origin: left center;
+}
+
+.ma-album-slot.normal {
+  background: linear-gradient(180deg, rgba(10, 18, 28, 0.88), rgba(10, 20, 30, 0.94));
+  border: 2px dashed rgba(220, 240, 255, 0.22);
+}
+
+.ma-album-slot.epica {
+  background: linear-gradient(180deg, rgba(45, 25, 70, 0.85), rgba(25, 15, 45, 0.92));
+  border: 2px dashed rgba(192, 132, 252, 0.45);
+}
+
+.ma-album-slot.lendaria {
+  background: linear-gradient(180deg, rgba(84, 58, 0, 0.8), rgba(51, 30, 0, 0.92));
+  border: 2px dashed rgba(255, 189, 89, 0.55);
+}
+
+.ma-album-slot.mitica {
+  background: linear-gradient(
+    135deg,
+    rgba(156, 39, 176, 0.85),
+    rgba(188, 35, 248, 0.85),
+    rgba(23, 120, 211, 0.85),
+    rgba(192, 103, 243, 0.85),
+    rgba(39, 23, 189, 0.85)
+  );
+  border: 2px dashed rgba(255, 255, 255, 0.7);
+}
+
+.ma-album-slot.god {
+  background: linear-gradient(
+    135deg,
+    rgba(0, 50, 100, 0.85),
+    rgba(0, 100, 200, 0.85),
+    rgba(100, 200, 255, 0.85),
+    rgba(0, 50, 100, 0.85)
+  );
+  border: 2px solid rgba(255, 255, 255, 0.8);
+  box-shadow: 0 0 15px rgba(0, 150, 255, 0.7), inset 0 0 15px rgba(255, 255, 255, 0.3);
+}
+
+.ma-album-slot.god::before {
+  content: '';
+  position: absolute;
+  inset: -6px;
+  z-index: 1;
+  border-radius: 16px;
+  pointer-events: none;
+  background: radial-gradient(circle at 50% 50%, rgba(0, 170, 255, 0.25), transparent 60%);
+  animation: maZeusPulse 3s ease-in-out infinite alternate;
+}
+
+@keyframes maZeusPulse {
+  from {
+    opacity: 0.46;
+    transform: scale(0.985);
+  }
+
+  to {
+    opacity: 0.75;
+    transform: scale(1.01);
+  }
+}
+
+.ma-album-slot.is-new {
+  position: relative;
+}
+
+.ma-album-slot.is-new::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 16px;
+  pointer-events: none;
+  border: 2px solid var(--pulse-color, rgba(255, 189, 89, 0.5));
+  opacity: 0.9;
+  animation: maPulseVar 1.35s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+.ma-album-slot.normal.is-new {
+  --pulse-color: rgba(86, 193, 255, 0.45);
+}
+
+.ma-album-slot.epica.is-new {
+  --pulse-color: rgba(192, 132, 252, 0.5);
+}
+
+.ma-album-slot.lendaria.is-new {
+  --pulse-color: rgba(255, 189, 89, 0.56);
+}
+
+.ma-album-slot.mitica.is-new {
+  --pulse-color: rgba(255, 105, 180, 0.62);
+}
+
+.ma-album-slot.god.is-new {
+  --pulse-color: rgba(0, 150, 255, 0.62);
+}
+
+/* Anima apenas transform/opacity (compositor-only) em vez de box-shadow,
+   que força repaint da área inteira do cartão a cada quadro. */
+@keyframes maPulseVar {
+  0% {
+    transform: scale(1);
+    opacity: 0.9;
+  }
+
+  70%,
+  100% {
+    transform: scale(1.09);
+    opacity: 0;
+  }
+}
+
+/* ---------- Holo ---------- */
+.ma-holo {
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+  z-index: 3;
+  pointer-events: none;
+  mix-blend-mode: overlay;
+  opacity: 0.72;
+  transition: opacity 0.25s ease;
+}
+
+.ma-holo::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(125deg, #ff0080, #ff8c00, #ffed00, #00ff80, #00bfff, #8a2be2, #ff0080);
+  background-size: 400% 400%;
+  animation: maHoloGradient 8s ease infinite;
+  opacity: 0.3;
+}
+
+.ma-holo::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(
+    circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
+    rgba(255, 255, 255, 0.84) 0%,
+    rgba(255, 255, 255, 0.42) 30%,
+    transparent 70%
+  );
+  opacity: 0.62;
+  transition: opacity 0.12s ease;
+}
+
+.ma-album-slot:hover .ma-holo {
+  opacity: 0.92;
+}
+
+.ma-album-slot.normal .ma-holo::before {
+  background: linear-gradient(125deg, #00bfff, #1e90ff, #87cefa, #00bfff);
+  background-size: 400% 400%;
+  opacity: 0.25;
+}
+
+.ma-album-slot.epica .ma-holo::before {
+  background: linear-gradient(125deg, #9370db, #8a2be2, #da70d6, #9370db);
+  background-size: 400% 400%;
+  opacity: 0.35;
+}
+
+.ma-album-slot.lendaria .ma-holo::before {
+  background: linear-gradient(125deg, #ffd700, #ff8c00, #ff4500, #ffd700);
+  background-size: 400% 400%;
+  opacity: 0.4;
+}
+
+.ma-album-slot.mitica .ma-holo::before {
+  background: linear-gradient(125deg, #9c27b0, #00bcd4, #4caf50, #ffeb3b, #ff5722, #9c27b0);
+  background-size: 400% 400%;
+  opacity: 0.5;
+  animation: maHoloMythic 4s linear infinite;
+}
+
+.ma-album-slot.god .ma-holo::before {
+  background: linear-gradient(125deg, #0066cc, #00aaff, #0066cc);
+  background-size: 400% 400%;
+  opacity: 0.6;
+  animation: maHoloGod 3s linear infinite;
+}
+
+@keyframes maHoloGradient {
+  0% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
+
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* `filter` animado força o navegador a re-rasterizar e recompositar o
+   elemento inteiro a cada quadro — é uma das propriedades mais caras de
+   animar em CSS. Mantemos o efeito de gradiente "correndo" apenas com
+   background-position (o visual de holograma deslizante permanece). */
+@keyframes maHoloMythic {
+  0% {
+    background-position: 0% 0%;
+  }
+
+  50% {
+    background-position: 100% 100%;
+  }
+
+  100% {
+    background-position: 0% 0%;
+  }
+}
+
+@keyframes maHoloGod {
+  0% {
+    background-position: 0% 0%;
+  }
+
+  50% {
+    background-position: 100% 100%;
+  }
+
+  100% {
+    background-position: 0% 0%;
+  }
+}
+
+/* ---------- Zeus procedural layers ---------- */
+.ma-zeus-host {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  border-radius: 12px;
+  pointer-events: none;
+}
+
+.ma-zeus-layer,
+.ma-zeus-clouds,
+.ma-zeus-flash {
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+  pointer-events: none;
+}
+
+.ma-zeus-layer {
+  z-index: 3;
+  mix-blend-mode: screen;
+}
+
+.ma-zeus-clouds {
+  z-index: 1;
+  opacity: 0.48;
+  filter: blur(8px) saturate(1.2);
+  background:
+    radial-gradient(140% 70% at 50% -25%, rgba(14, 131, 241, 0.38) 0%, transparent 55%),
+    radial-gradient(90% 45% at 15% -15%, rgba(0, 150, 255, 0.25) 0%, transparent 60%),
+    radial-gradient(90% 45% at 85% -15%, rgba(0, 150, 255, 0.25) 0%, transparent 60%);
+}
+
+.ma-zeus-flash {
+  z-index: 2;
+  opacity: 0;
+  transition: opacity 0.22s ease;
+  background: radial-gradient(
+    65% 45% at 50% 35%,
+    rgba(255, 255, 255, 0.55) 0%,
+    rgba(0, 180, 255, 0.2) 35%,
+    transparent 70%
+  );
+}
+
+/* ---------- Album modal preview ---------- */
+.ma-card-preview {
+  margin: 8px auto;
+  width: min(92%, 420px);
+  aspect-ratio: 2 / 3;
+  border-radius: 14px;
+  overflow: hidden;
+  position: relative;
+}
+
+.ma-card-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: 12px;
+}
+
+.ma-card-info {
+  margin-top: 10px;
+  text-align: center;
+  font-weight: 900;
+  font-size: 16px;
+  letter-spacing: 0.2px;
+  font-family: 'Orbitron', monospace;
+}
+
+.ma-card-info.normal {
+  color: #aeb8c2;
+}
+
+.ma-card-info.epica {
+  color: #c084fc;
+}
+
+.ma-card-info.lendaria {
+  color: #f59e0b;
+}
+
+.ma-card-info.mitica {
+  background: linear-gradient(135deg, #9c27b0, #00bcd4, #4caf50, #ffeb3b, #ff5722);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.ma-card-info.god {
+  background: linear-gradient(135deg, #0066cc, #00aaff, #0066cc);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+/* ---------- Sticker slots ---------- */
+.ma-sticker-slot-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ma-sticker-slot {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  border-radius: 14px;
+  overflow: visible;
+  background: linear-gradient(180deg, rgba(10, 18, 28, 0.62), rgba(10, 20, 30, 0.76));
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  transition: all 0.45s ease;
+  color: #e6f2f8;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+  transform-style: preserve-3d;
+  cursor: pointer;
+}
+
+.ma-sticker-slot:hover {
+  transform: translateY(-5%) rotateX(10deg);
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.6);
+}
+
+.ma-sticker-slot::before {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 16px;
+  z-index: -1;
+  opacity: 0;
+  filter: blur(8px);
+  transition: opacity 0.3s ease;
+  background: linear-gradient(45deg, #ffd700, #ffb700, #ffd700, #ffb700);
+}
+
+.ma-sticker-slot:hover::before {
+  opacity: 0.7;
+  animation: maHologramNeon 2s infinite linear;
+}
+
+@keyframes maHologramNeon {
+  0% {
+    background-position: 0% 0%;
+  }
+
+  100% {
+    background-position: 200% 200%;
+  }
+}
+
+.ma-sticker-img-container {
+  position: relative;
+  width: 92%;
+  height: 92%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.45s ease;
+  transform-style: preserve-3d;
+}
+
+.ma-sticker-img-container.dimmed img {
+  filter: brightness(0.06) contrast(1.1) saturate(0.8);
+}
+
+.ma-sticker-slot img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  z-index: 1;
+  filter: drop-shadow(0 10px 16px rgba(0, 0, 0, 0.45));
+  transition: transform 0.45s ease;
+  transform: translateZ(0);
+}
+
+.ma-sticker-slot:hover .ma-sticker-img-container {
+  transform: translate3d(0, -15%, 30px) scale(1.1);
+}
+
+.ma-sticker-slot .label {
+  position: absolute;
+  top: 6px;
+  left: 8px;
+  border-radius: 7px;
+  z-index: 2;
+  transition: transform 0.45s ease;
+  background: rgba(15, 35, 53, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #e6f1f8;
+  font-weight: 800;
+  font-size: 0.72rem;
+  padding: 3px 6px;
+}
+
+.ma-sticker-slot:hover .label {
+  transform: translate3d(0%, -10px, 30px);
+}
+
+.ma-sticker-slot .num {
+  position: absolute;
+  bottom: 8px;
+  right: 10px;
+  z-index: 2;
+  transition: transform 0.45s ease;
+  font-weight: 800;
+  opacity: 0.7;
+  font-size: 0.86rem;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.35);
+}
+
+.ma-sticker-slot:hover .num {
+  transform: translate3d(0%, 10px, 30px);
+}
+
+.ma-sticker-slot.is-new {
+  border: 2px dashed transparent;
+  background:
+    linear-gradient(rgba(0, 0, 0, 0.14), rgba(0, 0, 0, 0.14)) padding-box,
+    linear-gradient(135deg, #ffd45a, #ff7b3d) border-box;
+}
+
+.ma-reveal-bar {
+  width: 100%;
+  border-radius: 8px;
+  border: 1px solid rgba(58, 88, 120, 0.9);
+  background: #0f2435;
+  color: #e8f1f8;
+  padding: 6px 8px;
+  font-size: 0.85rem;
+  line-height: 1.25;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.16s ease, transform 0.16s ease;
+}
+
+.ma-reveal-bar:hover {
+  border-color: rgba(100, 168, 255, 0.88);
+  transform: translateY(-1px);
+}
+
+/* ---------- Sticker modal 3D ---------- */
+.ma-sticker-card3d {
+  perspective: 1000px;
+  margin: 8px auto;
+  width: min(92%, 420px);
+}
+
+.ma-sticker-card3d-inner {
+  transform-style: preserve-3d;
+  transition: transform 0.12s ease;
+  border-radius: 14px;
+  overflow: visible;
+  aspect-ratio: 1 / 1;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  position: relative;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.05), rgba(255, 215, 0, 0.1), rgba(255, 215, 0, 0.05));
+}
+
+.ma-sticker-card3d-inner::before {
+  content: '';
+  position: absolute;
+  inset: -10%;
+  border-radius: inherit;
+  background: radial-gradient(45% 45% at 50% 50%, rgba(255, 191, 73, 0.32), transparent 70%);
+  filter: blur(18px);
+}
+
+.ma-sticker-card3d-inner::after {
+  content: '';
+  position: absolute;
+  inset: -20%;
+  pointer-events: none;
+  z-index: 1;
+  background: linear-gradient(45deg, transparent 30%, rgba(255, 215, 0, 0.2) 50%, transparent 70%);
+  animation: maCardHoloSweep 3s linear infinite;
+}
+
+@keyframes maCardHoloSweep {
+  0% {
+    transform: translateX(-100%) translateY(-100%) rotate(45deg);
+  }
+
+  100% {
+    transform: translateX(100%) translateY(100%) rotate(45deg);
+  }
+}
+
+.ma-sticker-card3d-inner img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  position: relative;
+  z-index: 2;
+  filter: drop-shadow(0 0 15px rgba(255, 215, 0, 0.3));
+  transition: transform 0.5s ease;
+}
+
+.ma-sticker-card3d-inner:hover img {
+  transform: translateZ(40px) scale(1.1);
+}
+
+/* ---------- Pack opening FX ---------- */
+.ma-packfx-backdrop {
+  z-index: 260;
+}
+
+.ma-packfx-shell {
+  position: relative;
+  width: min(96vw, 1240px);
+  min-height: min(82vh, 820px);
+  border-radius: 16px;
+  border: 1px solid rgba(192, 132, 252, 0.34);
+  background:
+    linear-gradient(180deg, rgba(10, 18, 33, 0.98), rgba(8, 14, 27, 0.99)),
+    radial-gradient(100% 100% at 50% 0%, rgba(192, 132, 252, 0.1), transparent 65%);
+  box-shadow: 0 28px 90px rgba(0, 0, 0, 0.55);
+  padding: 16px;
+  overflow: hidden;
+}
+
+.ma-packfx-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.ma-packfx-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ma-packfx-stage {
+  position: relative;
+  height: min(74vh, 690px);
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background:
+    radial-gradient(130% 90% at 50% 0%, rgba(40, 70, 128, 0.34), transparent 66%),
+    linear-gradient(180deg, rgba(8, 15, 28, 0.94), rgba(5, 10, 20, 0.98));
+  overflow: hidden;
+}
+
+.ma-packfx-stage::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 64px;
+  pointer-events: none;
+  background: radial-gradient(65% 80% at 50% 100%, rgba(255, 255, 255, 0.08), transparent 80%);
+}
+
+.ma-packfx-pack {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 230px;
+  height: 310px;
+  border-radius: 18px;
+  transform: translate(-50%, -56%) rotateX(10deg) rotateY(-8deg);
+  background: #244a7a url('/uploads/figurinhas/pacote.png') center/cover no-repeat;
+  border: 2px solid rgba(174, 193, 255, 0.5);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
+  transition: opacity 0.35s ease, transform 0.35s ease;
+  z-index: 3;
+}
+
+.ma-packfx-pack.is-shaking {
+  animation: maPackShake 700ms ease-in-out 2;
+}
+
+.ma-packfx-pack.is-hidden {
+  opacity: 0;
+  transform: translate(-50%, -56%) scale(0.88);
+  pointer-events: none;
+}
+
+.ma-packfx-foil {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background:
+    linear-gradient(120deg, transparent 15%, rgba(255, 255, 255, 0.36) 35%, transparent 55%),
+    radial-gradient(65% 45% at 50% 0%, rgba(255, 255, 255, 0.24), transparent 70%);
+  mix-blend-mode: screen;
+  animation: maPackFoil 2.2s linear infinite;
+}
+
+.ma-packfx-tap {
+  position: absolute;
+  left: 50%;
+  bottom: 16px;
+  transform: translateX(-50%);
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  color: rgba(227, 241, 255, 0.95);
+  letter-spacing: 0.5px;
+  text-shadow: 0 0 10px rgba(103, 178, 255, 0.5);
+}
+
+.ma-packfx-fan {
+  --n: 4;
+  --card-w: 220px;
+  --card-h: 315px;
+  --gap: clamp(8px, 1.5vw, 16px);
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: grid;
+  grid-auto-flow: column;
+  grid-template-columns: repeat(var(--n), var(--card-w));
+  gap: var(--gap);
+  justify-content: center;
+  align-items: center;
+  padding: 20px 24px 44px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.32s ease;
+  z-index: 5;
+}
+
+.ma-packfx-fan.is-ready {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.ma-packfx-card-wrap {
+  width: var(--card-w);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.ma-packfx-card {
+  position: relative;
+  width: var(--card-w);
+  height: var(--card-h);
+  border-radius: 18px;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  background: transparent;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
+  transform-style: preserve-3d;
+  opacity: 0;
+  transform: translateY(38px) scale(0.96) rotateZ(var(--rot, 0deg));
+  animation: maPackCardIn 0.56s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+.ma-packfx-card:hover {
+  filter: brightness(1.04);
+}
+
+.ma-packfx-inner {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.ma-packfx-card.is-revealed .ma-packfx-inner {
+  transform: rotateY(180deg) translateZ(6px) scale(1.02);
+}
+
+.ma-packfx-face {
+  position: absolute;
+  inset: 0;
+  border-radius: 16px;
+  overflow: hidden;
+  backface-visibility: hidden;
+}
+
+.ma-packfx-back {
+  background: #0e1a2b url('/uploads/figurinhas/figurinha_verso.png') center/cover no-repeat;
+  border: 2px solid #3b4cca;
+}
+
+.ma-packfx-front {
+  transform: rotateY(180deg);
+  background: #edf2f9;
+  border: 2px solid #d2d8e6;
+  display: flex;
+  flex-direction: column;
+}
+
+.ma-packfx-art {
+  position: relative;
+  flex: 1;
+  background: #fff;
+  display: grid;
+  place-items: center;
+}
+
+.ma-packfx-art img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.ma-packfx-art-fallback {
+  font-size: 56px;
+  opacity: 0.3;
+  color: #24374f;
+}
+
+.ma-packfx-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  background: #fff;
+  color: #0a2236;
+}
+
+.ma-packfx-meta strong {
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ma-packfx-tag {
+  padding: 4px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.ma-packfx-tag.normal {
+  background: #e7f0ff;
+  color: #284d97;
+}
+
+.ma-packfx-tag.epica {
+  background: #efe1ff;
+  color: #6a2fad;
+}
+
+.ma-packfx-tag.lendaria {
+  background: #fff1bf;
+  color: #6a4a00;
+}
+
+.ma-packfx-tag.mitica {
+  background: #ffe4ff;
+  color: #a1269d;
+}
+
+.ma-packfx-tag.god {
+  background: #dff4ff;
+  color: #0062c6;
+}
+
+.ma-packfx-card.epica .ma-packfx-front {
+  border-color: #b16afd;
+}
+
+.ma-packfx-card.lendaria .ma-packfx-front {
+  border-color: #fedd46;
+}
+
+.ma-packfx-card.mitica .ma-packfx-front {
+  border-color: #ff6fe4;
+  box-shadow: 0 0 0 2px rgba(255, 111, 228, 0.28) inset;
+}
+
+.ma-packfx-card.god .ma-packfx-front {
+  border-color: #56c1ff;
+  box-shadow: 0 0 0 2px rgba(86, 193, 255, 0.3) inset;
+}
+
+.ma-packfx-card.is-duplicate .ma-packfx-front {
+  border-color: #ff4d4f !important;
+  box-shadow: 0 0 0 2px rgba(255, 77, 79, 0.35) inset;
+}
+
+.ma-packfx-dup {
+  width: 100%;
+  border-radius: 8px;
+  text-align: center;
+  padding: 6px 8px;
+  font-size: 12px;
+  line-height: 1.2;
+  color: #ffd7d7;
+  background: rgba(255, 0, 0, 0.12);
+  border: 1px solid rgba(255, 77, 79, 0.5);
+}
+
+@keyframes maPackShake {
+  0% {
+    transform: translate(-50%, -56%) rotateX(10deg) rotateY(-8deg);
+  }
+  25% {
+    transform: translate(-50%, -56%) rotateX(10deg) rotateY(-2deg) translateZ(6px);
+  }
+  50% {
+    transform: translate(-50%, -56%) rotateX(12deg) rotateY(8deg) translateZ(10px);
+  }
+  100% {
+    transform: translate(-50%, -56%) rotateX(8deg) rotateY(-4deg);
+  }
+}
+
+@keyframes maPackFoil {
+  from {
+    transform: translateX(-120%);
+  }
+  to {
+    transform: translateX(120%);
+  }
+}
+
+@keyframes maPackCardIn {
+  to {
+    opacity: 1;
+    transform: translateY(0) rotateZ(var(--rot, 0deg));
+  }
+}
+
+@media (max-width: 1200px) {
+  .ma-packfx-fan {
+    --card-w: 190px;
+    --card-h: 275px;
+  }
+}
+
+@media (max-width: 980px) {
+  .ma-packfx-shell {
+    min-height: min(88vh, 820px);
+  }
+
+  .ma-packfx-stage {
+    height: min(78vh, 700px);
+  }
+
+  .ma-packfx-fan {
+    --card-w: 160px;
+    --card-h: 230px;
+    grid-auto-flow: row;
+    grid-template-columns: repeat(2, minmax(140px, var(--card-w)));
+    transform: translate(-50%, -50%);
+  }
+}
+
+
+
+/* ══════════════════════════════════════════════════════════════
+   Copa do Mundo — TCG Holographic effect
+   Overrides generic .ma-holo inside .copa-album-grid slots.
+   Container uses color-dodge to blend the whole holo composite
+   (sparkles + rainbow) with the card image behind it.
+   ══════════════════════════════════════════════════════════════ */
+
+.copa-album-grid .ma-album-slot .ma-holo {
+  mix-blend-mode: screen;
+  opacity: 0.70;
+  transition: opacity .2s ease;
+}
+
+.copa-album-grid .ma-album-slot:hover .ma-holo {
+  opacity: 0.7;
+}
+
+/* Sparkle / glitter layer — colored dots on near-black base */
+.copa-album-grid .ma-album-slot .ma-holo::before {
+  /* Reduzido de 25 para 13 pontos de brilho — mantém a densidade visual de
+     "glitter" perceptível, mas corta quase pela metade o custo de
+     rasterização que o filter:hue-rotate animado precisa refazer a cada
+     quadro (ver nota em copaSparkleHue). */
+  background:
+    radial-gradient(circle 4px  at 14% 22%, rgba(0,255,255,.95)   0%, transparent 65%),
+    radial-gradient(circle 5px  at 39% 61%, rgba(0,180,255,.9)    0%, transparent 65%),
+    radial-gradient(circle 4px  at 22% 77%, rgba(255,60,120,.9)   0%, transparent 65%),
+    radial-gradient(circle 5px  at  5% 51%, rgba(255,140,0,.9)    0%, transparent 65%),
+    radial-gradient(circle 4px  at 51%  8%, rgba(255,60,200,.9)   0%, transparent 65%),
+    radial-gradient(circle 5px  at 76% 93%, rgba(0,255,255,.9)    0%, transparent 65%),
+    radial-gradient(circle 4px  at 44% 44%, rgba(220,0,255,.9)    0%, transparent 65%),
+    radial-gradient(circle 5px  at 29% 36%, rgba(255,80,0,.9)     0%, transparent 65%),
+    radial-gradient(circle 4px  at 73% 55%, rgba(180,255,0,.9)    0%, transparent 65%),
+    radial-gradient(circle 5px  at 96% 48%, rgba(0,255,160,.9)    0%, transparent 65%),
+    radial-gradient(circle 4px  at  3% 31%, rgba(180,0,255,.9)    0%, transparent 65%),
+    radial-gradient(circle 5px  at 25% 55%, rgba(255,255,0,.9)    0%, transparent 65%),
+    radial-gradient(circle 4px  at 42% 17%, rgba(80,255,80,.9)    0%, transparent 65%),
+    rgba(0,0,0,.88);
+  background-size: auto;
+  opacity: 1;
+  animation: copaSparkleHue 5s linear infinite;
+}
+
+/* Rainbow prism layer — screens over sparkle base, follows mouse */
+.copa-album-grid .ma-album-slot .ma-holo::after {
+  background: linear-gradient(
+    115deg,
+    rgba(86, 250, 10, 0.884)   0%,
+    rgba(224, 184, 6, 0.842)  16.66%,
+    rgba(  0,255,120,.55)  33.33%,
+    rgba(72, 193, 245, 0.616)  50%,
+    rgba(0, 192, 250, 0.918)  66.66%,
+    rgba(235, 231, 15, 0.925)  83.33%,
+    rgba(179, 3, 233, 0.55) 100%
+  );
+  background-size: 300% 300%;
+  background-position: var(--mouse-x, 50%) var(--mouse-y, 50%);
+  mix-blend-mode: screen;
+  opacity: 0.25;
+  transition: background-position .12s ease;
+}
+
+.copa-album-grid .ma-album-slot:hover .ma-holo::after {
+  opacity: 0.7;
+}
+
+/* `filter: hue-rotate` animado é a operação mais cara desta folha de
+   estilos: o navegador precisa re-rasterizar e recompositar a camada
+   inteira a cada quadro. Mantido aqui (é a assinatura visual da skin
+   Copa do Mundo), mas com a camada de glitter reduzida acima para
+   diminuir a área/complexidade que o filtro precisa reprocessar. */
+@keyframes copaSparkleHue {
+  from { filter: hue-rotate(0deg); }
+  to   { filter: hue-rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ma-album-slot,
+  .ma-sticker-slot,
+  .ma-reveal-bar,
+  .ma-modal-close,
+  .ma-holo,
+  .ma-sticker-card3d-inner,
+  .ma-sticker-img-container,
+  .ma-packfx-pack,
+  .ma-packfx-card,
+  .ma-packfx-inner,
+  .ma-packfx-foil {
+    animation: none !important;
+    transition: none !important;
+  }
+}

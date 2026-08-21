@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <!-- PRELOAD do auth.js (igual ao index) -->
+    <link rel="preload" href="/js/auth.js" as="script" />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Tirar Mix — Draft</title>
+
+    <!-- === ESTILOS DA SUA NAVBAR (copiados do index) === -->
+    <style>
+        :root {
+            /* paleta do layout global (igual ao index) */
+            --navy-900: #0b1824;
+            --navy-850: #0d1f2e;
+            --navy-800: #0f2436;
+            --navy-700: #112a41;
+            --navy-650: #14324c;
+            --navy-600: #183b59;
+            --ink: #e6f2ff;
+            --muted: #c8daec;
+            --line: #1f3953;
+            --accent: #56c1ff;
+            --accent-2: #87d4ff;
+            --gold: #f4c84a;
+
+            /* paleta do conteúdo da página */
+            --bg: #0b1824;
+            --bg-2: #0f2337;
+            --card: #0f2337;
+            --panel: #0d1f2e;
+            --soft-line: #244a6a;
+
+            /* tokens locais */
+            --pill: #0f1e28;
+            --list: #102436;
+        }
+
+        html,
+        body {
+            margin: 0;
+            height: 100%;
+            color: var(--ink);
+            background: radial-gradient(1200px 700px at 50% 0%, #183a5a 0%, #0f2337 50%, #0b1824 100%), linear-gradient(180deg, #0b1824, #0b1824);
+            font: 14px/1.5 Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif
+        }
+
+        a {
+            color: #e8f1f8;
+            text-decoration: none
+        }
+
+        /* NAVBAR (igual ao index) */
+        .nav {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 10px 16px;
+            background: #0b1824;
+            color: #e8f1f8;
+            border-bottom: 1px solid #12304a
+        }
+
+        .navbar-brand {
+            font-weight: 800;
+            letter-spacing: .5px;
+            color: #e8f1f8;
+            text-decoration: none;
+            margin-right: 10px;
+            font-size: 1.2rem
+        }
+
+        .nav-right {
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+            gap: 10px
+        }
+
+        .nav-btn {
+            color: #e8f1f8;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            margin: 0;
+            padding: 10px 15px;
+            position: relative;
+            text-decoration: none;
+            text-transform: uppercase;
+            transition: all .3s ease;
+            background: none;
+            border: none
+        }
+
+        .nav-btn:hover,
+        .nav-btn:active {
+            letter-spacing: 1px
+        }
+
+        .nav-btn:after,
+        .nav-btn:before {
+            backface-visibility: hidden;
+            border: 1px solid rgba(255, 255, 255, 0);
+            bottom: 0px;
+            content: " ";
+            display: block;
+            margin: 0 auto;
+            position: relative;
+            transition: all .3s ease-in-out;
+            width: 0
+        }
+
+        .nav-btn:hover:after,
+        .nav-btn:hover:before {
+            transition: width .3s ease-in-out;
+            width: 70%
+        }
+
+        .nav-btn:hover:before {
+            bottom: auto;
+            top: 0;
+            width: 70%
+        }
+
+        .nav-btn[data-color="#2db2ff"]:hover:after,
+        .nav-btn[data-color="#2db2ff"]:hover:before {
+            border-color: #2db2ff
+        }
+
+        .nav-btn[data-color="#ff1f71"]:hover:after,
+        .nav-btn[data-color="#ff1f71"]:hover:before {
+            border-color: #ff1f71
+        }
+
+        .nav-btn[data-color="#1eff45"]:hover:after,
+        .nav-btn[data-color="#1eff45"]:hover:before {
+            border-color: #1eff45
+        }
+
+        .nav-btn[data-color="#a78bfa"]:hover:after,
+        .nav-btn[data-color="#a78bfa"]:hover:before {
+            border-color: #a78bfa
+        }
+
+        .nav-btn[data-color="#56c1ff"]:hover:after,
+        .nav-btn[data-color="#56c1ff"]:hover:before {
+            border-color: #56c1ff
+        }
+
+        .nav-btn[data-color="#ff9e9e"]:hover:after,
+        .nav-btn[data-color="#ff9e9e"]:hover:before {
+            border-color: #ff9e9e
+        }
+
+        /* GOLD BADGE (igual ao index) */
+        .gold-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 4px 12px;
+            background: #132b3e;
+            border: 1px solid #23445e;
+            border-radius: 9999px;
+            line-height: 1;
+            font-weight: 700;
+            white-space: nowrap
+        }
+
+        .gold-badge>img,
+        .gold-badge>svg,
+        .gold-badge>span[aria-hidden] {
+            width: 18px !important;
+            height: 18px !important;
+            max-width: none !important;
+            object-fit: contain;
+            display: block;
+            transform: translateY(1px);
+            flex: 0 0 18px
+        }
+
+        #goldIcon {
+            width: 18px !important;
+            height: 18px !important;
+            max-width: none !important;
+            object-fit: contain !important;
+            display: block;
+            transform: translateY(1px)
+        }
+
+        .gold-badge .qty {
+            min-width: 14px;
+            text-align: right
+        }
+
+        /* ===== Estilos da página “Tirar Mix” (escopados) ===== */
+        .tmx-container {
+            width: min(1280px, 96vw);
+            margin: 18px auto;
+            padding: 0 12px
+        }
+
+        .tmx-toolbar {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+            margin: 18px 0
+        }
+
+        .tmx-toolbar .spacer {
+            flex: 1
+        }
+
+        .tmx-btn {
+            background: #183245;
+            color: #e6f2ff;
+            border: 1px solid #244a6a;
+            border-radius: 12px;
+            padding: 10px 14px;
+            cursor: pointer;
+            transition: .15s transform, .15s opacity;
+            font-weight: 700
+        }
+
+        .tmx-btn[disabled] {
+            opacity: .5;
+            cursor: not-allowed
+        }
+
+        .tmx-btn:hover {
+            transform: translateY(-1px)
+        }
+
+        .tmx-btn.acc {
+            background: linear-gradient(90deg, #2dd4bf, #60a5fa);
+            border: none;
+            color: #02131b;
+            font-weight: 900
+        }
+
+        .tmx-btn.warn {
+            background: #2a1d04;
+            border: 1px solid #4b3711;
+            color: #ffdf9b
+        }
+
+        .tmx-pill {
+            font-size: 12px;
+            padding: 4px 10px;
+            border-radius: 999px;
+            border: 1px solid #244a6a;
+            color: #c8daec;
+            background: #0f1e28
+        }
+
+        .tmx-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 8px;
+            border-radius: 999px;
+            background: #0f1e28;
+            border: 1px solid #244a6a;
+            color: #9bb2c4;
+            font-weight: 800
+        }
+
+        .tmx-card {
+            background: #0f2337;
+            border: 1px solid #244a6a;
+            border-radius: 16px;
+            padding: 14px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, .25), inset 0 0 0 1px rgba(255, 255, 255, .04)
+        }
+
+        .tmx-sub {
+            color: #c8daec;
+            font-size: 12px
+        }
+
+        .tmx-grid {
+            display: grid;
+            grid-template-columns: 1fr 1.2fr 1fr;
+            gap: 14px
+        }
+
+        h3 {
+            margin: 0 0 10px;
+            font-size: 16px
+        }
+
+        .tmx-teams {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            min-height: 520px
+        }
+
+        .tmx-slot {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: #0f1e28;
+            border: 1px dashed #244a6a;
+            border-radius: 12px;
+            padding: 10px
+        }
+
+        .tmx-slot.empty {
+            color: #6b93ad;
+            justify-content: center
+        }
+
+        .tmx-slot .cap {
+            color: #ffd166;
+            font-weight: 900;
+            margin-left: auto
+        }
+
+        .tmx-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-height: 560px;
+            overflow: auto;
+            padding-right: 6px
+        }
+
+        .tmx-player {
+            display: grid;
+            grid-template-columns: 36px 1fr auto;
+            gap: 10px;
+            align-items: center;
+            background: #0f1e28;
+            border: 1px solid #244a6a;
+            border-radius: 12px;
+            padding: 10px
+        }
+
+        .tmx-ava {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: #113044;
+            border: 1px solid #244a6a;
+            overflow: hidden;
+            display: grid;
+            place-items: center
+        }
+
+        .tmx-ava img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block
+        }
+
+        .tmx-meta {
+            display: flex;
+            gap: 10px;
+            color: #a8c0d3;
+            font-size: 12px
+        }
+
+        .tmx-meta b {
+            color: #e4f2fb
+        }
+
+        .tmx-actions {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap
+        }
+
+        .tmx-search {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 10px
+        }
+
+        .tmx-search input {
+            flex: 1;
+            padding: 10px 12px;
+            border-radius: 10px;
+            border: 1px solid #244a6a;
+            background: #0f1e28;
+            color: #e6f2ff
+        }
+
+        .tmx-toast {
+            position: fixed;
+            right: 16px;
+            bottom: 16px;
+            background: #0f1e28;
+            border: 1px solid #244a6a;
+            color: #e6f2ff;
+            padding: 10px 12px;
+            border-radius: 12px;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, .25);
+            display: none
+        }
+    </style>
+</head>
+
+<body>
+    <!-- NAVBAR (idêntica ao index; auth.js preenche .nav-right) -->
+    <div class="nav">
+        <a class="navbar-brand" href="/index">MIX AWARDS</a>
+        <a href="/importar-partida-html" class="nav-btn" data-color="#2db2ff">Importar Partida</a>
+        <a href="/consultar-partidas-html" class="nav-btn" data-color="#ff1f71">Consultar Partida</a>
+        <a href="/ranking-jogadores-html" class="nav-btn" data-color="#1eff45">Ranking Jogadores</a>
+        <a href="/shop-html" class="nav-btn" data-color="#56c1ff">Loja</a>
+        <a href="/album-html" class="nav-btn" data-color="#a78bfa">Álbum</a>
+        <a href="/tirar-mix-html" class="nav-btn" data-color="#ff9e9e">Tirar Mix</a>
+        <div class="nav-right"></div>
+    </div>
+
+    <div class="tmx-container">
+        <div class="tmx-toolbar">
+            <button class="tmx-btn acc" id="btn_nova">Nova sessão</button>
+            <button class="tmx-btn" id="btn_parimpar" disabled>Par/Ímpar (1–100)</button>
+            <span id="parimpar_result" class="tmx-tag" style="display:none;"></span>
+            <div class="spacer"></div>
+            <span class="tmx-pill">Sessão: <b id="sessao_lbl" style="margin-left:6px">—</b></span>
+            <span class="tmx-pill">Meu jogador id: <input id="meu_jogador_id" type="number" min="1"
+                    style="width:100px;margin-left:6px;background:transparent;border:none;color:#fff"
+                    placeholder="opcional" /></span>
+            <button class="tmx-btn warn" id="btn_aceitar_capitao" disabled>Sou capitão → aceitar</button>
+            <button class="tmx-btn warn" id="btn_undo" disabled>Desfazer último</button>
+        </div>
+
+        <div class="tmx-card" style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+            <div class="tmx-tag" id="turno_tag">aguardando…</div>
+            <div class="tmx-sub" id="sub_turno">Crie a sessão, convide capitães e inicie o draft.</div>
+            <div style="flex:1"></div>
+            <button class="tmx-btn" id="btn_enviar_convites" disabled>Enviar convites de capitão</button>
+            <button class="tmx-btn acc" id="btn_iniciar" disabled>Iniciar draft</button>
+        </div>
+
+        <div class="tmx-grid">
+            <div class="tmx-card">
+                <h3>Time A</h3>
+                <div id="team_a" class="tmx-teams"></div>
+            </div>
+
+            <div class="tmx-card">
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+                    <h3 style="margin:0">Jogadores</h3>
+                    <div style="flex:1"></div>
+                    <span class="tmx-pill">KDR</span>
+                    <span class="tmx-pill">WIN RATE</span>
+                    <span class="tmx-pill">KAST</span>
+                </div>
+
+                <div class="tmx-search">
+                    <input id="busca" placeholder="Buscar por nickname…" />
+                </div>
+
+                <div id="players" class="tmx-list"></div>
+            </div>
+
+            <div class="tmx-card">
+                <h3>Time B</h3>
+                <div id="team_b" class="tmx-teams"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast" class="tmx-toast"></div>
+
+    <script defer src="/js/auth.js"></script>
+    <script src="/js/tirar-mix.js"></script>
+</body>
+
+</html>

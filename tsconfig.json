@@ -1,11 +1,24 @@
 {
   "extends": "./node_modules/adonis-preset-ts/tsconfig",
   "include": [
-    "**/*"
-, "app/Models/.ts"  ],
+    "server.ts",
+    "ace",
+    "ace-manifest.json",
+    "ace.js",
+    "bin/**/*",
+    "app/**/*",
+    "config/**/*",
+    "contracts/**/*",
+    "database/**/*",
+    "providers/**/*",
+    "start/**/*",
+    "commands/**/*"
+  ],
   "exclude": [
     "node_modules",
-    "build"
+    "build",
+    "web/**/*",
+    "public/**/*"
   ],
   "compilerOptions": {
     "outDir": "build",

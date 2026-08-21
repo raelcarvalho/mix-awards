@@ -6,7 +6,7 @@ import CustomResponse from "App/Utils/CustomResponse";
 import Jogadores from "App/Models/Jogadores";
 import Figurinhas from "App/Models/Figurinhas";
 import Pacotes from "App/Models/Pacotes";
-import PacotesItens from "App/Models/PacotesItens";
+import PackOpeningService from "App/Service/Album/PackOpeningService";
 
 export default class AlbumController {
   protected customResponse: CustomResponse;
@@ -35,35 +35,6 @@ export default class AlbumController {
       ? Number(inserted[0]?.id ?? inserted[0])
       : Number(inserted);
     return albumId;
-  }
-
-  private async addIfMissing(
-    albumId: number,
-    figurinhaId: number
-  ): Promise<boolean> {
-    const exists = await Database.from("tb_album_figurinhas")
-      .where("album_id", albumId)
-      .andWhere("figurinha_id", figurinhaId)
-      .first();
-
-    if (exists) return false;
-
-    await Database.table("tb_album_figurinhas").insert({
-      album_id: albumId,
-      figurinha_id: figurinhaId,
-      obtida_via: "pacote",
-      created_at: DateTime.now().toSQL(),
-    });
-    return true;
-  }
-
-  private pickNUnique<T>(arr: T[], n: number): T[] {
-    const a = arr.slice();
-    for (let i = a.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [a[i], a[j]] = [a[j], a[i]];
-    }
-    return a.slice(0, n);
   }
 
   // ===== NOVO: endpoint de status para a loja =====
@@ -277,151 +248,28 @@ export default class AlbumController {
         );
       }
 
-      const poolNormal = todasAtivas.filter((f) => f.raridade === "normal");
-      const poolEpica = todasAtivas.filter((f) => f.raridade === "epica");
-      const poolLendaria = todasAtivas.filter((f) => f.raridade === "lendaria");
-      const poolMitica = todasAtivas.filter((f) => f.raridade === "mitica");
-      const poolGod = todasAtivas.filter((f) => f.raridade === "god");
+      const cartas = PackOpeningService.sortearCartas(todasAtivas, qtdItens);
 
-      type Raridade = "normal" | "epica" | "lendaria" | "mitica" | "god";
-      const PESOS = {
-        normal: 39,
-        epica: 45,
-        lendaria: 12,
-        mitica: 3,
-        god: 1,
-      } as const;
-
-      function sortearRaridade(): Raridade {
-        const r = Math.random() * 100;
-        let acc = 0;
-        for (const [rar, peso] of Object.entries(PESOS) as [
-          Raridade,
-          number
-        ][]) {
-          acc += peso;
-          if (r < acc) return rar;
-        }
-        return "normal";
-      }
-
-      function pickRandom<T>(arr: T[]): T | null {
-        if (!arr.length) return null;
-        const idx = Math.floor(Math.random() * arr.length);
-        return arr[idx];
-      }
-
-      function poolByRaridade(r: Raridade): any[] {
-        if (r === "normal") return poolNormal;
-        if (r === "epica") return poolEpica;
-        if (r === "lendaria") return poolLendaria;
-        if (r === "mitica") return poolMitica;
-        return poolGod;
-      }
-
-      const cartas: any[] = [];
-      let tentativas = 0;
-
-      while (cartas.length < qtdItens && tentativas < 20 * qtdItens) {
-        tentativas++;
-
-        let rar: Raridade = sortearRaridade();
-        let pool = poolByRaridade(rar);
-
-        if (!pool.length) {
-          const ordemFallback: Raridade[] =
-            rar === "mitica"
-              ? ["lendaria", "epica", "normal"]
-              : rar === "lendaria"
-              ? ["epica", "normal"]
-              : rar === "epica"
-              ? ["normal"]
-              : [];
-
-          for (const rfb of ordemFallback) {
-            const p = poolByRaridade(rfb);
-            if (p.length) {
-              rar = rfb;
-              pool = p;
-              break;
-            }
-          }
-        }
-
-        const sorteada = pickRandom(pool);
-        if (sorteada && !cartas.some((c) => c.id === sorteada.id)) {
-          cartas.push(sorteada);
-        }
-      }
-
-      const novas: any[] = [];
-      const duplicadas: any[] = [];
-
-      const VALOR_DUP: Record<Raridade, number> = {
-        normal: 2,
-        epica: 5,
-        lendaria: 10,
-        mitica: 20,
-        god: 50,
-      };
-
-      let goldVendidoTotal = 0;
-
-      for (const f of cartas) {
-        const nova = await this.addIfMissing(albumId, f.id);
-
-        await PacotesItens.create({
-          pacotes_id: pacote.id,
-          figurinha_id: f.id,
-          duplicada: !nova,
-        });
-
-        if (nova) {
-          novas.push(f);
-        } else {
-          duplicadas.push(f);
-          const val = VALOR_DUP[f.raridade as Raridade] || 0;
-          goldVendidoTotal += val;
-        }
-      }
-
-      if (goldVendidoTotal > 0) {
-        await Jogadores.query()
-          .where("id", jogador.id)
-          .increment("gold", goldVendidoTotal);
-      }
-
-      await Database.from("tb_pacotes").where("id", pacote.id).update({
-        status: "aberto",
-        aberto_em: DateTime.now().toSQL(),
-        updated_at: DateTime.now().toSQL(),
-      });
-
-      const countRes = await Database.from("tb_album_figurinhas")
-        .where("album_id", albumId)
-        .count("* as c")
-        .first();
-
-      const progresso = {
-        obtidas: Number(countRes?.c || 0),
-        total: todasAtivas.length,
-      };
-
-      const jogadorAtualizado = await Jogadores.find(jogador.id);
+      const outcome = await PackOpeningService.registrarResultado(
+        albumId,
+        pacote.id,
+        jogador.id,
+        cartas
+      );
 
       const payload = {
         pacoteId: pacote.id,
-        novas,
-        duplicadas,
-        goldVendidoTotal,
-        saldoGoldAtual: jogadorAtualizado?.gold ?? undefined,
-        progresso,
+        novas: outcome.novas,
+        duplicadas: outcome.duplicadas,
+        goldVendidoTotal: outcome.goldVendidoTotal,
+        saldoGoldAtual: outcome.saldoGoldAtual,
+        progresso: { obtidas: outcome.progresso.obtidas, total: todasAtivas.length },
         mensagens: {
-          novas: novas.length
+          novas: outcome.novas.length
             ? "Foi adicionada(s) nova(s) carta(s) ao seu álbum!"
             : "Nenhuma carta nova desta vez.",
-          repetidas: duplicadas.length
-            ? `Você vendeu ${duplicadas.length} carta(s) repetida(s) por ${goldVendidoTotal} gold.`
+          repetidas: outcome.duplicadas.length
+            ? `Você vendeu ${outcome.duplicadas.length} carta(s) repetida(s) por ${outcome.goldVendidoTotal} gold.`
             : "Nenhuma figurinha repetida.",
         },
       };

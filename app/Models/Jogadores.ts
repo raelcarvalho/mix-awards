@@ -36,6 +36,18 @@ export default class Jogadores extends BaseModel {
   public usuario_adm_id?: number | null;
 
   @column()
+  public gc_id?: number | null;
+
+  @column()
+  public steam_id?: string | null;
+
+  @column()
+  public gc_nick?: string | null;
+
+  @column()
+  public gc_nick_normalizado?: string | null;
+
+  @column()
   public gold: number;
 
   @column()
@@ -74,6 +86,18 @@ export default class Jogadores extends BaseModel {
   @column()
   public pontos: string;
 
+  @column()
+  public level: number;
+
+  @column()
+  public level_pontos: number;
+
+  @column({ columnName: "moldura_equipada" })
+  public moldura_equipada?: string | null;
+
+  @column({ columnName: "titulo_equipado" })
+  public titulo_equipado?: string | null;
+
   @belongsTo(() => UsuarioAdm, { foreignKey: "usuario_adm_id" })
   public usuarioAdm: BelongsTo<typeof UsuarioAdm>;
 
@@ -104,6 +128,9 @@ export default class Jogadores extends BaseModel {
       "qtd_partidas",
       "pontos",
       "partida_ganha",
+      "level_antes",
+      "level_depois",
+      "level_delta",
     ],
   })
   public partidas: ManyToMany<typeof Partidas>;

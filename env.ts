@@ -29,4 +29,11 @@ export default Env.rules({
 	PG_USER: Env.schema.string(),
 	PG_PASSWORD: Env.schema.string(),
 	PG_DB_NAME: Env.schema.string(),
+
+	/**
+	 * Pool de conexões (padrão knex: min 2 / max 10). Com muitos usuários
+	 * simultâneos, suba DB_POOL_MAX respeitando o max_connections do Postgres.
+	 */
+	DB_POOL_MIN: Env.schema.number.optional(),
+	DB_POOL_MAX: Env.schema.number.optional(),
 })

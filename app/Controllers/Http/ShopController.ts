@@ -5,14 +5,10 @@ import { DateTime } from "luxon";
 import CustomResponse from "App/Utils/CustomResponse";
 import Jogadores from "App/Models/Jogadores";
 import Pacotes from "App/Models/Pacotes";
-import Capsulas from "App/Models/Capsulas";
-import PartidasJogadores from "App/Models/PartidasJogadores";
 
 const PRECO_PACOTE = 20;
 const ITENS_POR_PACOTE = 4;
 const MAX_COMPRA_POR_VEZ = 50;
-const PRECO_BONUS_PONTOS = 100;
-const BONUS_PONTOS = 10;
 
 export default class ShopController {
   protected customResponse = new CustomResponse();
@@ -164,75 +160,6 @@ export default class ShopController {
       return this.customResponse.erro(
         response,
         "Erro ao comprar pacotes.",
-        error,
-        500
-      );
-    }
-  }
-
-  // COMPRAR BONUS POR PARTIDA
-  public async comprarBonusPontos({ auth, response }: HttpContextContract) {
-    const user = await auth.authenticate();
-
-    try {
-      const jogador = await Jogadores.query()
-        .where("usuario_adm_id", user.id)
-        .firstOrFail();
-
-      if ((jogador.gold || 0) < PRECO_BONUS_PONTOS) {
-        return this.customResponse.erro(
-          response,
-          "Gold insuficiente.",
-          {},
-          400
-        );
-      }
-
-      // Última partida do jogador na pivot tb_partidas_jogadores
-      const ultimaPartidaJogador = await PartidasJogadores.query()
-        .where("jogadores_id", jogador.id)
-        .orderBy("id", "desc")
-        .first();
-
-      if (!ultimaPartidaJogador) {
-        return this.customResponse.erro(
-          response,
-          "Nenhuma partida encontrada para adicionar pontos.",
-          {},
-          400
-        );
-      }
-
-      // 'pontos' é string na pivot -> converter com segurança
-      const pontosAtuais =
-        parseInt(ultimaPartidaJogador.pontos ?? "0", 10) || 0;
-      const novosPontos = pontosAtuais + BONUS_PONTOS;
-
-      // Atualiza os pontos na própria pivot
-      await PartidasJogadores.query()
-        .where("id", ultimaPartidaJogador.id)
-        .update({
-          pontos: String(novosPontos),
-          updated_at: DateTime.now().toSQL(),
-        });
-
-      // Debita o gold do jogador
-      jogador.gold = (jogador.gold || 0) - PRECO_BONUS_PONTOS;
-      await jogador.save();
-
-      return this.customResponse.sucesso(
-        response,
-        `Bônus de pontos comprado com sucesso. ${BONUS_PONTOS} pontos adicionados na última partida.`,
-        {
-          saldo_atual: jogador.gold,
-          pontos_adicionados: BONUS_PONTOS,
-          preco: PRECO_BONUS_PONTOS,
-        }
-      );
-    } catch (error) {
-      return this.customResponse.erro(
-        response,
-        "Erro ao comprar bônus de pontos.",
         error,
         500
       );

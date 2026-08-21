@@ -1,8 +1,10 @@
 import Hash from "@ioc:Adonis/Core/Hash";
 import { HttpContextContract } from "@ioc:Adonis/Core/HttpContext";
+import { randomBytes } from "crypto";
 import Jogadores from "App/Models/Jogadores";
 import UsuarioAdm from "App/Models/UsuarioAdm";
 import ApiBrevo from "App/Service/ApiBrevo";
+import { clearAuthCookie, setAuthCookie } from "App/Utils/AuthCookie";
 import CustomResponse from "App/Utils/CustomResponse";
 import Validators from "App/Validators/LoginValidators";
 import Env from "@ioc:Adonis/Core/Env";
@@ -14,6 +16,15 @@ export default class LoginController {
   constructor() {
     this.validators = new Validators();
     this.customResponse = new CustomResponse();
+  }
+
+  private normalizeName(raw: string) {
+    return String(raw || "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/\s+/g, " ")
+      .trim()
+      .toUpperCase();
   }
 
   public async cadastrar({ response, request }: HttpContextContract) {
@@ -35,18 +46,19 @@ export default class LoginController {
 
       const usuario = await UsuarioAdm.create(payload);
       usuario.usuario_admin = false;
+      const normalized = this.normalizeName(payload.nome_normalizado || payload.nome);
+      usuario.gc_nick = payload.nome_normalizado || null;
+      usuario.gc_nick_normalizado = this.normalizeName(
+        payload.nome_normalizado || ""
+      ).toLowerCase();
       await usuario.save();
 
-      const normalized = (payload.nome_normalizado || payload.nome)
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .replace(/\s+/g, " ")
-        .trim()
-        .toUpperCase();
-
       let candidatos = await Jogadores.query()
-        .whereNotNull("nome_normalizado")
-        .where("nome_normalizado", normalized)
+        .where((q) =>
+          q
+            .where("gc_nick_normalizado", normalized.toLowerCase())
+            .orWhere("nome_normalizado", normalized)
+        )
         .whereNull("usuario_adm_id")
         .limit(2);
 
@@ -57,14 +69,7 @@ export default class LoginController {
           .limit(5);
 
         candidatos = possiveis.filter((j) => {
-          const jNorm = j.nome
-            ? j.nome
-                .normalize("NFD")
-                .replace(/[\u0300-\u036f]/g, "")
-                .replace(/\s+/g, " ")
-                .trim()
-                .toUpperCase()
-            : "";
+          const jNorm = this.normalizeName(j.nome || "");
           return jNorm === normalized;
         });
       }
@@ -72,7 +77,12 @@ export default class LoginController {
       let mensagemVinculo =
         "Nenhum jogador correspondente encontrado para vincular.";
       if (candidatos.length === 1) {
-        candidatos[0].merge({ usuario_adm_id: usuario.id });
+        candidatos[0].merge({
+          usuario_adm_id: usuario.id,
+          gc_nick: candidatos[0].gc_nick || (payload.nome_normalizado || null),
+          gc_nick_normalizado:
+            candidatos[0].gc_nick_normalizado || normalized.toLowerCase(),
+        });
         await candidatos[0].save();
         mensagemVinculo = "Jogador vinculado com sucesso.";
       } else if (candidatos.length > 1) {
@@ -99,7 +109,6 @@ export default class LoginController {
   }
 
   public async login({ response, request, auth }: HttpContextContract) {
-    console.log("iniciando login");
     const payload = await request.validate(this.validators.login());
 
     try {
@@ -110,7 +119,7 @@ export default class LoginController {
       if (!usuario) {
         return this.customResponse.erro(
           response,
-          "Não foi possível encontrar o cliente solicitado!",
+          "Credenciais inválidas.",
           {},
           401
         );
@@ -119,28 +128,69 @@ export default class LoginController {
       const senhaCorreta = await Hash.verify(usuario.password, payload.senha);
 
       if (!senhaCorreta) {
-        return this.customResponse.erro(response, "Senha incorreta", {}, 401);
+        return this.customResponse.erro(response, "Credenciais inválidas.", {}, 401);
       }
 
-      const jogador = await Jogadores.query()
-        .where("nome", usuario.nome_normalizado)
-        .whereNull("usuario_adm_id")
-        .first();
+      const chaveNome = this.normalizeName(
+        usuario.gc_nick || usuario.nome_normalizado || ""
+      );
+      const chaveNomeLower = chaveNome.toLowerCase();
+      let jogador =
+        (usuario.gc_id
+          ? await Jogadores.query()
+              .where("gc_id", Number(usuario.gc_id))
+              .where((q) =>
+                q.whereNull("usuario_adm_id").orWhere("usuario_adm_id", usuario.id)
+              )
+              .first()
+          : null) ||
+        (usuario.steam_id
+          ? await Jogadores.query()
+              .where("steam_id", String(usuario.steam_id))
+              .where((q) =>
+                q.whereNull("usuario_adm_id").orWhere("usuario_adm_id", usuario.id)
+              )
+              .first()
+          : null) ||
+        (chaveNome
+          ? await Jogadores.query()
+              .where((q) =>
+                q
+                  .where("gc_nick_normalizado", chaveNomeLower)
+                  .orWhere("nome_normalizado", chaveNome)
+              )
+              .whereNull("usuario_adm_id")
+              .first()
+          : null);
 
       if (jogador) {
         jogador.usuario_adm_id = usuario.id;
-        jogador.nome_normalizado = usuario.nome_normalizado;
+        if (!jogador.nome_normalizado && chaveNome) jogador.nome_normalizado = chaveNome;
+        if (!jogador.gc_nick && usuario.gc_nick) jogador.gc_nick = usuario.gc_nick;
+        if (!jogador.gc_nick_normalizado && chaveNomeLower) {
+          jogador.gc_nick_normalizado = chaveNomeLower;
+        }
+        if (!jogador.gc_id && usuario.gc_id) jogador.gc_id = Number(usuario.gc_id);
+        if (!jogador.steam_id && usuario.steam_id) {
+          jogador.steam_id = String(usuario.steam_id);
+        }
         await jogador.save();
         console.log(
           `Jogador ${jogador.nome} vinculado ao usuário ${usuario.nome}`
         );
       }
 
-      const token = await auth
-        .use("api")
-        .attempt(payload.email, payload.senha, {
-          expiresIn: "10 days",
-        });
+      const token = await auth.use("api").attempt(payload.email, payload.senha, {
+        expiresIn: "10 days",
+      });
+      const tokenJson =
+        typeof (token as any).toJSON === "function"
+          ? (token as any).toJSON()
+          : (token as any);
+      const tokenValue = String(tokenJson?.token || (token as any)?.token || "");
+      if (tokenValue) {
+        setAuthCookie(response, tokenValue);
+      }
 
       const usuarioDdb = await UsuarioAdm.query()
         .where("email", payload.email)
@@ -148,15 +198,13 @@ export default class LoginController {
 
       const isAdmin = usuarioDdb.usuario_admin === true;
 
-      console.log("login funcionou", usuarioDdb);
-
       return this.customResponse.sucesso(
         response,
         "Login realizado com sucesso!",
         {
-          ...token.toJSON(),
           usuario: usuarioDdb,
           isAdmin,
+          auth_mode: "cookie",
         }
       );
     } catch (error) {
@@ -187,7 +235,8 @@ export default class LoginController {
         );
       }
 
-      usuario.password = "123123";
+      const senhaTemporaria = randomBytes(6).toString("hex");
+      usuario.password = senhaTemporaria;
       usuario.alterar_senha = 1;
       await usuario.save();
 
@@ -198,7 +247,7 @@ export default class LoginController {
       const html = `
       <div style="font-family:Arial,Helvetica,sans-serif;line-height:1.5">
         <p>Olá <strong>${usuario.nome}</strong>,</p>
-        <p>Sua senha foi temporariamente redefinida para: <strong>123123</strong>.</p>
+        <p>Sua senha foi temporariamente redefinida para: <strong>${senhaTemporaria}</strong>.</p>
         <p>Acesse o <a href="${loginUrl}">site do MIX AWARDS</a>, faça login e depois vá em <em>Alterar Senha</em> para definir a sua senha definitiva.</p>
         <p>Atalho direto: <a href="${alterarSenhaUrl}">${alterarSenhaUrl}</a></p>
         <hr/>
@@ -206,7 +255,7 @@ export default class LoginController {
       </div>
     `;
       const text = `Olá ${usuario.nome},
-        Sua senha foi temporariamente redefinida para: 123123.
+        Sua senha foi temporariamente redefinida para: ${senhaTemporaria}.
         Acesse ${loginUrl} e, após logar, altere sua senha em ${alterarSenhaUrl}.
         Se não foi você, contate o suporte.`;
 
@@ -275,18 +324,24 @@ export default class LoginController {
       usuarioAdm.password = payload.nova_senha;
       await usuarioAdm.save();
 
-      const token = await auth
-        .use("api")
-        .attempt(usuarioAdm.email, payload.nova_senha, {
-          expiresIn: "10 days",
-        });
+      const token = await auth.use("api").attempt(usuarioAdm.email, payload.nova_senha, {
+        expiresIn: "10 days",
+      });
+      const tokenJson =
+        typeof (token as any).toJSON === "function"
+          ? (token as any).toJSON()
+          : (token as any);
+      const tokenValue = String(tokenJson?.token || (token as any)?.token || "");
+      if (tokenValue) {
+        setAuthCookie(response, tokenValue);
+      }
 
       return this.customResponse.sucesso(
         response,
         "Senha alterada com sucesso!",
         {
-          ...token.toJSON(),
           usuario: usuarioAdm,
+          auth_mode: "cookie",
         }
       );
     } catch (error) {
@@ -326,11 +381,12 @@ export default class LoginController {
     try {
       // tenta revogar o token do guard 'api'
       try {
-        await (auth as any).use("api").logout();
+        await (auth as any).use("api").invalidateToken();
       } catch (e) {
         // fallback para logout genérico
         await auth.logout();
       }
+      clearAuthCookie(response);
 
       return this.customResponse.sucesso(
         response,
